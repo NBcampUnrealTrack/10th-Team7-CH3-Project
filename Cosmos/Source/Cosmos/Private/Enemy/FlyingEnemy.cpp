@@ -1,7 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FlyingEnemy.h"
+#include "Enemy/FlyingEnemy.h"
 
 // Sets default values
 AFlyingEnemy::AFlyingEnemy()

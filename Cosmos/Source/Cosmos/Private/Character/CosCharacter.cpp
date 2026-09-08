@@ -1,7 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CosCharacter.h"
+#include "Character/CosCharacter.h"
 
 // Sets default values
 ACosCharacter::ACosCharacter()
