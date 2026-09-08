@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "UHealthComponent.generated.h"
+#include "HealthComponent.generated.h"
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class COSMOS_API UUHealthComponent : public UActorComponent
+class COSMOS_API UHealthComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:	
 	// Sets default values for this component's properties
-	UUHealthComponent();
+	UHealthComponent();
 
 protected:
 	// Called when the game starts
