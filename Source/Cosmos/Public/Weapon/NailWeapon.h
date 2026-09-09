@@ -11,10 +11,9 @@ class COSMOS_API ANailWeapon : public AWeaponBase
 	
 public:
 	ANailWeapon();
-	void ApplyEnchant();
 
 protected:
 	virtual void PerformAttack() override;
 	virtual float GetCurrentDamage() const override;
-
+	virtual void ApplyEnchant() override;
 };

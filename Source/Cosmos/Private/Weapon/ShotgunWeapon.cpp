@@ -4,6 +4,7 @@ AShotgunWeapon::AShotgunWeapon()
 {
 	BaseDamage = 30.f;
 	AttackInterval = 1.f;
+	AttackRange = 2000.f;
 	MaxAmmo = 4;
 	CurrentAmmo = MaxAmmo;
 	ReloadTime = 2.f;
@@ -11,7 +12,17 @@ AShotgunWeapon::AShotgunWeapon()
 
 void AShotgunWeapon::PerformAttack()
 {
-	//원거리 트레이스 로직
+	if (bIsReloading || CurrentAmmo <= 0)
+	{
+		return;
+	}
+
+	CurrentAmmo--;
+
+}
+void AShotgunWeapon::ApplyEnchant()
+{
+	//인챈트 로직
 }
 
 void AShotgunWeapon::ApplyUpgrade()
@@ -26,5 +37,28 @@ float AShotgunWeapon::GetCurrentDamage() const
 
 void AShotgunWeapon::Reload()
 {
-	//재장전 로직
+	if (bIsReloading || CurrentAmmo == MaxAmmo)
+	{
+		return;
+	}
+
+	bIsReloading = true;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		ReloadTimerHandle,
+		this,
+		&AShotgunWeapon::FinishReload,
+		ReloadTime,
+		false
+	);
+}
+
+void AShotgunWeapon::FinishReload()
+{
+	if (!bIsReloading)
+	{
+		return;
+	}
+	CurrentAmmo = MaxAmmo;
+	bIsReloading = false;
 }

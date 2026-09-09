@@ -13,13 +13,22 @@ public:
 	AShotgunWeapon();
 	void ApplyUpgrade();
 	void Reload();
+	void FinishReload();
 
 protected:
 	virtual void PerformAttack() override;
 	virtual float GetCurrentDamage() const override;
+	virtual void ApplyEnchant() override;
 
-private:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 MaxAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 CurrentAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float ReloadTime;
+
+	bool bIsReloading = false;
+
+	FTimerHandle ReloadTimerHandle;
+
 };

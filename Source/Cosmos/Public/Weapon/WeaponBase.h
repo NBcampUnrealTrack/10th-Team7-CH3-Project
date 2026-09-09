@@ -20,9 +20,12 @@ protected:
 	float BaseDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float AttackInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float AttackRange;
 
 	float LastAttackTime;
 
 	virtual void PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, );
 	virtual float GetCurrentDamage() const PURE_VIRTUAL(AWeaponBase::GetCurrentDamage, return 0.f;);
+	virtual void ApplyEnchant() PURE_VIRTUAL(AWeaponBase::ApplyEnchant, );
 };

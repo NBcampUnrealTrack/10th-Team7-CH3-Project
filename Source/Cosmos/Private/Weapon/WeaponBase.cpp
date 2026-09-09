@@ -6,6 +6,7 @@ AWeaponBase::AWeaponBase()
 	BaseDamage = 50.f;
 	AttackInterval = 0.6f;
 	LastAttackTime = -100.f;
+	AttackRange = 200.f;
 }
 
 void AWeaponBase::TryAttack()
@@ -20,6 +21,7 @@ void AWeaponBase::TryAttack()
 	PerformAttack();
 }
 
+//HitResult안에 HitActor도 포함
 void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
 	if (!HitActor)

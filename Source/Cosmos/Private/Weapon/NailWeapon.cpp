@@ -4,6 +4,7 @@ ANailWeapon::ANailWeapon()
 {
 	BaseDamage = 50.f;
 	AttackInterval = 0.6f;
+	AttackRange = 200.f;
 }
 
 void ANailWeapon::PerformAttack()
