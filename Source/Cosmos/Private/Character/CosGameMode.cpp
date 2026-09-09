@@ -1,5 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "Character/CosGameMode.h"
+#include "Character/CosCharacter.h"
 
-
-#include "Character/CosGameMode.h"
+ACosGameMode::ACosGameMode()
+{
+	DefaultPawnClass = ACosCharacter::StaticClass();
+}
 
