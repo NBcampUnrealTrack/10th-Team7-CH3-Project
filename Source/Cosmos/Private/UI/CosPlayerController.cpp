@@ -8,8 +8,6 @@
 
 ACosPlayerController::ACosPlayerController()
 {
-	Super::BeginPlay();
-
 
 };
 	
