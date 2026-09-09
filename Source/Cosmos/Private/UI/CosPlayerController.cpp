@@ -1,15 +1,21 @@
 ﻿#include "UI/CosPlayerController.h"
+#include "Character/CosCharacter.h"
+#include "Character/HealthComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
 
 
-
 ACosPlayerController::ACosPlayerController()
 {
-	bShowMouseCursor = false;
-}
+	Super::BeginPlay();
 
+
+};
+	
+void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
+{
+}
 
 void ACosPlayerController::BeginPlay() 
 {
@@ -31,27 +37,27 @@ void ACosPlayerController::ShowCombatHUD()
 
 }
 
-void ACosPlayerController::HideCombatHUD()
+void ACosPlayerController::CloseCombatHUD()
 {
 
 }
 
-void ACosPlayerController::ShowForgeWidget()
+void ACosPlayerController::OpenForgeWidget()
 {
 
 }
 
-void ACosPlayerController::HideForgeWidget()
+void ACosPlayerController::CloseForgeWidget()
 {
 
 }
 
-void ACosPlayerController::ShowResultWidget(bool bWin, int32 Score)
+void ACosPlayerController::ShowResult(bool bWin, int32 Score)
 {
 
 }
 
-void ACosPlayerController::HideResultWidget()
+void ACosPlayerController::HideResult()
 {
 
 }
@@ -64,4 +70,12 @@ void ACosPlayerController::ToggleESCMenu()
 void ACosPlayerController::HideESCMenu()
 {
 
+}
+
+void ACosPlayerController::SetUIInputMode(bool bUIMode)
+{
+
+}
+
+void ACosPlayerController::ShowGameHUD() {
 }

@@ -4,11 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
 #include "CosPlayerController.generated.h"
 
 
 class UUserWidget;
+class UInputMappingContext;
+class UHealthComponent;
 
 
 UCLASS()
@@ -19,6 +20,10 @@ class COSMOS_API ACosPlayerController : public APlayerController
 public:
 
 	ACosPlayerController();
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputMappingContext> InputMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
 	TSubclassOf<UUserWidget> TitleWidgetClass;
@@ -61,22 +66,25 @@ public:
 	void ShowCombatHUD();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void HideCombatHUD();
+	void CloseCombatHUD();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	UUserWidget* GetCombatHUD() const { return CombatHUDInstance; }
+	void ShowGameHUD();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowForgeWidget();
+	UUserWidget* GetHUDWidget() const { return CombatHUDInstance; }
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void HideForgeWidget();
+	void OpenForgeWidget();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowResultWidget(bool bWin, int32 Score);
+	void CloseForgeWidget();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void HideResultWidget();
+	void ShowResult(bool bWin, int32 Score);
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void HideResult();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ToggleESCMenu();
@@ -84,9 +92,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void HideESCMenu();
 
-	void SetUIInputMode(UUserWidget* WidgetToFocus = nullptr);
-	void SetGameInputMode();
+
+	UFUNCTION(BlueprintCallable, Category = "UI|Input")
+	void SetUIInputMode(bool bUIMode);
+
+	UFUNCTION()
+	void UpdateHP(float CurrentHealth, float MaxHealth);
 
 protected:
 	virtual void BeginPlay() override;
+
 };
