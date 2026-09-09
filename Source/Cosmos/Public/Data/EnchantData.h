@@ -1,17 +1,36 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "CosDataTable.h"
 #include "EnchantData.generated.h"
 
-/**
- * 
- */
-UCLASS()
-class COSMOS_API UEnchantData : public UDataAsset
+USTRUCT(BlueprintType)
+struct FEnchantRolledStat
 {
 	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantStat StatType = EEnchantStat::None;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantValueType ValueType = EEnchantValueType::None;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float RolledValue = 0.f;
+};
+
+UCLASS()
+class COSMOS_API UEnchantData : public UPrimaryDataAsset
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FText EnchantName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FText EnchantDescription;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) UTexture2D* Icon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FEnchantRolledStat> RolledStats;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bHasSkill = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FName SkillName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillValue = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillDuration = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillCooldown = 0.f;
 	
 };
