@@ -11,11 +11,18 @@ class COSMOS_API AWeaponBase : public AActor
 	
 public:	
 	AWeaponBase();
+	
+	void TryAttack();
+	void ApplyDamage(AActor* HitActor, const FHitResult& HitResult);
 
 protected:
-	virtual void BeginPlay() override;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float BaseDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float AttackInterval;
 
-public:	
-	virtual void Tick(float DeltaTime) override;
+	float LastAttackTime;
 
+	virtual void PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, );
+	virtual float GetCurrentDamage() const PURE_VIRTUAL(AWeaponBase::GetCurrentDamage, return 0.f;);
 };

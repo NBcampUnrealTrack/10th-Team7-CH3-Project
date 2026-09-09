@@ -2,18 +2,29 @@
 
 AWeaponBase::AWeaponBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
-
+	BaseDamage = 50.f;
+	AttackInterval = 0.6f;
+	LastAttackTime = -100.f;
 }
 
-void AWeaponBase::BeginPlay()
+void AWeaponBase::TryAttack()
 {
-	Super::BeginPlay();
-	
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastAttackTime < AttackInterval)
+	{
+		return;
+	}
+
+	LastAttackTime = CurrentTime;
+	PerformAttack();
 }
 
-void AWeaponBase::Tick(float DeltaTime)
+void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
-	Super::Tick(DeltaTime);
+	if (!HitActor) return;
 
+	if (HitActor->Implements<UDamageable>())
+	{
+		IDamageable::Execute_TakeDamage(HitActor, GetCurrentDamage(), HitResult);
+	}
 }
