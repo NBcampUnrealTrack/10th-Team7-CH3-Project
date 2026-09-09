@@ -126,11 +126,11 @@ void ACosCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		}//나중에 지워야함
 	}
 }
-void ACosCharacter::Move(const FInputActionValue& value)
+void ACosCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	const FVector2D MoveInput = value.Get<FVector2D>();
+	const FVector2D MoveInput = Value.Get<FVector2D>();
 
 	if (!FMath::IsNearlyZero(MoveInput.X))
 	{
@@ -142,35 +142,35 @@ void ACosCharacter::Move(const FInputActionValue& value)
 		AddMovementInput(GetActorRightVector(), MoveInput.Y);
 	}
 }
-void ACosCharacter::StartJump(const FInputActionValue& value)
+void ACosCharacter::StartJump(const FInputActionValue& Value)
 {
-	if (value.Get<bool>())
+	if (Value.Get<bool>())
 	{
 		Jump();
 	}
 }
-void ACosCharacter::StopJump(const FInputActionValue& value)
+void ACosCharacter::StopJump(const FInputActionValue& Value)
 {
-	if (!value.Get<bool>())
+	if (!Value.Get<bool>())
 	{
 		StopJumping();
 	}
 }
-void ACosCharacter::Look(const FInputActionValue& value)
+void ACosCharacter::Look(const FInputActionValue& Value)
 {
-	const FVector2D LookInput = value.Get<FVector2D>();
+	const FVector2D LookInput = Value.Get<FVector2D>();
 
 	AddControllerYawInput(LookInput.X);
 	AddControllerPitchInput(LookInput.Y);
 }
-void ACosCharacter::StartSprint(const FInputActionValue& value)
+void ACosCharacter::StartSprint(const FInputActionValue& Value)
 {
 	if (GetCharacterMovement())
 	{
 		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 	}
 }
-void ACosCharacter::StopSprint(const FInputActionValue& value)
+void ACosCharacter::StopSprint(const FInputActionValue& Value)
 {
 	if (GetCharacterMovement())
 	{

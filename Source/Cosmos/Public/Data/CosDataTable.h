@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
@@ -47,28 +47,28 @@ enum class EEnchantStat : uint8
 	GainHeal = 47
 };
 
-FORCEINLINE uint8 GetCategory(EEnchantStat stat)
+FORCEINLINE uint8 GetCategory(EEnchantStat Stat)
 {
-	return static_cast<uint8>(stat) / 10;
+	return static_cast<uint8>(Stat) / 10;
 }
 
 UENUM(BlueprintType)
 enum class EEnchantSkillType : uint8
 {
 	None = 0,
-	// All -> 10¹ø´ë
+	// All -> 10ï¿½ï¿½ï¿½ï¿½
 	IncreaseAllSpeed = 10, IncreaseAllDamage = 11,
-	// Range -> 20¹ø´ë
+	// Range -> 20ï¿½ï¿½ï¿½ï¿½
 	IncreaseShotgunDamage = 20, IncreaseShotgunFiringRate = 21, IncreaseRangeReloadSpeed = 22, InfinityAmmo = 23,
-	// Melee -> 30¹ø´ë
+	// Melee -> 30ï¿½ï¿½ï¿½ï¿½
 	IncreaseMeleeDamage = 30, IncreaseMeleeAttackSpeed = 31, IncreaseMeleeMaxTarget = 32,
-	// Misc -> 40¹ø´ë
+	// Misc -> 40ï¿½ï¿½ï¿½ï¿½
 	IncreaseMovementSpeed = 40, MadePotion = 41
 };
 
-FORCEINLINE uint8 GetSkillCategory(EEnchantSkillType skill)
+FORCEINLINE uint8 GetSkillCategory(EEnchantSkillType Skill)
 {
-	return static_cast<uint8>(skill) / 10;
+	return static_cast<uint8>(Skill) / 10;
 }
 
 
@@ -79,17 +79,17 @@ struct FEnemyData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
-	// Ã¼·Â, °ø°Ý·Â, ÀÌµ¿¼Óµµ, µ¹Áø¼Óµµ, °ø°Ý¼Óµµ, Åõ»çÃ¼ ¼Óµµ, ºñÇà °íµµ, ¼±È¸ ¹Ý°æ, ¿µÈ¥ Á¶°¢ µå·Ó·®
-	// ¸ó½ºÅÍ ½ºÅÈ ±¸Á¶Ã¼
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float HP = 0.f; // Ã¼·Â
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackPower = 0.f; // °ø°Ý·Â
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MoveSpeed = 0.f; // ÀÌµ¿¼Óµµ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DashSpeed = 0.f; // µ¹Áø ¼Óµµ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackSpeed = 0.f; // °ø°Ý ¼Óµµ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float BulletSpeed = 0.f; // Åõ»çÃ¼ ¼Óµµ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlightAltitude = 0.f; // ºñÇà °íµµ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRadius = 0.f;	// ¼±È¸ ¹Ý°æ
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SoulDrop = 0; // ¼Ò¿ï µå·Ó·®
+	// Ã¼ï¿½ï¿½, ï¿½ï¿½ï¿½Ý·ï¿½, ï¿½Ìµï¿½ï¿½Óµï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½, ï¿½ï¿½ï¿½Ý¼Óµï¿½, ï¿½ï¿½ï¿½ï¿½Ã¼ ï¿½Óµï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½, ï¿½ï¿½È¸ ï¿½Ý°ï¿½, ï¿½ï¿½È¥ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ó·ï¿½
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float HP = 0.f; // Ã¼ï¿½ï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackPower = 0.f; // ï¿½ï¿½ï¿½Ý·ï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MoveSpeed = 0.f; // ï¿½Ìµï¿½ï¿½Óµï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DashSpeed = 0.f; // ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackSpeed = 0.f; // ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float BulletSpeed = 0.f; // ï¿½ï¿½ï¿½ï¿½Ã¼ ï¿½Óµï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlightAltitude = 0.f; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRadius = 0.f;	// ï¿½ï¿½È¸ ï¿½Ý°ï¿½
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SoulDrop = 0; // ï¿½Ò¿ï¿½ ï¿½ï¿½Ó·ï¿½
 };
 
 USTRUCT(BlueprintType)
