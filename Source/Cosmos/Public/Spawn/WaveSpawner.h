@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "WaveSpawner.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWaveCleared, int32 /*waveIndex*/);
+
 UCLASS()
 class COSMOS_API AWaveSpawner : public AActor
 {
@@ -11,11 +13,5 @@ class COSMOS_API AWaveSpawner : public AActor
 	
 public:	
 	AWaveSpawner();
-
-protected:
-	virtual void BeginPlay() override;
-
-public:	
-	virtual void Tick(float DeltaTime) override;
-
+	
 };
