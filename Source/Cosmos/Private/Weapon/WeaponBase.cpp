@@ -1,4 +1,5 @@
 ﻿#include "Weapon/WeaponBase.h"
+#include "Weapon/Damageable.h"
 
 AWeaponBase::AWeaponBase()
 {
@@ -21,10 +22,14 @@ void AWeaponBase::TryAttack()
 
 void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
-	if (!HitActor) return;
-
-	if (HitActor->Implements<UDamageable>())
+	if (!HitActor)
 	{
-		IDamageable::Execute_TakeDamage(HitActor, GetCurrentDamage(), HitResult);
+		return;
+	}
+
+	IDamageable* Damageable = Cast<IDamageable>(HitActor);
+	if (Damageable)
+	{
+		Damageable->TakeDamage(GetCurrentDamage(), HitResult);
 	}
 }

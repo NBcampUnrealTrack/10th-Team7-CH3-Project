@@ -14,6 +14,11 @@ void AShotgunWeapon::PerformAttack()
 	//원거리 트레이스 로직
 }
 
+void AShotgunWeapon::ApplyUpgrade()
+{
+	//업그레이드 로직
+}
+
 float AShotgunWeapon::GetCurrentDamage() const
 {
 	return BaseDamage;
