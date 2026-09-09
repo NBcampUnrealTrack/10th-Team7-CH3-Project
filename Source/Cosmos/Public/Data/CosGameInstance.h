@@ -8,11 +8,10 @@
 UENUM(BlueprintType)
 enum class EShotgunModuleType : uint8
 {
-	Muzzle,
-	Magazine,
-	Stock,
-	Sight,
-	Trigger
+	Damage,
+	FireSpeed,
+	Reload,
+	Magazine
 };
 
 
