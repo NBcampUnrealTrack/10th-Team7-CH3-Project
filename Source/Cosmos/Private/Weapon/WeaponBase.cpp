@@ -3,16 +3,17 @@
 
 AWeaponBase::AWeaponBase()
 {
-	BaseDamage = 50.f;
-	AttackInterval = 0.6f;
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	SetRootComponent(WeaponMesh);
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //캐릭터와 무기의 물리적 충돌로 인한 버그 예방
+
 	LastAttackTime = -100.f;
-	AttackRange = 200.f;
 }
 
-void AWeaponBase::TryAttack()
+void AWeaponBase::TryAttack() //공격 속도
 {
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (CurrentTime - LastAttackTime < AttackInterval)
+	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
 	{
 		return;
 	}
@@ -22,16 +23,19 @@ void AWeaponBase::TryAttack()
 }
 
 //HitResult안에 HitActor도 포함
-void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
+bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
-	if (!HitActor)
+	if (!IsValid(HitActor)) //맞은 대상이 없다면
 	{
-		return;
+		return false;
 	}
 
-	IDamageable* Damageable = Cast<IDamageable>(HitActor);
-	if (Damageable)
+	IDamageable* Damageable = Cast<IDamageable>(HitActor); // HitActor가 IDamageable을 포함한다면 데미저블 포인터를 반환
+	if (!Damageable) // 데미지를 받을 수 없다면
 	{
-		Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+		return false;
 	}
+
+	Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+	return true; // 데미지를 준 경우
 }
