@@ -12,6 +12,8 @@ class UInputMappingContext;
 class UHealthComponent;
 
 
+
+
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
 {
@@ -71,8 +73,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowGameHUD();
 
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	UUserWidget* GetHUDWidget() const { return CombatHUDInstance; }
+	UFUNCTION(BlueprintPure, Category = "HUD")
+	UUserWidget* GetHUDWidget() const;
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void OpenForgeWidget();
@@ -92,12 +94,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void HideESCMenu();
 
-
 	UFUNCTION(BlueprintCallable, Category = "UI|Input")
 	void SetUIInputMode(bool bUIMode);
 
 	UFUNCTION()
 	void UpdateHP(float CurrentHealth, float MaxHealth);
+
+
+
+	// 테스트용 임시
+	void TestDecreaseAmmo();
+	void TestReloadAmmo();
+	void TestDecreaseHP();
+	void TestHealHP();
+
+
+	UFUNCTION()
+	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
+	
+	UFUNCTION()
+	void SetupInputComponent();
 
 protected:
 	virtual void BeginPlay() override;
