@@ -5,10 +5,12 @@ AWeaponBase::AWeaponBase()
 {
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //캐릭터와 무기의 물리적 충돌로 인한 버그 예방
+
 	LastAttackTime = -100.f;
 }
 
-void AWeaponBase::TryAttack()
+void AWeaponBase::TryAttack() //공격 속도
 {
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
@@ -23,7 +25,7 @@ void AWeaponBase::TryAttack()
 //HitResult안에 HitActor도 포함
 bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
-	if (!IsValid(HitActor))
+	if (!IsValid(HitActor)) //맞은 대상이 없다면
 	{
 		return false;
 	}

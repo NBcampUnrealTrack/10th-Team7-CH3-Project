@@ -13,10 +13,45 @@ UCombatComponent::UCombatComponent()
 
 void UCombatComponent::BeginPlay()
 {
-	
+	Super::BeginPlay(); //부모가 해둔 초기화가 있을 수 있으니 관례적 호출
+
+	APawn* OwnerPawn = Cast<APawn>(GetOwner()); // 이 컴포넌트가 붙어있는 캐릭터를 가져옴 입력 컴포넌트에 접근하기 위해
+	if (!OwnerPawn)
+	{
+		return;
+	}
+
+
+	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController()); // Pawn 조종하는 컨트롤러 가져오기
+	if (!PC)
+	{
+		return;
+	}
+
+	// IMC 관리하는 시스템 가져오기
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		if (CombatMappingContext) // IMC 지정되어 있는지.
+		{
+			Subsystem->AddMappingContext(CombatMappingContext, 0); // IMC 등록
+		}
+	}
+
+	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(OwnerPawn->InputComponent)) // 입력을 Enhanced Input 타입으로 캐스팅
+	{
+		if (NailAttackAction)// IA 지정되어 있는지.
+		{
+			EIC->BindAction(NailAttackAction, ETriggerEvent::Started, this, &UCombatComponent::OnNailAttack); // 좌클릭시 대못공격
+		}
+		if (ShotgunAttackAction) 
+		{
+			EIC->BindAction(ShotgunAttackAction, ETriggerEvent::Started, this, &UCombatComponent::OnShotgunAttack); // 우클릭시 샷건공격
+		}
+	}
 }
 
 
+// 공격하는 함수랑 연결
 void UCombatComponent::OnNailAttack()
 {
 	if (NailWeapon)

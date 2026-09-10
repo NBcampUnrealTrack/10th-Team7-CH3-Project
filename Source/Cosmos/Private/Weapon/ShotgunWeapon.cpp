@@ -52,18 +52,18 @@ float AShotgunWeapon::GetCurrentDamage() const
 
 void AShotgunWeapon::Reload()
 {
-	if (bIsReloading || CurrentAmmo == MaxAmmo)
+	if (bIsReloading || CurrentAmmo == MaxAmmo) 
 	{
 		return;
 	}
 
-	bIsReloading = true;
+	bIsReloading = true; // 재장전중
 
-	GetWorld()->GetTimerManager().SetTimer(
+	GetWorld()->GetTimerManager().SetTimer( // 재장전하는데 시간이 들도록 함
 		ReloadTimerHandle,
 		this,
-		&AShotgunWeapon::FinishReload,
-		ReloadTime,
+		&AShotgunWeapon::FinishReload, // 시간이 되면 호출할 함수
+		ReloadTime, // 드는 시간
 		false
 	);
 }
