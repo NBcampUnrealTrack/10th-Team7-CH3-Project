@@ -30,7 +30,7 @@ void AWaveSpawner::BeginPlay()
 			SpawnPoints.Add(Point);
 		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] SpawnPoint %개 수집"), SpawnPoints.Num());
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] SpawnPoint %d개 수집"), SpawnPoints.Num());
 	return;
 }
 
@@ -57,7 +57,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	bIsSpawning = true;
 	AliveEnemies.Empty();
 
-	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Wave %d 시작", WaveIndex));
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Wave %d 시작"), WaveIndex);
 
 	// 마지막 두 인자: true = 반복, 0.f = 첫 실행까지의 지연(즉시 시작)
 	GetWorld()->GetTimerManager().SetTimer(
@@ -91,6 +91,37 @@ void AWaveSpawner::SpawnOne()
 
 		AActor* Enemy = GetWorld()->SpawnActor<AActor>(
 			EnemyClass, Point->GetActorLocation(), Point->GetActorRotation(), Params);
-		//------------------------------------------------------------------------
+		
+		if (Enemy)
+		{
+			AliveEnemies.Add(Enemy);
+
+			// 이 적이 파괴되면 HandleEnemyDestroyed를 불러달라고 등록합니다.
+			// AddDynamic은 UFUNCION()이 붙은 함수만 받습니다.
+			Enemy->OnDestroyed.AddDynamic(this, &AWaveSpawner::HandleEnemyDestroyed);
+
+		}
+
 	}
+	// ++SpawnedCount는 먼저 1 올린 뒤 비교합니다.
+	if (++SpawnedCount >= TargetSpawnCount)
+	{ 
+		GetWorld()->GetTimerManager().ClearTimer(SpawnTimer);
+		bIsSpawning = false;
+	}
+}
+ 
+void AWaveSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
+{
+	AliveEnemies.Remove(DestroyedActor);
+	
+	// bIsSpawning 검사가 없으면, 첫 적을 바로 죽였을 때
+	// 아직 더 나올 예정인데도 클리어로 오판합니다.
+
+	if (!bIsSpawning && AliveEnemies.Num() == 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Wave %d 클리어"), CurrentWave);
+		OnWaveCleared.Broadcast(CurrentWave);
+	}
+
 }
