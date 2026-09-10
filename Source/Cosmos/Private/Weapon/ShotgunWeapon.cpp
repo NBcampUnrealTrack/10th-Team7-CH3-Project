@@ -22,14 +22,14 @@ void AShotgunWeapon::PerformAttack()
 	const FVector StartLocation = GetActorLocation(); //트레이스 시작 위치
 	const FVector EndLocation = StartLocation + (GetActorForwardVector() * AttackRange); // 끝나는 위치(시작 + 사거리)
 
-	FHitResult HitResult;
+	FHitResult HitResult; // 트레이스 결과를 담을 곳
 	FCollisionQueryParams QueryParams; // 트레이스 설정
 	QueryParams.AddIgnoredActor(this); // 무기 자체는 맞지 않도록
 	QueryParams.AddIgnoredActor(GetOwner()); // 플레이어가 맞지 않도록
 
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams); // 라인 트레이스
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams); // 라인 트레이스, ECC_Visibility : 시각적 오브젝트 기준 충돌 
 
-	if (bHit)
+	if (bHit) // 무언가에 맞았는가
 	{
 		ApplyDamage(HitResult.GetActor(), HitResult);
 	}

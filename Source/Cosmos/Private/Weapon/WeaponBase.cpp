@@ -3,10 +3,9 @@
 
 AWeaponBase::AWeaponBase()
 {
-	BaseDamage = 50.f;
-	AttackInterval = 0.6f;
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	SetRootComponent(WeaponMesh);
 	LastAttackTime = -100.f;
-	AttackRange = 200.f;
 }
 
 void AWeaponBase::TryAttack()
@@ -22,16 +21,19 @@ void AWeaponBase::TryAttack()
 }
 
 //HitResult안에 HitActor도 포함
-void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
+bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
 	if (!IsValid(HitActor))
 	{
-		return;
+		return false;
 	}
 
-	IDamageable* Damageable = Cast<IDamageable>(HitActor);
-	if (Damageable)
+	IDamageable* Damageable = Cast<IDamageable>(HitActor); // HitActor가 IDamageable을 포함한다면 데미저블 포인터를 반환
+	if (!Damageable) // 데미지를 받을 수 없다면
 	{
-		Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+		return false;
 	}
+
+	Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+	return true; // 데미지를 준 경우
 }

@@ -13,9 +13,13 @@ public:
 	AWeaponBase();
 	
 	void TryAttack();
-	void ApplyDamage(AActor* HitActor, const FHitResult& HitResult);
+	bool ApplyDamage(AActor* HitActor, const FHitResult& HitResult); // 데미저블 판단을 위해 bool형
 
 protected:
+
+	UPROPERTY(VisibleAnyWhere, Category = "Weapon")
+	UStaticMeshComponent* WeaponMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float BaseDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
