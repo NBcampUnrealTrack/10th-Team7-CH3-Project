@@ -12,7 +12,7 @@ AWeaponBase::AWeaponBase()
 void AWeaponBase::TryAttack()
 {
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (CurrentTime - LastAttackTime < AttackInterval)
+	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
 	{
 		return;
 	}
@@ -24,7 +24,7 @@ void AWeaponBase::TryAttack()
 //HitResult안에 HitActor도 포함
 void AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
-	if (!HitActor)
+	if (!IsValid(HitActor))
 	{
 		return;
 	}

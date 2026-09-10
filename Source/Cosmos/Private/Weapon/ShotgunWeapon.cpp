@@ -12,12 +12,27 @@ AShotgunWeapon::AShotgunWeapon()
 
 void AShotgunWeapon::PerformAttack()
 {
-	if (bIsReloading || CurrentAmmo <= 0)
+	if (bIsReloading || CurrentAmmo <= 0) 
 	{
 		return;
 	}
 
 	CurrentAmmo--;
+
+	const FVector StartLocation = GetActorLocation(); //트레이스 시작 위치
+	const FVector EndLocation = StartLocation + (GetActorForwardVector() * AttackRange); // 끝나는 위치(시작 + 사거리)
+
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams; // 트레이스 설정
+	QueryParams.AddIgnoredActor(this); // 무기 자체는 맞지 않도록
+	QueryParams.AddIgnoredActor(GetOwner()); // 플레이어가 맞지 않도록
+
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams); // 라인 트레이스
+
+	if (bHit)
+	{
+		ApplyDamage(HitResult.GetActor(), HitResult);
+	}
 
 }
 void AShotgunWeapon::ApplyEnchant()
