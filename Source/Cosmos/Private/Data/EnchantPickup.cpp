@@ -49,6 +49,7 @@ void AEnchantPickup::OnEnchantOverlap(
 	// 중요. 캐릭터 태그가 Player라 되어 있어야 인챈트를 획득할 수 있음
 	if (OtherActor && OtherActor->ActorHasTag("Player"))
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("Overlap!!!")));
 		ActivateEnchant(OtherActor);
 	}
 }
@@ -65,11 +66,13 @@ void AEnchantPickup::OnEnchantEndOverlap(
 
 void AEnchantPickup::ActivateEnchant(AActor* Activator)
 {
+
 	if (!GeneratedEnchant)
 	{
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("장착 실행합니다!!"));
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{
 		GameInstance->EquipEnchant(GeneratedEnchant);

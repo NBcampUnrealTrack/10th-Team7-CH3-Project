@@ -38,6 +38,7 @@ bool UCosGameInstance::SpendSoul(int32 Amount)
 
 void UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 {
+	UE_LOG(LogTemp, Warning, TEXT("인챈트 장착"));
 	UE_LOG(LogTemp, Warning, TEXT("EquipEnchant called - Enchant: %s"), Enchant ? TEXT("valid") : TEXT("null"));
 }
 
