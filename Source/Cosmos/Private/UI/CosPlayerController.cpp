@@ -2,6 +2,7 @@
 #include "Character/CosCharacter.h"
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
+#include "Weapon/CombatComponent.h"   
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
@@ -45,16 +46,6 @@ void ACosPlayerController::BeginPlay()
 			{
 				Subsystem->AddMappingContext(InputMappingContext.Get(), 0);
 				UE_LOG(LogTemp, Warning, TEXT("IMC_Character 등록됨"));
-			}
-
-			if (IsValid(CombatMappingContext.Get()))
-			{
-				Subsystem->AddMappingContext(CombatMappingContext.Get(), 0);
-				UE_LOG(LogTemp, Warning, TEXT("IMC_Combat 등록됨"));
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("CombatMappingContext가 nullptr임 - 에디터에서 값 지정 필요"));
 			}
 		}
 	}
@@ -112,9 +103,9 @@ void ACosPlayerController::SetupCharacterBindings()
 
 	
 	// 2. ShotgunWeapon 델리게이트 바인딩
-	if (ACosCharacter* CosChar = Cast<ACosCharacter>(ControlledPawn))
+	if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
 	{
-		if (AShotgunWeapon* Weapon = CosChar->GetEquippedWeapon())
+		if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("무기 바인딩 성공"));
 
@@ -125,7 +116,7 @@ void ACosPlayerController::SetupCharacterBindings()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("GetEquippedWeapon()이 nullptr을 반환함 - 0.1초 후 재시도"));
+			UE_LOG(LogTemp, Error, TEXT("ShotgunWeapon이 아직 CombatComponent에 없음 - 0.1초 후 재시도"));
 			GetWorld()->GetTimerManager().SetTimer(
 				WeaponBindRetryTimer,
 				this,
@@ -137,7 +128,7 @@ void ACosPlayerController::SetupCharacterBindings()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("Cast<ACosCharacter> 실패"));
+		UE_LOG(LogTemp, Error, TEXT("CombatComponent를 찾을 수 없음"));
 	}
 }
 
