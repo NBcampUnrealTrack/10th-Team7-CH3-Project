@@ -15,11 +15,12 @@ public:
 protected:
 	virtual void PerformAttack() override;
 	virtual float GetCurrentDamage() const override;
+	virtual EWeaponType GetWeaponType() const override;
 	virtual void ApplyEnchant() override;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 MaxTargetPerSwing;
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Weapon")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float SwingRadius = 50.f;
 };
