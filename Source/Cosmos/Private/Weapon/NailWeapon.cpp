@@ -106,7 +106,7 @@ float ANailWeapon::GetCurrentDamage() const
 	return BaseDamage; 
 }
 
-EWeaponType ANailWeapon::GetWeaponType() const
+EWeaponType ANailWeapon::GetWeaponType() const // 무기타입 대못 반환
 {
 	return EWeaponType::Nail;
 }

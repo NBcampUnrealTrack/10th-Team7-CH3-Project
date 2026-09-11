@@ -76,6 +76,10 @@ void UCombatComponent::BeginPlay()
 		{
 			EIC->BindAction(ShotgunAttackAction, ETriggerEvent::Started, this, &UCombatComponent::OnShotgunAttack); // 우클릭시 샷건공격
 		}
+		if (IsValid(ReloadAction))
+		{
+			EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &UCombatComponent::OnReload); // R 누르면 재장전
+		}
 	}
 }
 
@@ -96,5 +100,13 @@ void UCombatComponent::OnShotgunAttack()
 	if (IsValid(ShotgunWeapon))
 	{
 		ShotgunWeapon->TryAttack();
+	}
+}
+
+void UCombatComponent::OnReload()
+{
+	if (IsValid(ShotgunWeapon))
+	{
+		ShotgunWeapon->Reload();
 	}
 }
