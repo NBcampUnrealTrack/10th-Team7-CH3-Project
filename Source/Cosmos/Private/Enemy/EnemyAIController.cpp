@@ -5,14 +5,14 @@
 #include "Enemy/EnemyBase.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BrainComponent.h"
-#include "BehaviorTree/BlackboardComponent.h" 
+//#include "BehaviorTree/BlackboardComponent.h" 
 
 AEnemyAIController::AEnemyAIController()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	// Change Rotate when it's moving. -> use in Pawn, not here
 	bSetControlRotationFromPawnOrientation = false;
-	BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackBoard"));
+
 	//AIPerception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AI Perception"));
 	//SetPerceptionComponent(*AIPerception);
 	//
@@ -42,14 +42,12 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		return;
 	}
 
-	if (BehaviorTreeAsset && BlackboardComp)
-	{
-		RunBehaviorTree(BehaviorTreeAsset);
-	}
-	else
+	UBehaviorTree* BT = Enemy->GetBehaviorTree();
+	if (!BT)
 	{
 		return;
 	}
+		RunBehaviorTree(BT);
 }
 
 void AEnemyAIController::OnUnPossess()

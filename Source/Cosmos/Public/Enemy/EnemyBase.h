@@ -22,7 +22,7 @@ public:
 	AEnemyBase();
 	// Damageable functions 
 	////
-	virtual void TakeHit(float Amount, const FHitResult& HitResult) override;
+	virtual void TakeHit(float Damage, EWeaponType Weapon) override;
 	////
 	//UFUNCTION(BlueprintPure, Category = "Enemy|Stats")
 	//FORCEINLINE float GetAttackRange() const { return RuntimeStats.AttackRange; }
@@ -30,6 +30,8 @@ public:
 	void SetMovementSpeed(float NewSpeed);
 
 	//stats getter
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
+	FORCEINLINE UBehaviorTree* GetBehaviorTree() const { return BehaviorTreeAsset; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetMaxHP() const { return MaxHP; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
@@ -48,7 +50,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	// Called when all components loaded  / 엑터에 포함된 모든 컴포넌트가 생성&초기화되면 엔진이 실행
-	//virtual void PostInitializeComponents() override;
+	virtual void PostInitializeComponents() override;
 	// Called when Destroy, or moved level / 엑터가 파괴되거나 레벨 이동으로 제거 될 때 실행 -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
