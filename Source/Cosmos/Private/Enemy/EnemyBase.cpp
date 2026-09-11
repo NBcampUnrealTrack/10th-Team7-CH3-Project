@@ -54,14 +54,7 @@ AEnemyBase::AEnemyBase()
 void AEnemyBase::BeginPlay()
 {
 	Super::BeginPlay();
-	if (HealthComponent)
-	{
-		//	HealthComponent->OnDeath.AddDynamic(this, &EnemyBase::HandleDeath);
-	}
-	else
-	{
-		return;
-	}
+
 }
 
 // Called every frame
@@ -76,10 +69,18 @@ void AEnemyBase::SetMovementSpeed(float NewSpeed)
 }
 
 
-//void AEnemyBase::PostInitializeComponents()
-//{
-//	Super::PostInitializeComponents();
-//}
+void AEnemyBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if (HealthComponent)
+	{
+		//	HealthComponent->OnDeath.AddDynamic(this, &EnemyBase::HandleDeath);
+	}
+	else
+	{
+		return;
+	}
+}
 
 void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
@@ -98,7 +99,7 @@ float AEnemyBase::EnemyAttack() {
 	const float Duration = PlayAnimMontage(AttackMontage);
 	return Duration > 0.0f ? Duration : 1.0f;
 }
-// AEnemyBase.cpp
+
 void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
 

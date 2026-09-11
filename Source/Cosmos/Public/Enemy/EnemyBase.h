@@ -22,7 +22,7 @@ public:
 	AEnemyBase();
 	// Damageable functions 
 	////
-	virtual void TakeHit(float Damage, EWeaponType Weapon) override;	
+	virtual void TakeHit(float Damage, EWeaponType Weapon) override;
 	////
 	//UFUNCTION(BlueprintPure, Category = "Enemy|Stats")
 	//FORCEINLINE float GetAttackRange() const { return RuntimeStats.AttackRange; }
@@ -30,6 +30,8 @@ public:
 	void SetMovementSpeed(float NewSpeed);
 
 	//stats getter
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
+	FORCEINLINE UBehaviorTree* GetBehaviorTree() const { return BehaviorTreeAsset; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetMaxHP() const { return MaxHP; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
@@ -48,7 +50,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	// Called when all components loaded  / ���Ϳ� ���Ե� ��� ������Ʈ�� ����&�ʱ�ȭ�Ǹ� ������ ����
-	//virtual void PostInitializeComponents() override;
+	virtual void PostInitializeComponents() override;
 	// Called when Destroy, or moved level / ���Ͱ� �ı��ǰų� ���� �̵����� ���� �� �� ���� -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
