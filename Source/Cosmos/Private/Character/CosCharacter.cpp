@@ -3,6 +3,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"// [추가] IMC 등록용 서브시스템
 #include "Character/HealthComponent.h"
+#include "Weapon/ShotgunWeapon.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -193,4 +194,9 @@ float ACosCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	}
 
 	return ActualDamage;
+}
+
+AShotgunWeapon* ACosCharacter::GetEquippedWeapon() const
+{
+	return EquippedWeapon;
 }
