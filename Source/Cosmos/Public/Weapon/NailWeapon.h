@@ -22,5 +22,5 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 MaxTargetPerSwing;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	float SwingRadius = 50.f;
+	float SwingRadius = 75.f;
 };
