@@ -127,6 +127,7 @@ struct FEnchantStatData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantStat StatType = EEnchantStat::None; 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantCategory Category = EEnchantCategory::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantStatKind StatKind = EEnchantStatKind::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantValueType ValueType = EEnchantValueType::None;
