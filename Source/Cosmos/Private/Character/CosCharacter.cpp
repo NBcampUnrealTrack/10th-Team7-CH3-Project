@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Weapon/CombatComponent.h"
 
 ACosCharacter::ACosCharacter()
 {
@@ -194,9 +195,4 @@ float ACosCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	}
 
 	return ActualDamage;
-}
-
-AShotgunWeapon* ACosCharacter::GetEquippedWeapon() const
-{
-	return EquippedWeapon;
 }

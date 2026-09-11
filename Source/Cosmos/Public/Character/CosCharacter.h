@@ -21,12 +21,6 @@ class COSMOS_API ACosCharacter : public ACharacter
 public:
 	ACosCharacter();
 
-	UFUNCTION(BlueprintCallable)
-	AShotgunWeapon* GetEquippedWeapon() const;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	AShotgunWeapon* EquippedWeapon = nullptr;
-
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	USpringArmComponent* SpringArmComp;
