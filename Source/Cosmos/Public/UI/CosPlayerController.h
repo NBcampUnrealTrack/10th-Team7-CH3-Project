@@ -24,10 +24,13 @@ private:
 public:
 
 	ACosPlayerController();
-
+	FTimerHandle WeaponBindRetryTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> CombatMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
 	TSubclassOf<UUserWidget> TitleWidgetClass;
