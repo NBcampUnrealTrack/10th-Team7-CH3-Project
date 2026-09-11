@@ -5,7 +5,9 @@
 #include "Engine/GameInstance.h"
 #include "CosGameInstance.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSoulChanged, int32, NewSoul);
+class UEnchantData;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrencyChanged, int32, NewSoul);
 
 UENUM(BlueprintType)
 enum class EShotgunModuleType : uint8
@@ -28,10 +30,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Soul")
 	void AddSoul(int32 Amount);
 	UFUNCTION(BlueprintCallable, Category = "Soul")
-	bool TrySpendSoul(int32 Amount);
+	bool SpendSoul(int32 Amount);
 	UPROPERTY(BlueprintAssignable, Category = "Soul")
-	FOnSoulChanged OnSoulChanged;
+	FOnCurrencyChanged OnCurrencyChanged;
 
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void EquipEnchant(UEnchantData* Enchant);
+
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void UnEquipEnchant(UEnchantData* Enchant);
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Soul")
 	int32 Soul = 0;
