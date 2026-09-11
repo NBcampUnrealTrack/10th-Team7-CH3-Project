@@ -10,14 +10,16 @@
 class UUserWidget;
 class UInputMappingContext;
 class UHealthComponent;
-
-
+class AShotgunWeapon;
 
 
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+
+private:
+	int32 CachedMaxAmmo = 0;
 
 public:
 
@@ -98,24 +100,29 @@ public:
 	void SetUIInputMode(bool bUIMode);
 
 	UFUNCTION()
+	void SetupCharacterBindings();
+
+	UFUNCTION()
+	void OnCharacterDeath();
+
+	UFUNCTION()
 	void UpdateHP(float CurrentHealth, float MaxHealth);
 
+	UFUNCTION()
+	void UpdateAmmoUI(int32 CurrentAmmo);
 
-
+/*
 	// 테스트용 임시
 	void TestDecreaseAmmo();
 	void TestReloadAmmo();
 	void TestDecreaseHP();
 	void TestHealHP();
+*/
 
-
-	UFUNCTION()
-	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
-	
 	UFUNCTION()
 	void SetupInputComponent();
 
 protected:
 	virtual void BeginPlay() override;
-
+	virtual void OnPossess(APawn* InPawn) override; 
 };

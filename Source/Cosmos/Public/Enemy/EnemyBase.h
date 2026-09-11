@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -49,9 +49,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	// Called when all components loaded  / ¿¢ÅÍ¿¡ Æ÷ÇÔµÈ ¸ðµç ÄÄÆ÷³ÍÆ®°¡ »ý¼º&ÃÊ±âÈ­µÇ¸é ¿£ÁøÀÌ ½ÇÇà
+	// Called when all components loaded  / ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½ï¿½ï¿½Ôµï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½&ï¿½Ê±ï¿½È­ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	virtual void PostInitializeComponents() override;
-	// Called when Destroy, or moved level / ¿¢ÅÍ°¡ ÆÄ±«µÇ°Å³ª ·¹º§ ÀÌµ¿À¸·Î Á¦°Å µÉ ¶§ ½ÇÇà -> Cleanup
+	// Called when Destroy, or moved level / ï¿½ï¿½ï¿½Í°ï¿½ ï¿½Ä±ï¿½ï¿½Ç°Å³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")

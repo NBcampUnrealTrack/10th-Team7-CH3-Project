@@ -1,16 +1,19 @@
 ﻿#include "UI/CosPlayerController.h"
 #include "Character/CosCharacter.h"
 #include "Character/HealthComponent.h"
+#include "Weapon/ShotgunWeapon.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
+/*
 // 테스트용 임시 체력 변수
 static float TestCurrentHealth = 100.f;
 static float TestMaxHealth = 100.f;
 static int32 TestCurrentAmmo = 4;
 static int32 TestMaxAmmo = 4;
-
+*/
 
 ACosPlayerController::ACosPlayerController()
 	: InputMappingContext(nullptr),
@@ -39,17 +42,146 @@ void ACosPlayerController::BeginPlay()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
-			if (InputMappingContext)
+			// IsValid로 체크
+			if (IsValid(InputMappingContext.Get()))
 			{
-				Subsystem->AddMappingContext(InputMappingContext, 0);
+				Subsystem->AddMappingContext(InputMappingContext.Get(), 0);
 			}
 		}
 	}
 
 	// 1. 기본 전투 HUD
 	ShowCombatHUD();
+	// 2. 델리게이트 바인딩
+	SetupCharacterBindings();
 }
 
+void ACosPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		{
+			if (IsValid(InputMappingContext.Get()))
+			{
+				Subsystem->RemoveMappingContext(InputMappingContext.Get());
+				Subsystem->AddMappingContext(InputMappingContext.Get(), 0);
+			}
+		}
+	}
+
+	// 레벨 재시작이나 폰 재스폰 시 바인딩을 다시 안전하게 연결
+	SetupCharacterBindings();
+}
+
+// 캐릭터 및 컴포넌트 델리게이트 바인딩
+void ACosPlayerController::SetupCharacterBindings()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (!IsValid(ControlledPawn)) return;
+
+	// 1. HealthComponent 델리게이트 바인딩
+	if (UHealthComponent* HealthComp = ControlledPawn->FindComponentByClass<UHealthComponent>())
+	{
+		if (IsValid(HealthComp))
+		{
+			// 체력 변경 이벤트
+			HealthComp->OnHealthChanged.RemoveDynamic(this, &ACosPlayerController::UpdateHP);
+			HealthComp->OnHealthChanged.AddDynamic(this, &ACosPlayerController::UpdateHP);
+
+			// 사망 이벤트
+			HealthComp->OnDeath.RemoveDynamic(this, &ACosPlayerController::OnCharacterDeath);
+			HealthComp->OnDeath.AddDynamic(this, &ACosPlayerController::OnCharacterDeath);
+
+			// 초기 체력값 UI 즉시 반영 함수 여야되는데 일단 Getter 받기 전까지 임시 함수
+			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+		}
+	}
+
+	
+	// 2. ShotgunWeapon 델리게이트 바인딩
+	if (ACosCharacter* CosChar = Cast<ACosCharacter>(ControlledPawn))
+	{
+		if (AShotgunWeapon* Weapon = CosChar->GetEquippedWeapon())
+		{
+			if (IsValid(Weapon))
+			{
+				Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+				Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+
+				CachedMaxAmmo = Weapon->GetMaxAmmo();          // 최대 탄약은 여기서 한 번만 저장
+				UpdateAmmoUI(Weapon->GetCurrentAmmo());         // 초기값 반영
+			}
+		}
+	}
+	
+}
+
+void ACosPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+}
+
+void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
+{
+
+	UE_LOG(LogTemp, Warning, TEXT("UpdateHP 호출됨: %f / %f"), CurrentHealth, MaxHealth);
+	// UI 위젯이 살아있는지 IsValid로 검사
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("UpdateHP %f %f"), CurrentHealth, MaxHealth);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
+
+void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo)
+{
+	UE_LOG(LogTemp, Warning, TEXT("UpdateAmmoUI 호출됨: %d"), CurrentAmmo);
+
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, CachedMaxAmmo);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
+void ACosPlayerController::OnCharacterDeath()
+{
+	UE_LOG(LogTemp, Warning, TEXT("플레이어 캐릭터 사망"));
+
+}
+
+void ACosPlayerController::ShowCombatHUD()
+{
+	// Class 유효성 및 Instance가 이미 생성되었는지 IsValid로 검사
+	if (IsValid(CombatHUDClass) && !IsValid(CombatHUDInstance))
+	{
+		CombatHUDInstance = CreateWidget<UUserWidget>(this, CombatHUDClass);
+
+		if (IsValid(CombatHUDInstance.Get()))
+		{
+			CombatHUDInstance->AddToViewport();
+		}
+	}
+}
+
+void ACosPlayerController::CloseCombatHUD()
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		CombatHUDInstance->RemoveFromParent();
+		CombatHUDInstance = nullptr;
+	}
+}
+
+UUserWidget* ACosPlayerController::GetHUDWidget() const
+{
+	return CombatHUDInstance.Get();
+}
 
 void ACosPlayerController::ShowTitleWidget()
 {
@@ -61,90 +193,16 @@ void ACosPlayerController::HideTitleWidget()
 
 }
 
-void ACosPlayerController::ShowCombatHUD()
-{
-	// 에디터에서 CombatHUDClass(WBP_CombatHUD)를 지정했고 아직 생성된 인스턴스가 없을때
-	if (CombatHUDClass && !CombatHUDInstance)
-	{
-		// 위젯 인스턴스 생성
-		CombatHUDInstance = CreateWidget<UUserWidget>(this, CombatHUDClass);
-
-		// 화면에 띄우기
-		if (CombatHUDInstance)
-		{
-			CombatHUDInstance->AddToViewport();
-		}
-	}
-}
-
-void ACosPlayerController::CloseCombatHUD()
-{
-	if (CombatHUDInstance)
-	{
-		CombatHUDInstance->RemoveFromParent();
-		CombatHUDInstance = nullptr;
-	}
-}
-
-UUserWidget* ACosPlayerController::GetHUDWidget() const
-{
-	return CombatHUDInstance;
-}
-
-
-void ACosPlayerController::SetupInputComponent()
-{
-
-
-	APawn* ControlledPawn = GetPawn();
-	if (!ControlledPawn) return;
-
-}
-
-void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
-{
-	if (CombatHUDInstance)
-	{
-		//  함수/이벤트 호출
-		FString Cmd = FString::Printf(TEXT("UpdateHP %f %f"), CurrentHealth, MaxHealth);
-		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
-
-	}
-}
-
-void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo)
-{
-	if (CombatHUDInstance)
-	{
-		// 블루프린트에 작성한 SetAmmoText 이벤트를 이름으로 호출
-		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, MaxAmmo);
-		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
-	}
-}
-
-
-
+/*
 // 테스트용
-void ACosPlayerController::TestDecreaseHP()
-{
-	UpdateHP(70.0f, 100.0f);
-}
+void ACosPlayerController::TestDecreaseHP() { UpdateHP(70.0f, 100.0f); }
 
-void ACosPlayerController::TestHealHP()
-{
-	UpdateHP(100.0f, 100.0f);
-}
+void ACosPlayerController::TestHealHP() { UpdateHP(100.0f, 100.0f); }
 
-void ACosPlayerController::TestDecreaseAmmo()
-{
-	UpdateAmmoUI(7, 30);
-}
+void ACosPlayerController::TestDecreaseAmmo() { UpdateAmmoUI(7, 30); }
 
-void ACosPlayerController::TestReloadAmmo()
-{
-	UpdateAmmoUI(30, 30);
-}
-
+void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
+*/
 
 
 
