@@ -24,6 +24,9 @@ public:
 
 	bool IsDead() const;//현재 체력이 0인지 확인함 
 
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
 	float MaxHealth;
