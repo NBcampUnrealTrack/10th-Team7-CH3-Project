@@ -27,8 +27,6 @@ ACosCharacter::ACosCharacter()
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
-	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
-
 	GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
 }
 

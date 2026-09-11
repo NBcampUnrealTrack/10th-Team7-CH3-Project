@@ -99,7 +99,7 @@ float AEnemyBase::EnemyAttack() {
 	return Duration > 0.0f ? Duration : 1.0f;
 }
 // AEnemyBase.cpp
-void AEnemyBase::TakeHit(float Amount, const FHitResult& HitResult)
+void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
 
 }
