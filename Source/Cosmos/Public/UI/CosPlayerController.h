@@ -10,8 +10,7 @@
 class UUserWidget;
 class UInputMappingContext;
 class UHealthComponent;
-
-
+class AShotgunWeapon;
 
 
 UCLASS()
@@ -98,8 +97,16 @@ public:
 	void SetUIInputMode(bool bUIMode);
 
 	UFUNCTION()
+	void SetupCharacterBindings();
+
+	UFUNCTION()
+	void OnCharacterDeath();
+
+	UFUNCTION()
 	void UpdateHP(float CurrentHealth, float MaxHealth);
 
+	UFUNCTION()
+	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
 
 
 	// 테스트용 임시
@@ -108,14 +115,10 @@ public:
 	void TestDecreaseHP();
 	void TestHealHP();
 
-
-	UFUNCTION()
-	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
-	
 	UFUNCTION()
 	void SetupInputComponent();
 
 protected:
 	virtual void BeginPlay() override;
-
+	virtual void OnPossess(APawn* InPawn) override; 
 };
