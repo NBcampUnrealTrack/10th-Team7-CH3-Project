@@ -36,6 +36,10 @@ bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 		return false;
 	}
 
-	Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+	//Damageable->TakeDamage(GetCurrentDamage(), HitResult);
+	Damageable->TakeHit(GetCurrentDamage(), GetWeaponType());
+
+	OnHitConfirmed.Broadcast(HitActor); // 적이 맞았을때 방송
+
 	return true; // 데미지를 준 경우
 }

@@ -79,17 +79,16 @@ struct FEnemyData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
-	// ü��, ���ݷ�, �̵��ӵ�, �����ӵ�, ���ݼӵ�, ����ü �ӵ�, ���� ���, ��ȸ �ݰ�, ��ȥ ���� ��ӷ�
-	// ���� ���� ����ü
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float HP = 0.f; // ü��
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackPower = 0.f; // ���ݷ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MoveSpeed = 0.f; // �̵��ӵ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DashSpeed = 0.f; // ���� �ӵ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackSpeed = 0.f; // ���� �ӵ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float BulletSpeed = 0.f; // ����ü �ӵ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlightAltitude = 0.f; // ���� ���
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRadius = 0.f;	// ��ȸ �ݰ�
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SoulDrop = 0; // �ҿ� ��ӷ�
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackPower = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MoveSpeed = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float DashSpeed = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float AttackSpeed = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float BulletSpeed = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float FlightAltitude = 0.f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRadius = 0.f;	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SoulDrop = 0; 
 };
 
 USTRUCT(BlueprintType)
@@ -127,6 +126,7 @@ struct FEnchantStatData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantStat StatType = EEnchantStat::None; 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantCategory Category = EEnchantCategory::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantStatKind StatKind = EEnchantStatKind::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantValueType ValueType = EEnchantValueType::None;

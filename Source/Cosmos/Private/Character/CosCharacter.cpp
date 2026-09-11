@@ -3,6 +3,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"// [추가] IMC 등록용 서브시스템
 #include "Character/HealthComponent.h"
+#include "Weapon/ShotgunWeapon.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -23,7 +24,8 @@ ACosCharacter::ACosCharacter()
 
 	NormalSpeed = 600.0f;
 	SprintSpeedMultiplier = 1.5f;
-	SprintSpeed = NormalSpeed * SprintSpeedMultiplier;
+
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
@@ -170,7 +172,7 @@ void ACosCharacter::StartSprint(const FInputActionValue& Value)
 {
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = NormalSpeed * SprintSpeedMultiplier;
 	}
 }
 void ACosCharacter::StopSprint(const FInputActionValue& Value)
@@ -188,10 +190,15 @@ float ACosCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	// HealthComponent를 찾아서 데미지 적용
-	if (UHealthComponent* HealthComp = FindComponentByClass<UHealthComponent>())
+	if (HealthComponent)//수정 : 멤버로 이미 갖고 있으니 바로 접근
 	{
-		HealthComp->ApplyDamage(ActualDamage);
+		HealthComponent->ApplyDamage(ActualDamage);
 	}
 
 	return ActualDamage;
+}
+
+AShotgunWeapon* ACosCharacter::GetEquippedWeapon() const
+{
+	return EquippedWeapon;
 }

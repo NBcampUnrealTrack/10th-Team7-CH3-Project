@@ -68,3 +68,8 @@ float ANailWeapon::GetCurrentDamage() const
 {
 	return BaseDamage; 
 }
+
+EWeaponType ANailWeapon::GetWeaponType() const
+{
+	return EWeaponType::Nail;
+}

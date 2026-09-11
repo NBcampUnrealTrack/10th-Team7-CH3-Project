@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -28,7 +27,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FEnchantRolledStat> RolledStats;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bHasSkill = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FName SkillName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) EEnchantSkillType SkillType = EEnchantSkillType::IncreaseAllDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillValue = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillDuration = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillCooldown = 0.f;

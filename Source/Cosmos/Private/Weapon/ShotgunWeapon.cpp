@@ -18,6 +18,7 @@ void AShotgunWeapon::PerformAttack()
 	}
 
 	CurrentAmmo--;
+	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
 	const FVector StartLocation = GetActorLocation(); //트레이스 시작 위치
 	const FVector EndLocation = StartLocation + (GetActorForwardVector() * AttackRange); // 끝나는 위치(시작 + 사거리)
@@ -50,6 +51,11 @@ float AShotgunWeapon::GetCurrentDamage() const
 	return BaseDamage;
 }
 
+int32 AShotgunWeapon::GetCurrentAmmo() const
+{
+	return CurrentAmmo;
+}
+
 void AShotgunWeapon::Reload()
 {
 	if (bIsReloading || CurrentAmmo == MaxAmmo) 
@@ -76,4 +82,10 @@ void AShotgunWeapon::FinishReload()
 	}
 	CurrentAmmo = MaxAmmo;
 	bIsReloading = false;
+	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송
+}
+
+EWeaponType AShotgunWeapon::GetWeaponType() const
+{
+	return EWeaponType::Shotgun;
 }
