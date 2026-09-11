@@ -15,10 +15,12 @@ void AWeaponBase::TryAttack() //공격 속도
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
 	{
+		UE_LOG(LogTemp, Warning, TEXT("TryAttack: CoolDown"));
 		return;
 	}
 
 	LastAttackTime = CurrentTime;
+	UE_LOG(LogTemp, Warning, TEXT("TryAttack: PerformAttack Called"));
 	PerformAttack();
 }
 
@@ -42,4 +44,25 @@ bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 	OnHitConfirmed.Broadcast(HitActor); // 적이 맞았을때 방송
 
 	return true; // 데미지를 준 경우
+}
+
+bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirection) const
+{
+	APawn* OwnerPawn = Cast<APawn>(GetAttachParentActor());
+	if (!IsValid(OwnerPawn))
+	{
+		return false;
+	}
+
+	AController* Controller = OwnerPawn->GetController();
+	if (!IsValid(Controller))
+	{
+		return false;
+	}
+
+	FRotator ViewRotation;
+	Controller->GetPlayerViewPoint(OutStart, ViewRotation);
+	OutDirection = ViewRotation.Vector();
+
+	return true;
 }

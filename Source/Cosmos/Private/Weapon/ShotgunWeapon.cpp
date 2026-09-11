@@ -1,10 +1,11 @@
 ﻿#include "Weapon/ShotgunWeapon.h"
+#include "DrawDebugHelpers.h" // 트레이스 시각화
 
 AShotgunWeapon::AShotgunWeapon()
 {
 	BaseDamage = 30.f;
 	AttackInterval = 1.f;
-	AttackRange = 2000.f;
+	AttackRange = 1000.f;
 	MaxAmmo = 4;
 	CurrentAmmo = MaxAmmo;
 	ReloadTime = 2.f;
@@ -20,15 +21,38 @@ void AShotgunWeapon::PerformAttack()
 	CurrentAmmo--;
 	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
-	const FVector StartLocation = GetActorLocation(); //트레이스 시작 위치
-	const FVector EndLocation = StartLocation + (GetActorForwardVector() * AttackRange); // 끝나는 위치(시작 + 사거리)
+	FVector StartLocation;
+	FVector Direction;
+	if (!GetTraceStartAndDirection(StartLocation, Direction)) // 시작점, 방향 설정
+	{
+		return;
+	}
+
+	const FVector EndLocation = StartLocation + (Direction * AttackRange); //끝점
 
 	FHitResult HitResult; // 트레이스 결과를 담을 곳
 	FCollisionQueryParams QueryParams; // 트레이스 설정
 	QueryParams.AddIgnoredActor(this); // 무기 자체는 맞지 않도록
-	QueryParams.AddIgnoredActor(GetOwner()); // 플레이어가 맞지 않도록
+	QueryParams.AddIgnoredActor(GetAttachParentActor()); // 플레이어가 맞지 않도록
 
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams); // 라인 트레이스, ECC_Visibility : 시각적 오브젝트 기준 충돌 
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(// 라인 트레이스
+		HitResult, // 결과 담는 곳
+		StartLocation, // 시작 
+		EndLocation, // 끝
+		ECC_Visibility, //시각적 오브젝트 기준 충돌
+		QueryParams // 트레이스 설정
+	); 
+
+	DrawDebugLine( // 라인트레이스 시각화
+		GetWorld(), //현재 월드
+		StartLocation, //시작
+		EndLocation, //끝
+		bHit ? FColor::Green : FColor::Red, // 라인 색 (맞으면 초록, 안맞으면 빨강)
+		false, // 계속 남아있는지
+		2.f, // 몇 초간 남아있나
+		0, // 그리기 우선순위, 0이면 벽은 뚫지 못함
+		2.f // 선 두께
+	);
 
 	if (bHit) // 무언가에 맞았는가
 	{
