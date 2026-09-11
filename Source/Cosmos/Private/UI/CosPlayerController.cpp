@@ -101,7 +101,7 @@ void ACosPlayerController::SetupCharacterBindings()
 		}
 	}
 
-	/*
+	
 	// 2. ShotgunWeapon 델리게이트 바인딩
 	if (ACosCharacter* CosChar = Cast<ACosCharacter>(ControlledPawn))
 	{
@@ -112,12 +112,12 @@ void ACosPlayerController::SetupCharacterBindings()
 				Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
 				Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
 
-				// 초기 탄약수 UI 즉시 반영
-				UpdateAmmoUI(Weapon->GetCurrentAmmo(), Weapon->GetMaxAmmo());
+				CachedMaxAmmo = Weapon->GetMaxAmmo();          // 최대 탄약은 여기서 한 번만 저장
+				UpdateAmmoUI(Weapon->GetCurrentAmmo());         // 초기값 반영
 			}
 		}
 	}
-	*/
+	
 }
 
 void ACosPlayerController::SetupInputComponent()
@@ -138,11 +138,13 @@ void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
 }
 
 
-void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo)
+void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo)
 {
+	UE_LOG(LogTemp, Warning, TEXT("UpdateAmmoUI 호출됨: %d"), CurrentAmmo);
+
 	if (IsValid(CombatHUDInstance.Get()))
 	{
-		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, MaxAmmo);
+		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, CachedMaxAmmo);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
 }
