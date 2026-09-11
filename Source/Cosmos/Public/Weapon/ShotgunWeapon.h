@@ -19,6 +19,8 @@ public:
 
 	int32 GetCurrentAmmo() const;
 
+	FORCEINLINE int32 GetMaxAmmo() const { return MaxAmmo; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Weapon")
 	FOnAmmoChanged OnAmmoChanged;
 
