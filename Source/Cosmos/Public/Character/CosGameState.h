@@ -1,4 +1,6 @@
-﻿#include "CoreMinimal.h"
+﻿#pragma once
+
+#include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
 #include "CosGameState.generated.h"
 
