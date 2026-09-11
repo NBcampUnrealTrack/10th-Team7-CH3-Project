@@ -5,6 +5,7 @@
 #include "InputActionValue.h"
 #include "CosCharacter.generated.h"
 
+class UHealthComponent;
 class USpringArmComponent;
 class UCameraComponent;
 // [추가] Enhanced Input 클래스 전방 선언
@@ -26,6 +27,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* CameraComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHealthComponent> HealthComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float NormalSpeed;
@@ -54,6 +58,9 @@ protected:
 	// =========================================================================
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+		class AController* EventInstigator, AActor* DamageCauser) override;
+
 
 	UFUNCTION()
 	void Move(const FInputActionValue& value);

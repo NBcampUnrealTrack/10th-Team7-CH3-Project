@@ -2,6 +2,7 @@
 #include "UI/CosPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"// [추가] IMC 등록용 서브시스템
+#include "Character/HealthComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -23,6 +24,8 @@ ACosCharacter::ACosCharacter()
 	NormalSpeed = 600.0f;
 	SprintSpeedMultiplier = 1.5f;
 	SprintSpeed = NormalSpeed * SprintSpeedMultiplier;
+
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
 	GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
 }
@@ -176,4 +179,19 @@ void ACosCharacter::StopSprint(const FInputActionValue& Value)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
 	}
+}
+
+float ACosCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+	AController* EventInstigator, AActor* DamageCauser)
+{
+	// 실제 피해량 계산
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// HealthComponent를 찾아서 데미지 적용
+	if (UHealthComponent* HealthComp = FindComponentByClass<UHealthComponent>())
+	{
+		HealthComp->ApplyDamage(ActualDamage);
+	}
+
+	return ActualDamage;
 }

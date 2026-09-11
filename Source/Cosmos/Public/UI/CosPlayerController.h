@@ -108,12 +108,13 @@ public:
 	UFUNCTION()
 	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
 
-
+/*
 	// 테스트용 임시
 	void TestDecreaseAmmo();
 	void TestReloadAmmo();
 	void TestDecreaseHP();
 	void TestHealHP();
+*/
 
 	UFUNCTION()
 	void SetupInputComponent();

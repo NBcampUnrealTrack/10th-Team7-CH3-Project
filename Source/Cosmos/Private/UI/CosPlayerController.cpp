@@ -7,12 +7,13 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
+/*
 // 테스트용 임시 체력 변수
 static float TestCurrentHealth = 100.f;
 static float TestMaxHealth = 100.f;
 static int32 TestCurrentAmmo = 4;
 static int32 TestMaxAmmo = 4;
-
+*/
 
 ACosPlayerController::ACosPlayerController()
 	: InputMappingContext(nullptr),
@@ -96,7 +97,7 @@ void ACosPlayerController::SetupCharacterBindings()
 			HealthComp->OnDeath.AddDynamic(this, &ACosPlayerController::OnCharacterDeath);
 
 			// 초기 체력값 UI 즉시 반영 함수 여야되는데 일단 Getter 받기 전까지 임시 함수
-			UpdateHP(TestCurrentHealth, TestMaxHealth);
+			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
 		}
 	}
 
@@ -190,7 +191,7 @@ void ACosPlayerController::HideTitleWidget()
 
 }
 
-
+/*
 // 테스트용
 void ACosPlayerController::TestDecreaseHP() { UpdateHP(70.0f, 100.0f); }
 
@@ -199,7 +200,7 @@ void ACosPlayerController::TestHealHP() { UpdateHP(100.0f, 100.0f); }
 void ACosPlayerController::TestDecreaseAmmo() { UpdateAmmoUI(7, 30); }
 
 void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
-
+*/
 
 
 
