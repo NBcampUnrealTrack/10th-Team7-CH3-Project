@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "CosTypes.h"
 #include "Damageable.generated.h"
 
 UINTERFACE(MinimalAPI)
@@ -15,4 +16,6 @@ class COSMOS_API IDamageable
 	GENERATED_BODY()
 
 public:
+	//virtual void TakeDamage(float Amount, const FHitResult& HitResult) = 0;
+	virtual void TakeHit(float Damage, EWeaponType Weapon) = 0;
 };
