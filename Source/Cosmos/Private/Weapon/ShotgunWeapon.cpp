@@ -104,6 +104,7 @@ void AShotgunWeapon::FinishReload()
 	{
 		return;
 	}
+	UE_LOG(LogTemp, Warning, TEXT("Reloading Finished"));
 	CurrentAmmo = MaxAmmo;
 	bIsReloading = false;
 	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송

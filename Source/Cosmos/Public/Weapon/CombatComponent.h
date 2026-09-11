@@ -16,6 +16,8 @@ class COSMOS_API UCombatComponent : public UActorComponent
 
 public:
 	UCombatComponent();
+	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
+	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -27,6 +29,8 @@ protected:
 	UInputAction* NailAttackAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* ShotgunAttackAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ReloadAction;
 
 	//TryAttack() 호출을 위한 포인터
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -37,4 +41,5 @@ protected:
 
 	void OnNailAttack();
 	void OnShotgunAttack();
+	void OnReload();
 };
