@@ -15,13 +15,12 @@ void AWeaponBase::TryAttack() //공격 속도
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
 	{
-		UE_LOG(LogTemp, Warning, TEXT("TryAttack: CoolDown"));
 		return;
 	}
 
 	LastAttackTime = CurrentTime;
-	UE_LOG(LogTemp, Warning, TEXT("TryAttack: PerformAttack Called"));
 	PerformAttack();
+	OnAttackPlayed();
 }
 
 //HitResult안에 HitActor도 포함

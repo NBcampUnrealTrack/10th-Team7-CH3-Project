@@ -18,12 +18,15 @@ public:
 	void TryAttack();
 	bool ApplyDamage(AActor* HitActor, const FHitResult& HitResult); // 데미저블 판단을 위해 bool형
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon") // 애니메이션 구현 위해 이벤트로 호출
+	void OnAttackPlayed();
+
 	UPROPERTY(BlueprintAssignable, Category = "Weapon") // Bind Event to OnHitConfirmed 설정
 	FOnHitConfirmed OnHitConfirmed; //방송하기 위한 변수 
 
 protected:
 
-	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
