@@ -47,3 +47,8 @@ bool UHealthComponent::IsDead() const
 	{
 		return CurrentHealth <= 0.0f;
 	}
+void UHealthComponent::SetHPAtStart(float MaxHP)
+{
+	MaxHealth = MaxHP;
+	CurrentHealth = MaxHealth;
+}

@@ -27,6 +27,9 @@ public:
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void SetHPAtStart(float MaxHP);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
 	float MaxHealth;

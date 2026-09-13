@@ -1,4 +1,4 @@
-ï»¿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -11,7 +11,7 @@
 class UHealthComponent;
 class UAnimMontage;
 class UBehaviorTree;
-
+class USoundBase;
 UCLASS()
 class COSMOS_API AEnemyBase : public ACharacter, public IDamageable
 {
@@ -43,15 +43,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetAttackDelay() const { return AttackDelay; }
 
+	//attack hit
+	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
+	void AttackHitCheck();
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
 	float EnemyAttack();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	// Called when all components loaded  / ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½ï¿½ï¿½Ôµï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½&ï¿½Ê±ï¿½È­ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	// Called when all components loaded  / ¿¢ÅÍ¿¡ Æ÷ÇÔµÈ ¸ðµç ÄÄÆ÷³ÍÆ®°¡ »ý¼º&ÃÊ±âÈ­µÇ¸é ¿£ÁøÀÌ ½ÇÇà
 	virtual void PostInitializeComponents() override;
-	// Called when Destroy, or moved level / ï¿½ï¿½ï¿½Í°ï¿½ ï¿½Ä±ï¿½ï¿½Ç°Å³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ -> Cleanup
+	// Called when Destroy, or moved level / ¿¢ÅÍ°¡ ÆÄ±«µÇ°Å³ª ·¹º§ ÀÌµ¿À¸·Î Á¦°Å µÉ ¶§ ½ÇÇà -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
@@ -59,6 +62,7 @@ protected:
 	//HealthComponent
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite, Category = "AI")
 	TObjectPtr<UHealthComponent> HealthComponent;
+
 	//Assets / Need to Set AnimBP <- for using Anim in cpp
 	////
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
@@ -66,7 +70,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
 	TObjectPtr<UAnimMontage> HitReactMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
-	TObjectPtr<UAnimMontage> DeatMontage;
+	TObjectPtr<UAnimMontage> DeathMontage;
+	//Sounds
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> FootStepSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> AttackSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> HitSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> DeathHitSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> DeathSound;
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
 	float DeathDelay = 2.0f;
@@ -82,12 +97,19 @@ protected:
 	float AttackDamage = 10.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackDelay = 1.5f;
-	void InitializaEnemy();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float AttackPreDelay = 0.5f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float AttackRadius = 60.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float AttackOffset = 75.0f;
+	void SetEnemyAtStart();
 
 	UFUNCTION()
 	void HandleDeath();
 
 	FTimerHandle DeathTimerHandle;
+	FTimerHandle AttackHitTimerHandle;
 
 public:
 	// NO TICK
