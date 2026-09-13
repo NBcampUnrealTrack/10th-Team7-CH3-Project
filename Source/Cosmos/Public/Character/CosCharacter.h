@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Weapon/Damageable.h"//[추가] 데미져블 인터페이스 사용하게
 #include "CosCharacter.generated.h"
 
 class UHealthComponent;
@@ -14,12 +15,13 @@ class UInputAction;
 // ㄴ 테스트용
 
 UCLASS()
-class COSMOS_API ACosCharacter : public ACharacter
+class COSMOS_API ACosCharacter : public ACharacter, public IDamageable// IDamageable 상속 추가
 {
 	GENERATED_BODY()
 
 public:
 	ACosCharacter();
+	void TakeHit(float Damage, EWeaponType Weapon) override;//추가한 IDamageable 구현부분
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -57,8 +59,7 @@ protected:
 	// =========================================================================
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-		class AController* EventInstigator, AActor* DamageCauser) override;
+	
 
 
 	UFUNCTION()

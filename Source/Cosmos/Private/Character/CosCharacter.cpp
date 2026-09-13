@@ -182,17 +182,10 @@ void ACosCharacter::StopSprint(const FInputActionValue& Value)
 	}
 }
 
-float ACosCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
-	AController* EventInstigator, AActor* DamageCauser)
+void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 {
-	// 실제 피해량 계산
-	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-	// HealthComponent를 찾아서 데미지 적용
-	if (HealthComponent)//수정 : 멤버로 이미 갖고 있으니 바로 접근
+	if (HealthComponent)
 	{
-		HealthComponent->ApplyDamage(ActualDamage);
+		HealthComponent->ApplyDamage(Damage);
 	}
-
-	return ActualDamage;
 }
