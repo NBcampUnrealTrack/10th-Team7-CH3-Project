@@ -186,6 +186,6 @@ void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 {
 	if (HealthComponent)
 	{
-		HealthComponent->ApplyDamage(Damage);
+		HealthComponent->ApplyDamage(Damage, Weapon);
 	}
 }

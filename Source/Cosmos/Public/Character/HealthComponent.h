@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "CosTypes.h" //코스타입 추가
 #include "HealthComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -19,7 +20,7 @@ class COSMOS_API UHealthComponent : public UActorComponent
 public:	
 	UHealthComponent();
 
-	void ApplyDamage(float Damage); //데미지만큼 현재 체력 감소시킴. 체력이 0이면 OnDeath 방송
+	void ApplyDamage(float Damage, EWeaponType Weapon); //데미지만큼 현재 체력 감소시킴. 체력이 0이면 OnDeath 방송
 	void Heal(float Amount);//현재 체력 회복, 최대 체력 넘진 않음
 
 	bool IsDead() const;//현재 체력이 0인지 확인함 
