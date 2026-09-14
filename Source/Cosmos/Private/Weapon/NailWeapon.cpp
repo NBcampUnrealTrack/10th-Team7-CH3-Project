@@ -29,7 +29,7 @@ void ANailWeapon::PerformAttack()
 		StartLocation,
 		EndLocation,
 		FQuat::Identity,// FQuat: 회전을 표현하는 방식 , Identity : 회전이 없는 상태. 구체는 회전이 의미 없기 때문에
-		ECC_Visibility,
+		ECC_Weapon,
 		FCollisionShape::MakeSphere(SwingRadius), // 구체 반지름
 		QueryParams // 나머진 샷건과 동일
 	);

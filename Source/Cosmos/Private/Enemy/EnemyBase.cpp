@@ -43,7 +43,9 @@ AEnemyBase::AEnemyBase()
 	Movement->GetNavAgentPropertiesRef().bCanJump = false;
 	Movement->GetNavAgentPropertiesRef().bCanSwim = false;
 	//Disable Capsule Collision Overlap Each Monsters. ->  Use RVOAvoidance up there / 콜리전 계산 중지, 겹치기 방지는 위에 RVO가 함
-	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	Capsule->SetCollisionObjectType(ECC_Enemies);                      
+	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Ignore);
+	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	Capsule->SetGenerateOverlapEvents(false);
 	//for Reduce Animations costs / 시야 밖 적들 애니메이션 줄이기
 	MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
@@ -116,7 +118,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 		return;
 	}
 	HealthComponent->ApplyDamage(Damage, EWeaponType::None);
-	if (!IsAlive())
+	if (HealthComponent->IsDead())
 	{
 		return;
 	}
@@ -143,15 +145,29 @@ void AEnemyBase::HandleDeath()
 	}
 	GetCharacterMovement()->DisableMovement();
 	SetActorEnableCollision(false);
+	//RAGDOLL SECTION, Instead DeathMontage
+	//// Delete this section if it make frame down
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	
+	USkeletalMeshComponent* MeshComp = GetMesh();
+
+	MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));  
+	MeshComp->SetSimulatePhysics(true);                 
+	MeshComp->WakeAllRigidBodies();
+	MeshComp->bBlendPhysics = true;                        
+	MeshComp->bComponentUseFixedSkelBounds = false;
+	/////////////////////////////////////////////////////////
 	if (DeathSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 	}
-	if (DeathMontage)
-	{
-		PlayAnimMontage(DeathMontage);
-	}
+	//if (DeathMontage)
+	//{
+	//	PlayAnimMontage(DeathMontage);
+	//}
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, [this]() { Destroy(); }, DeathDelay, false);
 }
 

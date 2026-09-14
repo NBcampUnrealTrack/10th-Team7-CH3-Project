@@ -57,3 +57,6 @@ enum class ECosStatType : uint8     // StatType이라는 이름이 엔진에 있
 
     MAX                 UMETA(Hidden)                               
 };
+
+constexpr ECollisionChannel ECC_Enemies = ECollisionChannel::ECC_GameTraceChannel1;
+constexpr ECollisionChannel ECC_Weapon = ECollisionChannel::ECC_GameTraceChannel2;
