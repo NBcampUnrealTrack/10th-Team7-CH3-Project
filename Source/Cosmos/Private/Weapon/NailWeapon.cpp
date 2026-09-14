@@ -4,18 +4,24 @@
 ANailWeapon::ANailWeapon()
 {
 	BaseDamage = 50.f;
-	AttackInterval = 0.6f;
+	AttackInterval = 0.3f;
 	AttackRange = 200.f;
 	MaxTargetPerSwing = 2;
+
+	ComboWindowBonus = 0.3f;
+	bSwingLeftToRight = false;
+	LastSwingTime = -100.f;
 }
 
-void ANailWeapon::PerformAttack()
+bool ANailWeapon::PerformAttack()
 {
+	UpdateSwingDirection();
+
 	FVector StartLocation; 
 	FVector Direction;
 	if (!GetTraceStartAndDirection(StartLocation, Direction)) //샷건과 동일
 	{
-		return;
+		return false;
 	}
 	const FVector EndLocation = StartLocation + (Direction * AttackRange);
 
@@ -67,7 +73,7 @@ void ANailWeapon::PerformAttack()
 
 	if (!bHit) // 안맞은 경우
 	{
-		return;
+		return true; // 재장전중, 탄약없음 이 아니라면 트루
 	}
 
 	TSet<AActor*> AlreadyHit; // 맞은 적 기록. 중복데미지 방지
@@ -94,6 +100,8 @@ void ANailWeapon::PerformAttack()
 			HitCount++;
 		}
 	}
+
+	return true;
 }
 
 void ANailWeapon::ApplyEnchant()
@@ -109,4 +117,20 @@ float ANailWeapon::GetCurrentDamage() const
 EWeaponType ANailWeapon::GetWeaponType() const // 무기타입 대못 반환
 {
 	return EWeaponType::Nail;
+}
+
+void ANailWeapon::UpdateSwingDirection() // 좌공격모션 후 몇 초 동안은 우공격 모션이 나오도록.
+{
+	const float CurrentTime = GetWorld()->GetTimeSeconds(); // 공격속도 로직과 동일
+	if (CurrentTime - LastSwingTime <= GetComboWindow())
+	{
+		bSwingLeftToRight = !bSwingLeftToRight;
+	}
+
+	else
+	{
+		bSwingLeftToRight = true;
+	}
+
+	LastSwingTime = CurrentTime;
 }

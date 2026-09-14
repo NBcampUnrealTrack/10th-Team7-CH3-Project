@@ -11,22 +11,22 @@ AShotgunWeapon::AShotgunWeapon()
 	ReloadTime = 2.f;
 }
 
-void AShotgunWeapon::PerformAttack()
+bool AShotgunWeapon::PerformAttack()
 {
 	if (bIsReloading || CurrentAmmo <= 0) 
 	{
-		return;
+		return false;
 	}
-
-	CurrentAmmo--;
-	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
 	FVector StartLocation;
 	FVector Direction;
 	if (!GetTraceStartAndDirection(StartLocation, Direction)) // 시작점, 방향 설정
 	{
-		return;
+		return false;
 	}
+
+	CurrentAmmo--;
+	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
 	const FVector EndLocation = StartLocation + (Direction * AttackRange); //끝점
 
@@ -59,6 +59,7 @@ void AShotgunWeapon::PerformAttack()
 		TryApplyDamage(HitResult.GetActor());
 	}
 
+	return true;
 }
 void AShotgunWeapon::ApplyEnchant()
 {
