@@ -89,7 +89,7 @@ void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 // 
 // void CosGameMode::Recalc()
 // {
-//		UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
+//		UCosGameInstance* GI = Cast<UCosGameInstance>(GetWorld()->GetGameInstance());
 //		if (!GI) return;
 //		
 //		// All

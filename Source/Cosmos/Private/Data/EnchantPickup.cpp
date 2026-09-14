@@ -75,9 +75,17 @@ void AEnchantPickup::ActivateEnchant(AActor* Activator)
 	UE_LOG(LogTemp, Warning, TEXT("인챈트를 획득합니다!!"));
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{
-		GameInstance->CollectEnchant(GeneratedEnchant);
+		if (GameInstance->CollectEnchant(GeneratedEnchant))
+		{
+			DestroyEnchant();
+		}
+		else
+		{
+			// 획득하지 못하면 (인챈트 인벤토리가 꽉 차서)
+			// 어떻게 처리??
+		}
 	}
-	DestroyEnchant();
+	
 }
 
 void AEnchantPickup::DestroyEnchant()
