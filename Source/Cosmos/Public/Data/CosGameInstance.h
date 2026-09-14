@@ -50,6 +50,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Enchant")
 	float GetTotalStat(EEnchantStat Stat) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Shotgun")
+	void UpgradeShotgun(EShotgunModuleType Type);
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Soul")
 	int32 Soul = 0;

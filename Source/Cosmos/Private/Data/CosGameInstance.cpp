@@ -138,3 +138,8 @@ float UCosGameInstance::GetTotalStat(EEnchantStat Stat) const
 	
 	return Sum;
 }
+
+void UCosGameInstance::UpgradeShotgun(EShotgunModuleType Type)
+{
+
+}
