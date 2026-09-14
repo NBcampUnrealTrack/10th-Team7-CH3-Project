@@ -56,7 +56,7 @@ void AShotgunWeapon::PerformAttack()
 
 	if (bHit) // 무언가에 맞았는가
 	{
-		ApplyDamage(HitResult.GetActor(), HitResult);
+		TryApplyDamage(HitResult.GetActor());
 	}
 
 }

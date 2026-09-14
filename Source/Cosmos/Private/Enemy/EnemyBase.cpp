@@ -70,7 +70,10 @@ void AEnemyBase::SetEnemyAtStart()
 		HealthComponent->SetHPAtStart(MaxHP);
 	}
 }
-
+bool AEnemyBase::IsAlive() const
+{
+	return HealthComponent && !HealthComponent->IsDead();
+}
 void AEnemyBase::SetMovementSpeed(float NewSpeed)
 {
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
@@ -110,7 +113,7 @@ float AEnemyBase::EnemyAttack() {
 
 void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
-	if (Damage <= 0.f || !HealthComponent || HealthComponent->IsDead())
+	if (Damage <= 0.f || !IsAlive())
 	{
 		return;
 	}
@@ -121,7 +124,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	}
 	if (HitSound)
 	{
-			UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
 	}
 	if (HitReactMontage)
 	{
@@ -135,6 +138,10 @@ void AEnemyBase::HandleDeath()
 	if (AAIController* AI = Cast<AAIController>(GetController()))
 	{
 		AI->StopMovement();
+		if (AI->BrainComponent)
+		{
+			AI->BrainComponent->StopLogic(TEXT("Death"));
+		}
 	}
 	GetCharacterMovement()->DisableMovement();
 	SetActorEnableCollision(false);
@@ -166,7 +173,7 @@ void AEnemyBase::HandleDeath()
 
 void AEnemyBase::AttackHitCheck()
 {
-	if (HealthComponent && HealthComponent->IsDead())
+	if (!IsAlive())
 	{
 		return;
 	}
@@ -203,8 +210,6 @@ void AEnemyBase::AttackHitCheck()
 		if (IDamageable* bonk = Cast<IDamageable>(Target))
 		{
 			bonk->TakeHit(AttackDamage, EWeaponType::None);
-		
-
 		}
 		break;
 	}
