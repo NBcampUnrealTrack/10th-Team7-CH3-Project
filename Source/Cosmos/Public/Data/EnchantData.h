@@ -20,7 +20,6 @@ class COSMOS_API UEnchantData : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FText EnchantName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FText EnchantDescription;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UTexture2D* Icon;
 
