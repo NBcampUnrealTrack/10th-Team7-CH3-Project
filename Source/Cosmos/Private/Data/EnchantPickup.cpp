@@ -72,7 +72,7 @@ void AEnchantPickup::ActivateEnchant(AActor* Activator)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("장착 실행합니다!!"));
+	UE_LOG(LogTemp, Warning, TEXT("인챈트를 획득합니다!!"));
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{
 		GameInstance->CollectEnchant(GeneratedEnchant);
