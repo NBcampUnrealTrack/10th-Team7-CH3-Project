@@ -26,10 +26,10 @@ public:
 	FOnCurrencyChanged OnCurrencyChanged;
 	UPROPERTY(BlueprintAssignable, Category = "Change")
 	FOnLoadoutChanged OnLoadoutChange;
-	UPROPERTY()
-	TArray<UEnchantData*> CollectedEnchant; // 인챈트 인벤토리f
-	UPROPERTY()
-	TArray<UEnchantData*> EquippedEnchant; // 장착한 인텐츠
+	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
+	TArray<UEnchantData*> CollectedEnchant; // 인챈트 인벤토리
+	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
+	TArray<UEnchantData*> EquippedEnchant; // 장착한 인챈트
 
 	
 	

@@ -79,7 +79,10 @@ bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 
 void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 {
-	
+	if (!Enchant || !EquippedEnchant.Contains(Enchant)) return;
+
+	EquippedEnchant.Remove(Enchant);
+	OnLoadoutChange.Broadcast();
 }
 
 // GameMode에서 사용할 Recalc() 함수
