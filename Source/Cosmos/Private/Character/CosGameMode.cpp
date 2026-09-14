@@ -22,11 +22,12 @@ void ACosGameMode::BeginPlay()
 	);
 }
 
-void ACosGameMode::StartGame()
+void ACosGameMode::StartNextWave()
 {
 }
 
-void ACosGameMode::StartNextWave()
+void ACosGameMode::StartGame()
 {
+	UGameplayStatics::OpenLevel(this, FName("L_AlphaTestMap"));
 }
 

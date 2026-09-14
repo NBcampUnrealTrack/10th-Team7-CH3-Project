@@ -27,7 +27,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<AWaveSpawner> WaveSpawner;
 
-	int32 CrrentWaveIndex = 0;//몇번째 웨이브인지
+	int32 CurrentWaveIndex = 0;//몇번째 웨이브인지
 
 	
 };
