@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Data/EnchantData.h"
+#include "Data/CosDataTable.h"
+#include "Data/CosGameInstance.h"
 #include "EnchantPickup.generated.h"
 
 class USphereComponent;
