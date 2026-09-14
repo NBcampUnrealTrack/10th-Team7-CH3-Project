@@ -4,6 +4,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "CosGameMode.generated.h"
 
+class AWaveSpawner;
+
 UCLASS()
 class COSMOS_API ACosGameMode : public AGameModeBase
 {
@@ -11,6 +13,21 @@ class COSMOS_API ACosGameMode : public AGameModeBase
 
 public:
 	ACosGameMode();
+
+	UFUNCTION(BlueprintCallable)
+	void StartGame();
+
+	UFUNCTION(BlueprintCallable)
+	void StartNextWave();
+
+protected:
+	virtual void BeginPlay() override;
+
+private:
+	UPROPERTY()
+	TObjectPtr<AWaveSpawner> WaveSpawner;
+
+	int32 CrrentWaveIndex = 0;//몇번째 웨이브인지
+
 	
 };
-//test
