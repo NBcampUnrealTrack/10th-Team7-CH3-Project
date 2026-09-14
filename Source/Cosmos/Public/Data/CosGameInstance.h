@@ -35,7 +35,7 @@ public:
 	
 	
 	UFUNCTION(BlueprintPure, Category = "Soul")
-	int32 GetSoul() const { return Soul; }
+	int32 GetSoul() const;
 	UFUNCTION(BlueprintCallable, Category = "Soul")
 	void AddSoul(int32 Amount);
 	UFUNCTION(BlueprintCallable, Category = "Soul")

@@ -3,6 +3,10 @@
 #include "Weapon/NailWeapon.h"
 #include "Weapon/ShotgunWeapon.h"
 
+int32 UCosGameInstance::GetSoul() const
+{
+	return Soul;
+}
 
 // 재화를 얻는 로직
 // 몬스터 쪽에서 사망 처리 로직에 AddSoul 호출
