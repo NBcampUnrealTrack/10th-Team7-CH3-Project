@@ -3,8 +3,11 @@
 
 AWeaponBase::AWeaponBase()
 {
+	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot"));
+	SetRootComponent(WeaponRoot);
+	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	SetRootComponent(WeaponMesh);
+	WeaponMesh->SetupAttachment(WeaponRoot);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //캐릭터와 무기의 물리적 충돌로 인한 버그 예방
 
 	LastAttackTime = -100.f;
@@ -18,8 +21,11 @@ void AWeaponBase::TryAttack() //공격 속도
 		return;
 	}
 
+	if (!PerformAttack()) // 샷건탄약이 없어서 공격이 안되는 경우 리턴. 공격속도를 소모하지 않게 하고 공격 모션이 재생되지 않도록 
+	{
+		return;
+	}
 	LastAttackTime = CurrentTime;
-	PerformAttack();
 	OnAttackPlayed();
 }
 

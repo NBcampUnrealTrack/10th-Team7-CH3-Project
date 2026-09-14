@@ -87,6 +87,11 @@ void UCombatComponent::BeginPlay()
 // 공격하는 함수랑 연결
 void UCombatComponent::OnNailAttack()
 {
+	if (!CanAttack())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("OnNailAttack called")); // IMC ,IA 바인딩 확인 
 	if (IsValid(NailWeapon))
 	{
@@ -96,6 +101,11 @@ void UCombatComponent::OnNailAttack()
 
 void UCombatComponent::OnShotgunAttack()
 {
+	if (!CanAttack())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("OnShotgunAttack called"));
 	if (IsValid(ShotgunWeapon))
 	{
@@ -109,4 +119,14 @@ void UCombatComponent::OnReload()
 	{
 		ShotgunWeapon->Reload();
 	}
+}
+
+bool UCombatComponent::CanAttack() const // 장전중 공격 방지
+{
+	if (IsValid(ShotgunWeapon) && ShotgunWeapon->IsReloading())
+	{
+		return false;
+	}
+
+	return true;
 }

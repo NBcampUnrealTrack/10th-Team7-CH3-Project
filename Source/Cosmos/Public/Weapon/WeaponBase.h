@@ -28,7 +28,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	USceneComponent* WeaponRoot;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float BaseDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -38,7 +40,7 @@ protected:
 
 	float LastAttackTime;
 
-	virtual void PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, ); // 공격
+	virtual bool PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, return false; ); // 탄 없을때 공격모션 나가지 않도록 bool
 	virtual float GetCurrentDamage() const PURE_VIRTUAL(AWeaponBase::GetCurrentDamage, return 0.f;); // 데미지 getter
 	virtual EWeaponType GetWeaponType() const PURE_VIRTUAL(AWeaponBase::GetWeaponType, return EWeaponType::None;); // 무기 타입
 	virtual void ApplyEnchant() PURE_VIRTUAL(AWeaponBase::ApplyEnchant, ); // 인챈트 

@@ -17,6 +17,9 @@ public:
 	void Reload();
 	void FinishReload();
 
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	bool IsReloading() const { return bIsReloading; }
+
 	int32 GetCurrentAmmo() const;
 
 	FORCEINLINE int32 GetMaxAmmo() const { return MaxAmmo; }
@@ -25,7 +28,7 @@ public:
 	FOnAmmoChanged OnAmmoChanged;
 
 protected:
-	virtual void PerformAttack() override;
+	virtual bool PerformAttack() override;
 	virtual float GetCurrentDamage() const override;
 	virtual EWeaponType GetWeaponType() const override;
 	virtual void ApplyEnchant() override;

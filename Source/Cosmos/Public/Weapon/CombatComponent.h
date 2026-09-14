@@ -18,6 +18,9 @@ public:
 	UCombatComponent();
 	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
 	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
+	
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	bool CanAttack() const;
 
 protected:
 	virtual void BeginPlay() override;
