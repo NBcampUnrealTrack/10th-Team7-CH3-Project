@@ -1,5 +1,7 @@
 ﻿#include "Data/CosGameInstance.h"
 #include "Data/EnchantData.h"
+#include "Weapon/NailWeapon.h"
+#include "Weapon/ShotgunWeapon.h"
 
 
 // 재화를 얻는 로직
@@ -33,13 +35,16 @@ bool UCosGameInstance::SpendSoul(int32 Amount)
 	return true;
 }
 
+// 인챈트 드랍
+// 몬스터 클래스에서 몬스터가 죽을 때 이 코드를 넣으면 인챈트가 드랍
+// GetWorld()->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
 bool UCosGameInstance::CollectEnchant(UEnchantData* Enchant)
 {
 	if (!Enchant) return false;
 
 	const int32 MaxCollectedEnchantCount = 10;
 
-	if (CollectedEnchant.Num() >= 10)
+	if (CollectedEnchant.Num() >= MaxCollectedEnchantCount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("인챈트 인벤토리가 꽉 찼습니다."));
 		return false;
@@ -51,10 +56,8 @@ bool UCosGameInstance::CollectEnchant(UEnchantData* Enchant)
 	return true;
 }
 
-// 인챈트 드랍
-// 몬스터 클래스에서 몬스터가 죽을 때 이 코드를 넣으면 인챈트가 드랍
-// GetWorld()->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
 
+// 인챈트 장착
 bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 {
 	UE_LOG(LogTemp, Warning, TEXT("인챈트 장착"));
@@ -62,7 +65,7 @@ bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 	
 	const int32 MaxEquippedEnchantCount = 3;
 
-	if (CollectedEnchant.Num() >= 3)
+	if (EquippedEnchant.Num() >= MaxEquippedEnchantCount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 장착할 수 없습니다."));
 		return false;
@@ -77,4 +80,58 @@ bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 {
 	
+}
+
+// GameMode에서 사용할 Recalc() 함수
+// 
+// void CosGameMode::Recalc()
+// {
+//		UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
+//		if (!GI) return;
+//		
+//		// All
+//		EnchantAllAddValue = GI->GetTotalStat(EEnchantStat::AllDamageAdd);
+//		EnchantAllMultiValue = GI->GetTotalStat(EEnchantStat::AllDamageMulti);
+//		
+//		// Range
+//		EnchantRangeAddValue = GI->GetTotalStat(EEnchantStat::RangeDamageAdd);
+//		EnchantRangeMultiValue = GI->GetTotalStat(EEnchantStat::RangeDamageMulti);
+//		EnchantRangeFiringRateValue = GI->GetTotalStat(EEnchantStat::RangeFiringRate);
+//		EnchantRangeMaxAmmoValue = GI->GetTotalStat(EEnchantStat::RangeMaxAmmo);
+//		EnchantRangeReloadSpeedValue = GI->GetTotalStat(EEnchantStat::RangeReloadSpeed);
+// 
+//		// Melee
+//		EnchantMeleeAddValue = GI->GetTotalStat(EEnchantStat::MeleeDamageAdd);
+//		EnchantMeleeMultiValue = GI->GetTotalStat(EEnchantStat::MeleeDamageMulti);
+//		EnchantMeleeSpeedValue = GI->GetTotalStat(EEnchantStat::MeleeSpeed);
+//		EnchantMeleeMaxTargetValue = GI->GetTotalStat(EEnchantStat::MeleeMaxTarget);
+//		EnchantMeleeRangeValue = GI->GetTotalStat(EEnchantStat::MeleeRange);
+// 
+//		// Misc
+//		EnchantMaxHealthValue = GI->GetTotalStat(EEnchantStat::MaxHealth);
+//		EndhantMovementSpeedValue = GI->GetTotalStat(EEnchantStat::MovementSpeed);
+//		EnchantSprintSpeedMultiValue = GI->GetTotalStat(EEnchantStat::SprintSpeedMulti);
+//		EnchantMaxPotionAddValue = GI->GetTotalStat(EEnchantStat::MaxPotionAdd);
+//		EnchantIncreasePotionValue = GI->GetTotalStat(EEnchantStat::IncreasePotionValue);
+//		EnchantDecreaseSkillCooldownValue = GI->GetTotalStat(EEnchantStat::DecreaseSkillCooldown);
+//		EnchantIncreaseSoulValue = GI->GetTotalStat(EEnchantStat::IncreaseSoulValue);
+//		EnchantGainHealValue = GI->GetTotalStat(EEnchantStat::GainHeal);
+// }
+
+float UCosGameInstance::GetTotalStat(EEnchantStat Stat) const
+{
+	float Sum = 0.0f;
+
+	for (const UEnchantData* Enchant : EquippedEnchant)
+	{
+		for (const FEnchantRolledStat& RolledStat : Enchant->RolledStats)
+		{
+			if (RolledStat.StatType == Stat)
+			{
+				Sum += RolledStat.RolledValue;
+			}
+		}
+	}
+	
+	return Sum;
 }
