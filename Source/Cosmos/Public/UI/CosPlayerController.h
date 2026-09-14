@@ -24,7 +24,7 @@ private:
 public:
 
 	ACosPlayerController();
-
+	FTimerHandle WeaponBindRetryTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;

@@ -76,6 +76,10 @@ void UCombatComponent::BeginPlay()
 		{
 			EIC->BindAction(ShotgunAttackAction, ETriggerEvent::Started, this, &UCombatComponent::OnShotgunAttack); // 우클릭시 샷건공격
 		}
+		if (IsValid(ReloadAction))
+		{
+			EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &UCombatComponent::OnReload); // R 누르면 재장전
+		}
 	}
 }
 
@@ -83,6 +87,7 @@ void UCombatComponent::BeginPlay()
 // 공격하는 함수랑 연결
 void UCombatComponent::OnNailAttack()
 {
+	UE_LOG(LogTemp, Warning, TEXT("OnNailAttack called")); // IMC ,IA 바인딩 확인 
 	if (IsValid(NailWeapon))
 	{
 		NailWeapon->TryAttack();
@@ -91,8 +96,17 @@ void UCombatComponent::OnNailAttack()
 
 void UCombatComponent::OnShotgunAttack()
 {
+	UE_LOG(LogTemp, Warning, TEXT("OnShotgunAttack called"));
 	if (IsValid(ShotgunWeapon))
 	{
 		ShotgunWeapon->TryAttack();
+	}
+}
+
+void UCombatComponent::OnReload()
+{
+	if (IsValid(ShotgunWeapon))
+	{
+		ShotgunWeapon->Reload();
 	}
 }

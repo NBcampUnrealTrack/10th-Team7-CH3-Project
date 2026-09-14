@@ -8,7 +8,7 @@ UHealthComponent::UHealthComponent()
 	CurrentHealth = MaxHealth;
 }
 
-void UHealthComponent::ApplyDamage(float Damage)
+void UHealthComponent::ApplyDamage(float Damage, EWeaponType Weapon)
 {
 	if (Damage <= 0.0f || IsDead())//이상한 데미지 방지로, 데미지가 0 이하거나 죽었으면 끝
 	{

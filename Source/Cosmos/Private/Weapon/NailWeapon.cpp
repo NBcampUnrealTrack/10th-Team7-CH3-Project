@@ -1,4 +1,5 @@
 ﻿#include "Weapon/NailWeapon.h"
+#include "DrawDebugHelpers.h" // 트레이스 시각화
 
 ANailWeapon::ANailWeapon()
 {
@@ -10,13 +11,18 @@ ANailWeapon::ANailWeapon()
 
 void ANailWeapon::PerformAttack()
 {
-	const FVector StartLocation = GetActorLocation(); 
-	const FVector EndLocation = StartLocation + (GetActorForwardVector() * AttackRange); // 샷건과 동일. 시작점, 끝점  
+	FVector StartLocation; 
+	FVector Direction;
+	if (!GetTraceStartAndDirection(StartLocation, Direction)) //샷건과 동일
+	{
+		return;
+	}
+	const FVector EndLocation = StartLocation + (Direction * AttackRange);
 
 	TArray<FHitResult> HitResults; //맞은 대상을 담을 배열
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
-	QueryParams.AddIgnoredActor(GetOwner()); // 샷건 코드와 동일 (무기,캐릭터 제외)
+	QueryParams.AddIgnoredActor(GetAttachParentActor()); // 샷건 코드와 동일 (무기,캐릭터 제외)
 
 	const bool bHit = GetWorld()->SweepMultiByChannel( //구체를 보내서 여러명이 맞도록 하는 트레이스
 		HitResults,
@@ -26,6 +32,37 @@ void ANailWeapon::PerformAttack()
 		ECC_Visibility,
 		FCollisionShape::MakeSphere(SwingRadius), // 구체 반지름
 		QueryParams // 나머진 샷건과 동일
+	);
+
+	DrawDebugLine( // 구체 트레이스 이동경로
+		GetWorld(), // 샷건과 동일
+		StartLocation,
+		EndLocation,
+		FColor::Blue,
+		false,
+		2.f,
+		0,
+		2.f
+	);
+
+	DrawDebugSphere( // 근접 광역 공격
+		GetWorld(),
+		StartLocation, // 구체 중심좌표 (플레이어 위치)
+		SwingRadius, // 반지름
+		12, // 구체를 몇각형으로 근사해서 나타낼지
+		FColor::Cyan, // 색
+		false, // 영구적이지 않음
+		2.f // 2초간 표시
+	);
+
+	DrawDebugSphere( // 위와 동일
+		GetWorld(),
+		EndLocation, // 구체 중심좌표 , 이번에는 구체가 이동한 끝지점
+		SwingRadius,
+		12,
+		FColor::Cyan,
+		false,
+		2.f
 	);
 
 	if (!bHit) // 안맞은 경우
@@ -38,7 +75,7 @@ void ANailWeapon::PerformAttack()
 
 	for (const FHitResult& Hit : HitResults) //공격에 맞은 대상을 순회
 	{
-		if (HitCount >= MaxTargetPerSwing)
+		if (HitCount >= MaxTargetPerSwing) // 이미 최대치를 맞췄다면 중지
 		{
 			break;
 		}
@@ -69,7 +106,7 @@ float ANailWeapon::GetCurrentDamage() const
 	return BaseDamage; 
 }
 
-EWeaponType ANailWeapon::GetWeaponType() const
+EWeaponType ANailWeapon::GetWeaponType() const // 무기타입 대못 반환
 {
 	return EWeaponType::Nail;
 }

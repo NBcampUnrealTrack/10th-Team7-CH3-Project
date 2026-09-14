@@ -1,4 +1,4 @@
-#include "Data/EnchantPickup.h"
+ï»¿#include "Data/EnchantPickup.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Data/EnchantGenerator.h"
@@ -18,7 +18,7 @@ AEnchantPickup::AEnchantPickup()
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
 	StaticMesh->SetupAttachment(Collision);
 
-	// ÀÌº¥Æ® ¹ÙÀÎµù
+	// ì´ë²¤íŠ¸ ë°”ì¸ë”©
 	Collision->OnComponentBeginOverlap.AddDynamic(this, &AEnchantPickup::OnEnchantOverlap);
 	Collision->OnComponentEndOverlap.AddDynamic(this, &AEnchantPickup::OnEnchantEndOverlap);
 
@@ -46,9 +46,10 @@ void AEnchantPickup::OnEnchantOverlap(
 	const FHitResult& SweepResult
 )
 {
-	// Áß¿ä. Ä³¸¯ÅÍ ÅÂ±×°¡ Player¶ó µÇ¾î ÀÖ¾î¾ß ÀÎÃ¦Æ®¸¦ È¹µæÇÒ ¼ö ÀÖÀ½
+	// ì¤‘ìš”. ìºë¦­í„° íƒœê·¸ê°€ Playerë¼ ë˜ì–´ ìžˆì–´ì•¼ ì¸ì±ˆíŠ¸ë¥¼ íšë“í•  ìˆ˜ ìžˆìŒ
 	if (OtherActor && OtherActor->ActorHasTag("Player"))
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("Overlap!!!")));
 		ActivateEnchant(OtherActor);
 	}
 }
@@ -65,14 +66,16 @@ void AEnchantPickup::OnEnchantEndOverlap(
 
 void AEnchantPickup::ActivateEnchant(AActor* Activator)
 {
+
 	if (!GeneratedEnchant)
 	{
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("ìž¥ì°© ì‹¤í–‰í•©ë‹ˆë‹¤!!"));
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{
-		GameInstance->EquipEnchant(GeneratedEnchant);
+		GameInstance->CollectEnchant(GeneratedEnchant);
 	}
 	DestroyEnchant();
 }

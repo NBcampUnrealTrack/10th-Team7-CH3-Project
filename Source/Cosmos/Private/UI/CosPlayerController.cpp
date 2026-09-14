@@ -2,6 +2,7 @@
 #include "Character/CosCharacter.h"
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
+#include "Weapon/CombatComponent.h"   
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
@@ -36,16 +37,15 @@ void ACosPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	
-	// Enhanced Input Context 등록
 	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
-			// IsValid로 체크
 			if (IsValid(InputMappingContext.Get()))
 			{
 				Subsystem->AddMappingContext(InputMappingContext.Get(), 0);
+				UE_LOG(LogTemp, Warning, TEXT("IMC_Character 등록됨"));
 			}
 		}
 	}
@@ -103,21 +103,33 @@ void ACosPlayerController::SetupCharacterBindings()
 
 	
 	// 2. ShotgunWeapon 델리게이트 바인딩
-	if (ACosCharacter* CosChar = Cast<ACosCharacter>(ControlledPawn))
+	if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
 	{
-		if (AShotgunWeapon* Weapon = CosChar->GetEquippedWeapon())
+		if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
 		{
-			if (IsValid(Weapon))
-			{
-				Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
-				Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+			UE_LOG(LogTemp, Warning, TEXT("무기 바인딩 성공"));
 
-				CachedMaxAmmo = Weapon->GetMaxAmmo();          // 최대 탄약은 여기서 한 번만 저장
-				UpdateAmmoUI(Weapon->GetCurrentAmmo());         // 초기값 반영
-			}
+			Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+			Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+			CachedMaxAmmo = Weapon->GetMaxAmmo();
+			UpdateAmmoUI(Weapon->GetCurrentAmmo());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("ShotgunWeapon이 아직 CombatComponent에 없음 - 0.1초 후 재시도"));
+			GetWorld()->GetTimerManager().SetTimer(
+				WeaponBindRetryTimer,
+				this,
+				&ACosPlayerController::SetupCharacterBindings,
+				0.1f,
+				false
+			);
 		}
 	}
-	
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("CombatComponent를 찾을 수 없음"));
+	}
 }
 
 void ACosPlayerController::SetupInputComponent()
