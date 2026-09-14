@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "CosGameInstance.h"
 #include "CosDataTable.generated.h"
 
 UENUM(BlueprintType)
@@ -37,13 +36,34 @@ UENUM(BlueprintType)
 enum class EEnchantStat : uint8
 {
 	None = 0,
-	AllDamageAdd = 10, AllDamageMulti = 11, AllSpeed = 12,
-	RangeDamageAdd = 20, RangeDamageMulti = 21, RangeFiringRate = 22, RangeMaxAmmo = 23,
+
+	// All
+	AllDamageAdd = 10, 
+	AllDamageMulti = 11, 
+	AllSpeed = 12,
+
+	// Range
+	RangeDamageAdd = 20, 
+	RangeDamageMulti = 21, 
+	RangeFiringRate = 22, 
+	RangeMaxAmmo = 23,
 	RangeReloadSpeed = 24,
-	MeleeDamageAdd = 30, MeleeDamageMulti = 31, MeleeSpeed = 32, MeleeMaxTarget = 33,
+
+	// Melee
+	MeleeDamageAdd = 30, 
+	MeleeDamageMulti = 31, 
+	MeleeSpeed = 32, 
+	MeleeMaxTarget = 33,
 	MeleeRange = 34,
-	MaxHealth = 40, MovementSpeed = 41, SprintSpeedMulti = 42, MaxPotionAdd = 43,
-	IncreasePotionValue = 44, DecreaseSkillCooldown = 45, IncreaseSoulValue = 46,
+
+	//Misc
+	MaxHealth = 40, 
+	MovementSpeed = 41, 
+	SprintSpeedMulti = 42,
+	MaxPotionAdd = 43,
+	IncreasePotionValue = 44, 
+	DecreaseSkillCooldown = 45, 
+	IncreaseSoulValue = 46,
 	GainHeal = 47
 };
 
@@ -56,13 +76,13 @@ UENUM(BlueprintType)
 enum class EEnchantSkillType : uint8
 {
 	None = 0,
-	// All -> 10����
+	// All
 	IncreaseAllSpeed = 10, IncreaseAllDamage = 11,
-	// Range -> 20����
+	// Range
 	IncreaseShotgunDamage = 20, IncreaseShotgunFiringRate = 21, IncreaseRangeReloadSpeed = 22, InfinityAmmo = 23,
-	// Melee -> 30����
+	// Melee
 	IncreaseMeleeDamage = 30, IncreaseMeleeAttackSpeed = 31, IncreaseMeleeMaxTarget = 32,
-	// Misc -> 40����
+	// Misc
 	IncreaseMovementSpeed = 40, MadePotion = 41
 };
 
@@ -105,6 +125,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 GargoyleCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 CrowCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 BossCount = 0;
+};
+
+UENUM(BlueprintType)
+enum class EShotgunModuleType : uint8
+{
+	Damage,
+	FireSpeed,
+	Reload,
+	Magazine
 };
 
 USTRUCT(BlueprintType)
