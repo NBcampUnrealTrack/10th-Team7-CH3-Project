@@ -42,8 +42,7 @@ public:
 	FORCEINLINE float GetAttackDamage() const { return AttackDamage; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetAttackDelay() const { return AttackDelay; }
-	UFUNCTION(BlueprintPure, Category = "AI|Getters")
-	bool IsAlive() const;
+
 	//attack hit
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
 	void AttackHitCheck();

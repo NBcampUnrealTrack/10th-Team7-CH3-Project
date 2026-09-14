@@ -24,7 +24,7 @@ void AWeaponBase::TryAttack() //공격 속도
 }
 
 //HitResult안에 HitActor도 포함
-bool AWeaponBase::TryApplyDamage(AActor* HitActor)
+bool AWeaponBase::ApplyDamage(AActor* HitActor, const FHitResult& HitResult)
 {
 	if (!IsValid(HitActor)) //맞은 대상이 없다면
 	{
