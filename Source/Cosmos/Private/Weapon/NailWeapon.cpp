@@ -89,7 +89,7 @@ void ANailWeapon::PerformAttack()
 
 		AlreadyHit.Add(HitActor);// 한번 본 액터 중복처리
 
-		if (ApplyDamage(HitActor, Hit)) // 데미지를 준 경우에만 카운트
+		if (TryApplyDamage(HitActor)) // 데미지를 준 경우에만 카운트
 		{
 			HitCount++;
 		}
