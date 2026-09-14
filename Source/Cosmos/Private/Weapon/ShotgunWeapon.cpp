@@ -39,7 +39,7 @@ void AShotgunWeapon::PerformAttack()
 		HitResult, // 결과 담는 곳
 		StartLocation, // 시작 
 		EndLocation, // 끝
-		ECC_Visibility, //시각적 오브젝트 기준 충돌
+		ECC_Weapon, //시각적 오브젝트 기준 충돌
 		QueryParams // 트레이스 설정
 	); 
 
