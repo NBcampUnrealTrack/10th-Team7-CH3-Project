@@ -124,9 +124,13 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		return;
 	}
-	if (HitSound)
+	if (HitbyMeleeSound && Weapon == EWeaponType::Nail)	
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
+		UGameplayStatics::PlaySoundAtLocation(this, HitbyMeleeSound, GetActorLocation());
+	}
+	if (HitbyRangeSound && Weapon == EWeaponType::Shotgun)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitbyRangeSound, GetActorLocation());
 	}
 	ApplyStagger();
 

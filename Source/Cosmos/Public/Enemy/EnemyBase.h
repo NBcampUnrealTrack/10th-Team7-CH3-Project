@@ -85,7 +85,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	TObjectPtr<USoundBase> AttackSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> HitSound;
+	TObjectPtr<USoundBase> HitbyMeleeSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	TObjectPtr<USoundBase> HitbyRangeSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	TObjectPtr<USoundBase> DeathHitSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
