@@ -8,6 +8,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/CharacterMovementComponent.h" 
 
 /*
 // 테스트용 임시 체력 변수
@@ -177,7 +178,24 @@ void ACosPlayerController::OnCharacterDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("플레이어 캐릭터 사망"));
 
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		// 입력 비활성화
+		ControlledPawn->DisableInput(this);
+
+		// 이동 강제 정지
+		if (ACharacter* PossessedCharacter = Cast<ACharacter>(ControlledPawn))
+		{
+			if (UCharacterMovementComponent* MoveComp = PossessedCharacter->GetCharacterMovement())
+			{
+				MoveComp->StopMovementImmediately();
+			}
+		}
+	}
+
 	ShowGameOver(0);
+
+
 
 }
 
