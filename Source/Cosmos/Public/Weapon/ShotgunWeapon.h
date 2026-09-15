@@ -19,6 +19,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsReloading() const { return bIsReloading; }
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	void OnReloadStarted();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	void OnReloadFinished();
 
 	int32 GetCurrentAmmo() const;
 
