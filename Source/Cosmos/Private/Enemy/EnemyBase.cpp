@@ -13,6 +13,7 @@
 //for debug
 #include "DrawDebugHelpers.h" 
 #include "Engine/OverlapResult.h" //  FOverlapResult 
+#include "BehaviorTree/BlackboardComponent.h" 
 
 // Sets default values
 AEnemyBase::AEnemyBase()
@@ -33,7 +34,7 @@ AEnemyBase::AEnemyBase()
 	Movement->SetMovementMode(MOVE_NavWalking);
 	// no clip each enemy, / 적들이 알아서 비켜가게
 	Movement->bUseRVOAvoidance = true;
-	Movement->AvoidanceConsiderationRadius = 125.0f; //No Clip Range
+	Movement->AvoidanceConsiderationRadius = 150.0f; //No Clip Range
 	//DIsable unnecessary Functions / 이동 방향으로 알아서 회전
 	Movement->bUseControllerDesiredRotation = false;
 	Movement->bOrientRotationToMovement = true;
@@ -42,6 +43,8 @@ AEnemyBase::AEnemyBase()
 	Movement->GetNavAgentPropertiesRef().bCanFly = false;
 	Movement->GetNavAgentPropertiesRef().bCanJump = false;
 	Movement->GetNavAgentPropertiesRef().bCanSwim = false;
+	// avoid hit other collisions / 서로 물리 충돌 방지
+	Movement->bEnablePhysicsInteraction = false; 
 	//Disable Capsule Collision Overlap Each Monsters. ->  Use RVOAvoidance up there / 콜리전 계산 중지, 겹치기 방지는 위에 RVO가 함
 	Capsule->SetCollisionObjectType(ECC_Enemies);                      
 	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Ignore);
@@ -82,7 +85,6 @@ void AEnemyBase::SetMovementSpeed(float NewSpeed)
 	}
 }
 
-
 void AEnemyBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
@@ -118,7 +120,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 		return;
 	}
 	HealthComponent->ApplyDamage(Damage, EWeaponType::None);
-	if (HealthComponent->IsDead())
+	if (!IsAlive())
 	{
 		return;
 	}
@@ -126,10 +128,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
 	}
-	if (HitReactMontage)
-	{
-		PlayAnimMontage(HitReactMontage);
-	}
+	ApplyStagger();
 
 }
 
@@ -144,30 +143,20 @@ void AEnemyBase::HandleDeath()
 		}
 	}
 	GetCharacterMovement()->DisableMovement();
-	SetActorEnableCollision(false);
-	//RAGDOLL SECTION, Instead DeathMontage
-	//// Delete this section if it make frame down
-	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->SetComponentTickEnabled(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision); 
+	//Reset all timers
+	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
+	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
 
-	
-	USkeletalMeshComponent* MeshComp = GetMesh();
-
-	MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));  
-	MeshComp->SetSimulatePhysics(true);                 
-	MeshComp->WakeAllRigidBodies();
-	MeshComp->bBlendPhysics = true;                        
-	MeshComp->bComponentUseFixedSkelBounds = false;
-	/////////////////////////////////////////////////////////
 	if (DeathSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 	}
-	//if (DeathMontage)
-	//{
-	//	PlayAnimMontage(DeathMontage);
-	//}
+	if (DeathMontage)
+	{
+		 PlayAnimMontage(DeathMontage);
+	}
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, [this]() { Destroy(); }, DeathDelay, false);
 }
 
@@ -188,10 +177,10 @@ void AEnemyBase::AttackHitCheck()
 	//ignore self
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(DetectPlayer), false, this);
 
-	const bool bHit = GetWorld()->OverlapMultiByChannel(AttackHits, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(AttackRange), Params);
+	const bool bHit = GetWorld()->OverlapMultiByChannel(AttackHits, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(AttackRadius), Params);
 	// for DEBUUYG
 #if ENABLE_DRAW_DEBUG
-	DrawDebugSphere(GetWorld(), Start, AttackRange, 12,
+	DrawDebugSphere(GetWorld(), Start, AttackRadius, 12,
 		bHit ? FColor::Red : FColor::Green, false, 1.0f);
 #endif
 	//no hit -> return
@@ -214,3 +203,41 @@ void AEnemyBase::AttackHitCheck()
 		break;
 	}
 }
+
+void AEnemyBase::ApplyStagger()
+{
+	if (!IsAlive())
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (LastStaggerTime >= 0.f && (Now - LastStaggerTime) < StaggerDelay)
+	{
+		return;
+	}
+	LastStaggerTime = Now;
+	bIsStagger = true;
+//stop attacking
+	if (AttackMontage)
+	{
+		StopAnimMontage(AttackMontage);
+	}
+	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
+	//stop movement
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		AI->StopMovement();
+		if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(StaggerKeyName, true);
+		}
+	}
+	GetCharacterMovement()->StopMovementImmediately();
+	//play hit React
+	if (HitReactMontage)
+	{
+		PlayAnimMontage(HitReactMontage);
+	}
+	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	[this]() { bIsStagger = false; }, StaggerDuration, false);
+}
+

@@ -42,13 +42,18 @@ public:
 	FORCEINLINE float GetAttackDamage() const { return AttackDamage; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetAttackDelay() const { return AttackDelay; }
+	//status getter
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	bool IsAlive() const;
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
+	bool IsStagger() const { return bIsStagger; };
 	//attack hit
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
-	void AttackHitCheck();
+	virtual void AttackHitCheck();
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
-	float EnemyAttack();
+	virtual float EnemyAttack();
+	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
+	virtual void ApplyStagger();
 
 protected:
 	// Called when the game starts or when spawned
@@ -60,6 +65,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	FName StaggerKeyName = TEXT("bIsStagger");
 	//HealthComponent
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite, Category = "AI")
 	TObjectPtr<UHealthComponent> HealthComponent;
@@ -91,28 +98,36 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float MaxHP = 130.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
-	float AttackRange = 150.0f;
+	float AttackRange = 120.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float RunSpeed = 500.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
-	float AttackDamage = 10.f;
+	float AttackDamage = 15.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackDelay = 1.5f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackPreDelay = 0.5f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
-	float AttackRadius = 60.0f;
+	float AttackRadius = 80.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
-	float AttackOffset = 75.0f;
+	float AttackOffset = 80.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float StaggerDuration = 0.3f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float StaggerDelay = 0.5f;
 	void SetEnemyAtStart();
 
 	UFUNCTION()
 	void HandleDeath();
 
+private:
+	
+
 	FTimerHandle DeathTimerHandle;
 	FTimerHandle AttackHitTimerHandle;
+	FTimerHandle StaggerTimerHandle;
 
-public:
-	// NO TICK
-	//virtual void Tick(float DeltaTime) override;
+	bool  bIsStagger = false;
+	float LastStaggerTime = -1.f;
+
 };

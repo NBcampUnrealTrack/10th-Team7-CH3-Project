@@ -21,16 +21,18 @@ UBTS_RangeCheck::UBTS_RangeCheck()
 	//avoid pick wrong key
 	TargetActorKey.AddObjectFilter(this, GET_MEMBER_NAME_CHECKED(UBTS_RangeCheck, TargetActorKey), AActor::StaticClass());
 	InAttackRangeKey.AddBoolFilter(this, GET_MEMBER_NAME_CHECKED(UBTS_RangeCheck, InAttackRangeKey));
+	StaggerKey.AddBoolFilter(this, GET_MEMBER_NAME_CHECKED(UBTS_RangeCheck, StaggerKey));
 }
 
 void UBTS_RangeCheck::InitializeFromAsset(UBehaviorTree& Asset)
 {
 	Super::InitializeFromAsset(Asset);
 	//transfer key Nmame->Blackboard ID
-	if (UBlackboardData* BBAsset = GetBlackboardAsset())
+	if (UBlackboardData* BB = GetBlackboardAsset())
 	{
-		TargetActorKey.ResolveSelectedKey(*BBAsset);
-		InAttackRangeKey.ResolveSelectedKey(*BBAsset);
+		TargetActorKey.ResolveSelectedKey(*BB);
+		InAttackRangeKey.ResolveSelectedKey(*BB);
+		StaggerKey.ResolveSelectedKey(*BB);
 	}
 }
 
@@ -58,4 +60,5 @@ void UBTS_RangeCheck::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMem
 		bInRange = (DistSq <= FMath::Square(Range));
 	}
 	BB->SetValueAsBool(InAttackRangeKey.SelectedKeyName, bInRange);
+	BB->SetValueAsBool(StaggerKey.SelectedKeyName, Enemy->IsStagger());
 }
