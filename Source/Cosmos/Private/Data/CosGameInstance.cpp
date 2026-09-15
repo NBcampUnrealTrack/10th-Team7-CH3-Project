@@ -140,7 +140,58 @@ float UCosGameInstance::GetTotalStat(EEnchantStat Stat) const
 	return Sum;
 }
 
-void UCosGameInstance::UpgradeShotgun(EShotgunModuleType Type)
+const FUpgradeData* UCosGameInstance::FindUpgradeData(EShotgunModuleType Type, int32 Level) const
 {
+	if (!UpgradePool) return nullptr;
 
+	const FUpgradeData* FoundRow = nullptr;
+	UpgradePool->ForeachRow<FUpgradeData>(TEXT("FindUpgradeData"), [&](const FName& RowName, const FUpgradeData& Row)
+		{
+			if (Row.Type == Type && Row.Level == Level)
+			{
+				FoundRow = &Row;
+			}
+		});
+
+	return FoundRow;
+}
+
+bool UCosGameInstance::UpgradeShotgun(EShotgunModuleType Type)
+{
+	// 업그레이드 할 샷건 모듈의 레벨을 저장
+	int32 Level = ModuleLevels.FindOrAdd(Type);
+	// 업그레이드 할 샷건 모듈의 데이터 테이블 행을 찾아서 "행"을 저장
+	const FUpgradeData* UpgradeModule = FindUpgradeData(Type, Level + 1);
+
+	if (!UpgradeModule)
+	{
+		// 이미 업그레이드가 만렙인 상태
+		return false;
+	}
+
+	// 강화 실행
+	if (SpendSoul(UpgradeModule->Cost))
+	{
+		ModuleLevels.Add(Type, UpgradeModule->Level);
+		OnLoadoutChange.Broadcast();
+		return true;
+	}
+	else
+	{
+		// 돈이 부족하다는 알림
+		return false;
+	}
+}
+
+float UCosGameInstance::GetShotgunStat(EShotgunModuleType Type) const
+{
+	// 현재 레벨 조회 (FindRef)
+
+	// 레벨이 0이면 0.0f 반환
+
+	// FindUpgradeData(Type, 현재레벨)로 행 조회
+
+	// 행 있으면 EffectValue 반환, 없으면 0.0f
+
+	return 0.0f;
 }

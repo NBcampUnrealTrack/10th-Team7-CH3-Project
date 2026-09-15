@@ -20,6 +20,7 @@ class COSMOS_API UCosGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 	
+	
 public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Soul")
@@ -34,7 +35,11 @@ public:
 	int32 EnchantMaxEqippedCount = 1;
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	int32 EnchantMaxCollectedCount = 16;
-	
+
+	UPROPERTY(BlueprintReadOnly, Category = "Upgrade")
+	TMap<EShotgunModuleType, int32> ModuleLevels;
+	UPROPERTY(EditDefaultsOnly, Category = "Upgrade")
+	UDataTable* UpgradePool;
 	
 	UFUNCTION(BlueprintPure, Category = "Soul")
 	int32 GetSoul() const;
@@ -46,6 +51,7 @@ public:
 	bool CollectEnchant(UEnchantData* Enchant);
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	bool EquipEnchant(UEnchantData* Enchant);
+	
 
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	void UnEquipEnchant(UEnchantData* Enchant);
@@ -54,7 +60,12 @@ public:
 	float GetTotalStat(EEnchantStat Stat) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Shotgun")
-	void UpgradeShotgun(EShotgunModuleType Type);
+	bool UpgradeShotgun(EShotgunModuleType Type);
+
+	const FUpgradeData* FindUpgradeData(EShotgunModuleType Type, int32 Level) const;
+	UFUNCTION(BlueprintPure, Category = "Upgrade")
+	float GetShotgunStat(EShotgunModuleType Type) const;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Soul")
 	int32 Soul = 0;
