@@ -4,7 +4,7 @@
 
 AWeaponBase::AWeaponBase()
 {
-	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot"));
+	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot")); // 무기 메쉬
 	SetRootComponent(WeaponRoot);
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
@@ -14,7 +14,7 @@ AWeaponBase::AWeaponBase()
 	LastAttackTime = -100.f;
 }
 
-void AWeaponBase::TryAttack() //공격 속도
+void AWeaponBase::TryAttack() //공격 쿨타임이 지났으면 공격
 {
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastAttackTime < GetCurrentAttackInterval()) // 공격 딜레이만큼 시간이 지났는지.
@@ -27,11 +27,11 @@ void AWeaponBase::TryAttack() //공격 속도
 		return;
 	}
 	LastAttackTime = CurrentTime;
-	OnAttackPlayed();
+	OnAttackPlayed(); // 공격 모션 재생하기 위해
 }
 
 //HitResult안에 HitActor도 포함
-bool AWeaponBase::TryApplyDamage(AActor* HitActor)
+bool AWeaponBase::TryApplyDamage(AActor* HitActor) // 데미지를 준 경우에만 true를 리턴해서 대못의 적 공격 수를 카운트함 , 데미저블인지 판단함
 {
 	if (!IsValid(HitActor)) //맞은 대상이 없다면
 	{
@@ -52,7 +52,7 @@ bool AWeaponBase::TryApplyDamage(AActor* HitActor)
 	return true; // 데미지를 준 경우
 }
 
-bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirection) const
+bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirection) const // 
 {
 	APawn* OwnerPawn = Cast<APawn>(GetAttachParentActor());
 	if (!IsValid(OwnerPawn))
