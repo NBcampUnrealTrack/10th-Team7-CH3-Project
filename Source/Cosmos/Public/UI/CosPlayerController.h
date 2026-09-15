@@ -7,15 +7,18 @@
 #include "CosPlayerController.generated.h"
 
 
+
 class UUserWidget;
 class UInputMappingContext;
 class UHealthComponent;
 class AShotgunWeapon;
 
 
+
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
 {
+
 	GENERATED_BODY()
 
 private:
@@ -126,6 +129,8 @@ public:
 
 	UFUNCTION()
 	void SetupInputComponent();
+
+
 
 protected:
 	virtual void BeginPlay() override;
