@@ -5,7 +5,7 @@
 #include "CosGameMode.generated.h"
 
 class AWaveSpawner;
-class UHealthComponent;
+//class UHealthComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForgeRequested);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOver);
@@ -27,9 +27,10 @@ public:
 
 	void HandleWaveCleared(int32 WaveIndex);//클리어 신호를 받는 함수(웨이브, 대장간, 보스 여부 판단)
 
-	void HandlePlayerDeath();//플레이어 사망 시
+	//플레이어 사망, 리스폰 일단 보류
+	//void HandlePlayerDeath();//플레이어 사망 시
 
-	void ResPawnPlayer();// 플레이어 리스폰
+	//void ResPawnPlayer();// 플레이어 리스폰
 
 	UPROPERTY(BlueprintAssignable)
 	FOnForgeRequested OnForgeRequested;
@@ -50,16 +51,10 @@ private:
 
 	int32 CurrentWaveIndex = 0;//몇번째 웨이브인지
 
-	FTimerHandle RespawnTimer;
+	//플레이어 사망 바인딩은 보류로
+	//void BindPlayerDeath();
 
-	void BindPlayerDeath();
-
-	UPROPERTY()
-	TObjectPtr<AWaveSpawner> WaveSpawner;
-
-	int32 CurrentWaveIndex = 0;
-
-	FTimerHandle RespawnTimer;
+	//FTimerHandle RespawnTimer;
 
 	
 };
