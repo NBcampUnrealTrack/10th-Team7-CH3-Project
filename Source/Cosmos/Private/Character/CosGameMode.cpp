@@ -28,6 +28,6 @@ void ACosGameMode::StartNextWave()
 
 void ACosGameMode::StartGame()
 {
-	UGameplayStatics::OpenLevel(this, FName("L_AlphaTestMap"));
+	UGameplayStatics::OpenLevel(this, FName("L_BlockoutTriangle"));
 }
 
