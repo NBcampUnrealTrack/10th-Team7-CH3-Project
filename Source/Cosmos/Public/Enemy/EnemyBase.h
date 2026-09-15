@@ -74,24 +74,28 @@ protected:
 	//Assets / Need to Set AnimBP <- for using Anim in cpp
 	////
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
-	TObjectPtr<UAnimMontage> AttackMontage;
+	TObjectPtr<UAnimMontage> AttackMontage1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
+	TObjectPtr<UAnimMontage> AttackMontage2;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
 	TObjectPtr<UAnimMontage> HitReactMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
 	TObjectPtr<UAnimMontage> DeathMontage;
 	//Sounds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> FootStepSound;
+	FSFXVolume FootStepSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> AttackSound;
+	FSFXVolume AttackSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> HitbyMeleeSound;
+	FSFXVolume HitbyMeleeSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> HitbyRangeSound;
+	FSFXVolume HitbyRangeSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> DeathHitSound;
+	FSFXVolume DeathHitSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	TObjectPtr<USoundBase> DeathSound;
+	FSFXVolume DeathSound;
+	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
+	void PlaySFX(const FSFXVolume& SFX);
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
 	float DeathDelay = 2.0f;
