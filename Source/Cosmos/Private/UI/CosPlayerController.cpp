@@ -124,7 +124,7 @@ void ACosPlayerController::SetupCharacterBindings()
 
 			Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
 			Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
-			CachedMaxAmmo = Weapon->GetMaxAmmo();
+			CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
 			UpdateAmmoUI(Weapon->GetCurrentAmmo());
 		}
 		else
@@ -216,6 +216,7 @@ void ACosPlayerController::ShowCombatHUD()
 		}
 	}
 }
+
 
 void ACosPlayerController::CloseCombatHUD()
 {
