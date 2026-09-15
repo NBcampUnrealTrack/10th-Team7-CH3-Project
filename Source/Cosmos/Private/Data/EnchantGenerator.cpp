@@ -24,12 +24,11 @@ UEnchantData* UEnchantGenerator::GenerateRandomEnchant(UObject* Outer,
 	UEnchantData* NewEnchant = NewObject<UEnchantData>(Outer);
 
 	// 인챈트 재료 (스탯, 스킬)
-	const int32 EnchantMaterialCount = FMath::RandRange(2, 4);
+	
 
-	// 스킬 포함 여부 (어느 확률로 붙을지 미정이라 일단 false로 설정)
-	const bool bIncludeSkill = false;
+	// 스킬 포함 여부 (임시로 50% 확률로 스킬 포함하게 설정)
+	const bool bIncludeSkill = FMath::FRand() < 0.5f;
 	NewEnchant->bHasSkill = bIncludeSkill;
-
 	// 스킬을 포함할 경우
 	// 스킬 데이터 테이블에서 해당 값들을 가져옴
 	// 수치는 랜덤값이기 때문에 최소값과 최대값 사이의 랜덤값을 저장해줌
@@ -53,9 +52,8 @@ UEnchantData* UEnchantGenerator::GenerateRandomEnchant(UObject* Outer,
 			NewEnchant->SkillCooldown = FMath::FRandRange(PickedSkill->MinCooldown, PickedSkill->MaxCooldown);
 		}
 	}
-	
-	// 나머지 인챈트 재료를 스탯으로 채움
-	const int32 EnchantStatCount = EnchantMaterialCount - (bIncludeSkill ? 1 : 0);
+
+	const int32 EnchantStatCount = bIncludeSkill ? FMath::RandRange(0, 3) : FMath::RandRange(2, 4);
 
 	// 인챈트 스탯 데이터 테이블을 다 가져옴
 	TArray<FEnchantStatData*> AllStats;
