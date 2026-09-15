@@ -46,14 +46,13 @@ bool UCosGameInstance::CollectEnchant(UEnchantData* Enchant)
 {
 	if (!Enchant) return false;
 
-	const int32 MaxCollectedEnchantCount = 10;
+	EnchantMaxCollectedCount = 16;
 
-	if (CollectedEnchant.Num() >= MaxCollectedEnchantCount)
+	if (CollectedEnchant.Num() >= EnchantMaxCollectedCount)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("인챈트 인벤토리가 꽉 찼습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 획득할 수 없습니다."));
 		return false;
 	}
-
 	CollectedEnchant.Add(Enchant);
 	OnLoadoutChange.Broadcast();
 
@@ -66,10 +65,8 @@ bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 {
 	UE_LOG(LogTemp, Warning, TEXT("인챈트 장착"));
 	if (!Enchant || !CollectedEnchant.Contains(Enchant)) return false;
-	
-	const int32 MaxEquippedEnchantCount = 3;
 
-	if (EquippedEnchant.Num() >= MaxEquippedEnchantCount)
+	if (EquippedEnchant.Num() >= EnchantMaxEqippedCount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 장착할 수 없습니다."));
 		return false;
