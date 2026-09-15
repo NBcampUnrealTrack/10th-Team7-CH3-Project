@@ -22,8 +22,8 @@ void ACosGameMode::BeginPlay()
 		)
 	);
 
-	//웨이브 스포너에서 웨이브 클리어 신호 받도록 연결
-	//웨이브 끝나면 HandleWaveCleared가 호출
+	//웨이브 스포너에서 웨이브 클리어 델리게이트 구독
+	//웨이브 끝나면 HandleWaveCleared가 자동 호출
 	if (WaveSpawner)
 	{
 		WaveSpawner->OnWaveCleared.AddUObject(
@@ -37,7 +37,7 @@ void ACosGameMode::BeginPlay()
 }
 
 void ACosGameMode::StartNextWave()
-{//CurrentWaveIndex+1-> 게임 CosGameState 에 현재 웨이브 전달 ->WaveSpawner가  웨이브 시작함
+{//CurrentWaveIndex+1->  웨이브 스포너에 현재 웨이브 번호 전달(적 스폰)-> GameState에서도 번호 저장
 	++CurrentWaveIndex;
 
 	if (WaveSpawner)//웨이브 스포너에 현재 웨이브 번호 전달, 적 스폰 시작함
@@ -61,12 +61,13 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 {
 	if (WaveIndex == 26)//보스 나오게하기
 	{
-		
+		OnGameClear.Broadcast();
 		return;
 	}
 
-	if (WaveIndex % 5 == 0)//대장간 5,10,15,20,25 클리어 시 대장간 
+	if (WaveIndex % 5 == 0)//대장간 5,10,15,20,25 클리어 시 대장간 신호 방송
 	{
+		OnForgeRequested.Broadcast();
 		return;
 	}
 
