@@ -41,6 +41,7 @@ void UHealthComponent::Heal(float Amount)
 		0.0f,
 		MaxHealth
 	);
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }
 
 bool UHealthComponent::IsDead() const
