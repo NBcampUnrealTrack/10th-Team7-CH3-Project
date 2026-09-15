@@ -89,6 +89,7 @@ void AShotgunWeapon::Reload()
 	}
 
 	bIsReloading = true; // 재장전중
+	OnReloadStarted();
 
 	GetWorld()->GetTimerManager().SetTimer( // 재장전하는데 시간이 들도록 함
 		ReloadTimerHandle,
@@ -105,13 +106,14 @@ void AShotgunWeapon::FinishReload()
 	{
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Reloading Finished"));
 	CurrentAmmo = MaxAmmo;
 	bIsReloading = false;
 	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송
+	OnReloadFinished();
 }
 
 EWeaponType AShotgunWeapon::GetWeaponType() const
 {
 	return EWeaponType::Shotgun;
 }
+
