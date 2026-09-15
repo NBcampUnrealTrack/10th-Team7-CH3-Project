@@ -16,27 +16,23 @@ void AWaveSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-
-	// 레벨에 배치된 스폰 포인트를 전부 찾아서 배열에 담습니다.
-	// 위치를 코드에 하드코딩하지 않고 에디터에서 드래그로 조정하기 위함입니다.
-	TArray<AActor*> Found;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemySpawnPoint::StaticClass(), Found);
-
-	for (AActor* A : Found)
-	{
-		// Cast가 실패하면 nullptr이 나오므로 if 안에서 바로 검사합니다.
-		if (AEnemySpawnPoint* Point = Cast<AEnemySpawnPoint>(A))
-		{
-			SpawnPoints.Add(Point);
-		}
-	}
-	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] SpawnPoint %d개 수집"), SpawnPoints.Num());
-	return;
+	CollectSpawnPoints();
+	
 }
 
 
 void AWaveSpawner::StartWave(int32 WaveIndex)
 {
+
+	// 액터 BeginPlay 순서는 보장되지 않아, 패키징 빌드에서는
+	// 게임모드가 이 함수를 BeginPlay보다 먼저 부를 수 있습니다.
+	// 그래서 여기서 수집을 한 번 더 보장합니다.
+	if (SpawnPoints.Num() == 0)
+	{
+		CollectSpawnPoints();
+	}
+
+
 	// 스폰 포인트가 없으면 어디에 만들지 알 수 없으므로 중단합니다.
 	if (SpawnPoints.Num() == 0)
 	{
@@ -124,4 +120,26 @@ void AWaveSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
 		OnWaveCleared.Broadcast(CurrentWave);
 	}
 
+}
+
+void AWaveSpawner::CollectSpawnPoints()
+{
+	// StartWave에서 먼저 불렸다가 BeginPlay에서 다시 불릴 수 있으므로
+	// 중복 적재를 막기 위해 비우고 시작합니다.
+	SpawnPoints.Empty();
+
+	// 레벨에 배치된 스폰 포인트를 전부 찾아서 배열에 담습니다.
+	// 위치를 코드에 하드코딩하지 않고 에디터에서 드래그로 조정하기 위함입니다.
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemySpawnPoint::StaticClass(), Found);
+
+	for (AActor* A : Found)
+	{
+		// Cast가 실패하면 nullptr이 나오므로 if 안에서 바로 검사합니다.
+		if (AEnemySpawnPoint* Point = Cast<AEnemySpawnPoint>(A))
+		{
+			SpawnPoints.Add(Point);
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] SpawnPoint %d개 수집"), SpawnPoints.Num());
 }

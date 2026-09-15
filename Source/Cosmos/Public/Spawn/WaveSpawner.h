@@ -48,6 +48,13 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 				// AddDynamic은 UFUNCTION() 매크로가 붙은 함수만 받습니다.
 	void HandleEnemyDestroyed(AActor* DestroyedActor);
 
+
+	// 레벨의 AEnemySpawnPoint를 전부 찾아 SpawnPoints에 담아줍니다. 패키징할 때 문제가 있어서 넣어봤습니다.
+	// BeginPlay와 StartWave 양쪽에서 부르므로 함수로 일단 분리했습니다만, 9월15일 알파패키징 이후로는 쓸모가 없을 것 같다고 생각중입니다.
+	// PIE 할 때랑 패키징 후랑 액터의 순서차이가 날 수도 있나본데요. 아무튼 그렇습니다.
+	void CollectSpawnPoints();
+
+
 	// -- 에디터 설정값 (점심먹고 나서 실행해보고 되면 FWaveData로 대체할거임)
 
 	UPROPERTY(EditAnywhere, Category = "Wave")
