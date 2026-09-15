@@ -28,6 +28,8 @@ protected:
 	FBlackboardKeySelector TargetActorKey;
 	UPROPERTY(EditAnywhere, Category = "Blacboard")
 	FBlackboardKeySelector InAttackRangeKey;
+	UPROPERTY(EditAnywhere, Category = "Blacboard")
+	FBlackboardKeySelector StaggerKey;
 	//for extra range
 	UPROPERTY(EditAnywhere, Category = "Blacboard")
 	float ExtraRange = 1.15f;
