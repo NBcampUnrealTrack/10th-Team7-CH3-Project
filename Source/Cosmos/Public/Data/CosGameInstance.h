@@ -30,8 +30,10 @@ public:
 	TArray<UEnchantData*> CollectedEnchant; // 인챈트 인벤토리
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TArray<UEnchantData*> EquippedEnchant; // 장착한 인챈트
-
-	
+	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
+	int32 EnchantMaxEqippedCount = 1;
+	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
+	int32 EnchantMaxCollectedCount = 16;
 	
 	
 	UFUNCTION(BlueprintPure, Category = "Soul")
