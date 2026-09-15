@@ -28,22 +28,19 @@ void UCombatComponent::BeginPlay()
 		return;
 	}
 
-	// 팔 없이 무기만 쓰기 위한 임시 코드
-	//=========================================================================================
+	TArray<UChildActorComponent*> ChildActorComponents; // 배열 생성
+	OwnerPawn->GetComponents<UChildActorComponent>(ChildActorComponents); // 캐릭터가 가진 child컴포넌트를 배열에 담기 ,GetComponents는 결과를 인자에 넣음.
 
-	TArray<UChildActorComponent*> ChildActorComponents;
-	OwnerPawn->GetComponents<UChildActorComponent>(ChildActorComponents);
-
-	for (UChildActorComponent* ChildActorComp : ChildActorComponents)
+	for (UChildActorComponent* ChildActorComp : ChildActorComponents) // 배열을 인자를 하나씩 비교함
 	{
-		if (!IsValid(ChildActorComp))
+		if (!IsValid(ChildActorComp)) //방어코드
 		{
 			continue;
 		}
 
-		AActor* ChildActor = ChildActorComp->GetChildActor();
+		AActor* ChildActor = ChildActorComp->GetChildActor(); // 실제 액터 꺼내서 붙이기
 
-		if (ANailWeapon* Nail = Cast<ANailWeapon>(ChildActor))
+		if (ANailWeapon* Nail = Cast<ANailWeapon>(ChildActor)) // ChildActor가 ANailWeapon 타입이라면 ANailWeapon 타입 포인터를 돌려줌. 그렇기때문에 맞다면 if 실행
 		{
 			NailWeapon = Nail;
 		}
@@ -52,8 +49,6 @@ void UCombatComponent::BeginPlay()
 			ShotgunWeapon = Shotgun;
 		}
 	}
-
-	//=========================================================================================
 
 	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController()); // Pawn 조종하는 컨트롤러 가져오기
 	if (!IsValid(PC))

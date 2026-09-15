@@ -7,6 +7,7 @@ ANailWeapon::ANailWeapon()
 	AttackInterval = 0.3f;
 	AttackRange = 200.f;
 	MaxTargetPerSwing = 2;
+	SwingRadius = 75.f;
 
 	ComboWindowBonus = 0.3f;
 	bSwingLeftToRight = false;
@@ -23,7 +24,7 @@ bool ANailWeapon::PerformAttack()
 	{
 		return false;
 	}
-	const FVector EndLocation = StartLocation + (Direction * AttackRange);
+	const FVector EndLocation = StartLocation + (Direction * GetCurrentRange());
 
 	TArray<FHitResult> HitResults; //맞은 대상을 담을 배열
 	FCollisionQueryParams QueryParams;
@@ -79,9 +80,10 @@ bool ANailWeapon::PerformAttack()
 	TSet<AActor*> AlreadyHit; // 맞은 적 기록. 중복데미지 방지
 	int32 HitCount = 0; // 데미지를 입은 대상 카운트
 
+	const int32 MaxTarget = GetCurrentMaxTarget();
 	for (const FHitResult& Hit : HitResults) //공격에 맞은 대상을 순회
 	{
-		if (HitCount >= MaxTargetPerSwing) // 이미 최대치를 맞췄다면 중지
+		if (HitCount >= MaxTarget) // 이미 최대치를 맞췄다면 중지
 		{
 			break;
 		}
@@ -104,16 +106,6 @@ bool ANailWeapon::PerformAttack()
 	return true;
 }
 
-void ANailWeapon::ApplyEnchant()
-{
-	//인챈트 로직
-}
-
-float ANailWeapon::GetCurrentDamage() const
-{
-	return BaseDamage; 
-}
-
 EWeaponType ANailWeapon::GetWeaponType() const // 무기타입 대못 반환
 {
 	return EWeaponType::Nail;
@@ -133,4 +125,14 @@ void ANailWeapon::UpdateSwingDirection() // 좌공격모션 후 몇 초 동안�
 	}
 
 	LastSwingTime = CurrentTime;
+}
+
+int32 ANailWeapon::GetCurrentMaxTarget() const
+{
+	return MaxTargetPerSwing + FMath::RoundToInt(GetEnchantStat(EEnchantStat::MeleeMaxTarget));
+}
+
+float ANailWeapon::GetCurrentRange() const
+{
+	return AttackRange * (1.f + GetEnchantStat(EEnchantStat::MeleeRange) * 0.01f);
 }

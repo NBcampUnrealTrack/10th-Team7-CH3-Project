@@ -14,28 +14,27 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsSwingLeftToRight() const { return bSwingLeftToRight; }
-
 	UFUNCTION(BlueprintPure, Category = "Weapon")
-	float GetComboWindow() const { return AttackInterval + ComboWindowBonus; }
+	float GetComboWindow() const { return GetCurrentAttackInterval() + ComboWindowBonus; }
 
 protected:
 	virtual bool PerformAttack() override;
-	virtual float GetCurrentDamage() const override;
 	virtual EWeaponType GetWeaponType() const override;
-	virtual void ApplyEnchant() override;
+	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::MeleeSpeed; }
+	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::MeleeDamageAdd; }
+	virtual EEnchantStat GetDamageMultiStatType() const override { return EEnchantStat::MeleeDamageMulti; }
 
-
+	int32 GetCurrentMaxTarget() const;
+	float GetCurrentRange() const;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 MaxTargetPerSwing;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	float SwingRadius = 75.f;
+	float SwingRadius;
 
 	// 공격 모션을 위한 것들
 	void UpdateSwingDirection();
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float ComboWindowBonus;
-
 	bool bSwingLeftToRight;
 	float LastSwingTime;
 };

@@ -1,5 +1,6 @@
 ﻿#include "Weapon/ShotgunWeapon.h"
 #include "DrawDebugHelpers.h" // 트레이스 시각화
+#include "Data/CosGameInstance.h"
 
 AShotgunWeapon::AShotgunWeapon()
 {
@@ -9,6 +10,22 @@ AShotgunWeapon::AShotgunWeapon()
 	MaxAmmo = 4;
 	CurrentAmmo = MaxAmmo;
 	ReloadTime = 2.f;
+}
+
+void AShotgunWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance()))
+		{
+			GameInstance->OnLoadoutChange.AddDynamic(this, &AShotgunWeapon::OnLoadoutChanged);
+		}
+	}
+
+	CurrentAmmo = GetCurrentMaxAmmo();
+	OnAmmoChanged.Broadcast(CurrentAmmo);
 }
 
 bool AShotgunWeapon::PerformAttack()
@@ -61,20 +78,6 @@ bool AShotgunWeapon::PerformAttack()
 
 	return true;
 }
-void AShotgunWeapon::ApplyEnchant()
-{
-	//인챈트 로직
-}
-
-void AShotgunWeapon::ApplyUpgrade()
-{
-	//업그레이드 로직
-}
-
-float AShotgunWeapon::GetCurrentDamage() const
-{
-	return BaseDamage;
-}
 
 int32 AShotgunWeapon::GetCurrentAmmo() const
 {
@@ -83,7 +86,7 @@ int32 AShotgunWeapon::GetCurrentAmmo() const
 
 void AShotgunWeapon::Reload()
 {
-	if (bIsReloading || CurrentAmmo == MaxAmmo) 
+	if (bIsReloading || CurrentAmmo == GetCurrentMaxAmmo())
 	{
 		return;
 	}
@@ -106,7 +109,7 @@ void AShotgunWeapon::FinishReload()
 	{
 		return;
 	}
-	CurrentAmmo = MaxAmmo;
+	CurrentAmmo = GetCurrentMaxAmmo();
 	bIsReloading = false;
 	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송
 	OnReloadFinished();
@@ -117,3 +120,19 @@ EWeaponType AShotgunWeapon::GetWeaponType() const
 	return EWeaponType::Shotgun;
 }
 
+void AShotgunWeapon::OnLoadoutChanged()
+{
+	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());
+	OnAmmoChanged.Broadcast(CurrentAmmo);
+}
+
+int32 AShotgunWeapon::GetCurrentMaxAmmo() const
+{
+	return MaxAmmo + FMath::RoundToInt(GetEnchantStat(EEnchantStat::RangeMaxAmmo));
+}
+
+float AShotgunWeapon::GetCurrentReloadTime() const
+{
+	const float SpeedBonus = GetEnchantStat(EEnchantStat::RangeReloadSpeed);
+	return ReloadTime / (1.f + SpeedBonus * 0.01f);
+}
