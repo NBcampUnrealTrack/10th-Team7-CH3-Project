@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CosTypes.h"
+#include "Data/CosDataTable.h"
 #include "WeaponBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHitConfirmed, AActor*, Target); //FOnHitConfirmed 델리게이트 타입 생성
@@ -25,10 +26,17 @@ public:
 	FOnHitConfirmed OnHitConfirmed; //방송하기 위한 변수 
 
 protected:
+	virtual bool PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, return false; ); // 탄 없을때 공격모션 나가지 않도록 bool
+	virtual EWeaponType GetWeaponType() const PURE_VIRTUAL(AWeaponBase::GetWeaponType, return EWeaponType::None;); // 무기 타입
+	bool GetTraceStartAndDirection(FVector & OutStart, FVector & OutDirection) const; // 트레이스 방향을 무기 기준이 아니라 카메라 시점으로 바꿔줌.
+	float LastAttackTime;
 
+	//메쉬
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	USceneComponent* WeaponRoot;
+	//무기 스탯
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float BaseDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -36,12 +44,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float AttackRange;
 
-	float LastAttackTime;
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	float GetCurrentAttackInterval() const;
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	float GetCurrentDamage() const;
+	virtual EEnchantStat GetSpeedStatType() const { return EEnchantStat::None; }
+	virtual EEnchantStat GetDamageAddStatType() const { return EEnchantStat::None; }
+	virtual EEnchantStat GetDamageMultiStatType() const { return EEnchantStat::None; }
 
-	virtual void PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, ); // 공격
-	virtual float GetCurrentDamage() const PURE_VIRTUAL(AWeaponBase::GetCurrentDamage, return 0.f;); // 데미지 getter
-	virtual EWeaponType GetWeaponType() const PURE_VIRTUAL(AWeaponBase::GetWeaponType, return EWeaponType::None;); // 무기 타입
-	virtual void ApplyEnchant() PURE_VIRTUAL(AWeaponBase::ApplyEnchant, ); // 인챈트 
-
-	bool GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirection) const; // 트레이스 방향을 무기 기준이 아니라 카메라 시점으로 바꿔줌.
+	float GetEnchantStat(EEnchantStat Stat) const; // 인챈트로 얼마나 스탯이 늘어나는지.
 };

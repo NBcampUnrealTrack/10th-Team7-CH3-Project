@@ -16,6 +16,5 @@ class COSMOS_API IDamageable
 	GENERATED_BODY()
 
 public:
-	//virtual void TakeDamage(float Amount, const FHitResult& HitResult) = 0;
 	virtual void TakeHit(float Damage, EWeaponType Weapon) = 0;
 };

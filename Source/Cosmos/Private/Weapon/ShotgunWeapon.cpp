@@ -1,5 +1,6 @@
 ﻿#include "Weapon/ShotgunWeapon.h"
 #include "DrawDebugHelpers.h" // 트레이스 시각화
+#include "Data/CosGameInstance.h"
 
 AShotgunWeapon::AShotgunWeapon()
 {
@@ -11,22 +12,38 @@ AShotgunWeapon::AShotgunWeapon()
 	ReloadTime = 2.f;
 }
 
-void AShotgunWeapon::PerformAttack()
+void AShotgunWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance()))
+		{
+			GameInstance->OnLoadoutChange.AddDynamic(this, &AShotgunWeapon::OnLoadoutChanged);
+		}
+	}
+
+	CurrentAmmo = GetCurrentMaxAmmo();
+	OnAmmoChanged.Broadcast(CurrentAmmo);
+}
+
+bool AShotgunWeapon::PerformAttack()
 {
 	if (bIsReloading || CurrentAmmo <= 0) 
 	{
-		return;
+		return false;
 	}
-
-	CurrentAmmo--;
-	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
 	FVector StartLocation;
 	FVector Direction;
 	if (!GetTraceStartAndDirection(StartLocation, Direction)) // 시작점, 방향 설정
 	{
-		return;
+		return false;
 	}
+
+	CurrentAmmo--;
+	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
 
 	const FVector EndLocation = StartLocation + (Direction * AttackRange); //끝점
 
@@ -59,20 +76,7 @@ void AShotgunWeapon::PerformAttack()
 		TryApplyDamage(HitResult.GetActor());
 	}
 
-}
-void AShotgunWeapon::ApplyEnchant()
-{
-	//인챈트 로직
-}
-
-void AShotgunWeapon::ApplyUpgrade()
-{
-	//업그레이드 로직
-}
-
-float AShotgunWeapon::GetCurrentDamage() const
-{
-	return BaseDamage;
+	return true;
 }
 
 int32 AShotgunWeapon::GetCurrentAmmo() const
@@ -82,12 +86,13 @@ int32 AShotgunWeapon::GetCurrentAmmo() const
 
 void AShotgunWeapon::Reload()
 {
-	if (bIsReloading || CurrentAmmo == MaxAmmo) 
+	if (bIsReloading || CurrentAmmo == GetCurrentMaxAmmo())
 	{
 		return;
 	}
 
 	bIsReloading = true; // 재장전중
+	OnReloadStarted();
 
 	GetWorld()->GetTimerManager().SetTimer( // 재장전하는데 시간이 들도록 함
 		ReloadTimerHandle,
@@ -104,13 +109,30 @@ void AShotgunWeapon::FinishReload()
 	{
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Reloading Finished"));
-	CurrentAmmo = MaxAmmo;
+	CurrentAmmo = GetCurrentMaxAmmo();
 	bIsReloading = false;
 	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송
+	OnReloadFinished();
 }
 
 EWeaponType AShotgunWeapon::GetWeaponType() const
 {
 	return EWeaponType::Shotgun;
+}
+
+void AShotgunWeapon::OnLoadoutChanged()
+{
+	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());
+	OnAmmoChanged.Broadcast(CurrentAmmo);
+}
+
+int32 AShotgunWeapon::GetCurrentMaxAmmo() const
+{
+	return MaxAmmo + FMath::RoundToInt(GetEnchantStat(EEnchantStat::RangeMaxAmmo));
+}
+
+float AShotgunWeapon::GetCurrentReloadTime() const
+{
+	const float SpeedBonus = GetEnchantStat(EEnchantStat::RangeReloadSpeed);
+	return ReloadTime / (1.f + SpeedBonus * 0.01f);
 }

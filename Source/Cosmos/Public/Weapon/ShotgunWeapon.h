@@ -13,22 +13,27 @@ class COSMOS_API AShotgunWeapon : public AWeaponBase
 	
 public:
 	AShotgunWeapon();
-	void ApplyUpgrade();
 	void Reload();
 	void FinishReload();
 
-	int32 GetCurrentAmmo() const;
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	bool IsReloading() const { return bIsReloading; }
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	void OnReloadStarted();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	void OnReloadFinished();
 
-	FORCEINLINE int32 GetMaxAmmo() const { return MaxAmmo; }
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	int32 GetCurrentMaxAmmo() const;
+	int32 GetCurrentAmmo() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Weapon")
 	FOnAmmoChanged OnAmmoChanged;
 
 protected:
-	virtual void PerformAttack() override;
-	virtual float GetCurrentDamage() const override;
+	virtual void BeginPlay() override;
+	virtual bool PerformAttack() override;
 	virtual EWeaponType GetWeaponType() const override;
-	virtual void ApplyEnchant() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 MaxAmmo;
@@ -36,9 +41,15 @@ protected:
 	int32 CurrentAmmo;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float ReloadTime;
-
 	bool bIsReloading = false;
-
 	FTimerHandle ReloadTimerHandle;
 
+	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::RangeFiringRate; }
+	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::RangeDamageAdd; }
+	virtual EEnchantStat GetDamageMultiStatType() const override { return EEnchantStat::RangeDamageMulti; }
+
+	float GetCurrentReloadTime() const;
+
+	UFUNCTION()
+	void OnLoadoutChanged();
 };

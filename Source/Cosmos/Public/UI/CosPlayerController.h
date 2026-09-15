@@ -7,15 +7,18 @@
 #include "CosPlayerController.generated.h"
 
 
+
 class UUserWidget;
 class UInputMappingContext;
 class UHealthComponent;
 class AShotgunWeapon;
 
 
+
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
 {
+
 	GENERATED_BODY()
 
 private:
@@ -85,7 +88,7 @@ public:
 	void CloseForgeWidget();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowResult(bool bWin, int32 Score);
+	void ShowResult(bool bCleared);
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void HideResult();
@@ -111,6 +114,11 @@ public:
 	UFUNCTION()
 	void UpdateAmmoUI(int32 CurrentAmmo);
 
+	UFUNCTION(BlueprintCallable)
+	void ShowGameOver(int32 Score);
+
+	UFUNCTION(BlueprintCallable)
+	void HideGameOver();
 /*
 	// 테스트용 임시
 	void TestDecreaseAmmo();
@@ -121,6 +129,8 @@ public:
 
 	UFUNCTION()
 	void SetupInputComponent();
+
+
 
 protected:
 	virtual void BeginPlay() override;

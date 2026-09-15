@@ -1,10 +1,14 @@
 ﻿#include "Weapon/WeaponBase.h"
 #include "Weapon/Damageable.h"
+#include "Data/CosGameInstance.h"
 
 AWeaponBase::AWeaponBase()
 {
+	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot"));
+	SetRootComponent(WeaponRoot);
+	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	SetRootComponent(WeaponMesh);
+	WeaponMesh->SetupAttachment(WeaponRoot);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //캐릭터와 무기의 물리적 충돌로 인한 버그 예방
 
 	LastAttackTime = -100.f;
@@ -13,13 +17,16 @@ AWeaponBase::AWeaponBase()
 void AWeaponBase::TryAttack() //공격 속도
 {
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (CurrentTime - LastAttackTime < AttackInterval) // 공격 딜레이만큼 시간이 지났는지.
+	if (CurrentTime - LastAttackTime < GetCurrentAttackInterval()) // 공격 딜레이만큼 시간이 지났는지.
 	{
 		return;
 	}
 
+	if (!PerformAttack()) // 샷건탄약이 없어서 공격이 안되는 경우 리턴. 공격속도를 소모하지 않게 하고 공격 모션이 재생되지 않도록 
+	{
+		return;
+	}
 	LastAttackTime = CurrentTime;
-	PerformAttack();
 	OnAttackPlayed();
 }
 
@@ -64,4 +71,48 @@ bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirec
 	OutDirection = ViewRotation.Vector();
 
 	return true;
+}
+
+float AWeaponBase::GetEnchantStat(EEnchantStat Stat) const
+{
+	if (Stat == EEnchantStat::None)
+	{
+		return 0.f;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return 0.f;
+	}
+
+	UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance());
+	if (!IsValid(GameInstance))
+	{
+		return 0.f;
+	}
+
+	return GameInstance->GetTotalStat(Stat);
+}
+
+float AWeaponBase::GetCurrentAttackInterval() const
+{
+	const float SpeedBonus =
+		GetEnchantStat(EEnchantStat::AllSpeed) +
+		GetEnchantStat(GetSpeedStatType());
+
+	return AttackInterval / (1.f + SpeedBonus * 0.01f);
+}
+
+float AWeaponBase::GetCurrentDamage() const
+{
+	const float AddBonus =
+		GetEnchantStat(EEnchantStat::AllDamageAdd) +
+		GetEnchantStat(GetDamageAddStatType());
+
+	const float MultiBonus =
+		GetEnchantStat(EEnchantStat::AllDamageMulti) +
+		GetEnchantStat(GetDamageMultiStatType());
+
+	return (BaseDamage + AddBonus) * (1.f + MultiBonus * 0.01f);
 }

@@ -18,6 +18,9 @@ public:
 	UCombatComponent();
 	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
 	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
+	
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	bool CanAttack() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -31,6 +34,16 @@ protected:
 	UInputAction* ShotgunAttackAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* ReloadAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* UsePotionAction;
+
+	//포션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
+	int32 PotionCount;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
+	float PotionHealAmount;
+	void OnUsePotion();
+
 
 	//TryAttack() 호출을 위한 포인터
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")

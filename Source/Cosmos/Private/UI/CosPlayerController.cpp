@@ -7,6 +7,8 @@
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/TextBlock.h"
+#include "GameFramework/CharacterMovementComponent.h" 
 
 /*
 // 테스트용 임시 체력 변수
@@ -36,7 +38,6 @@ void ACosPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
 	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
@@ -45,15 +46,27 @@ void ACosPlayerController::BeginPlay()
 			if (IsValid(InputMappingContext.Get()))
 			{
 				Subsystem->AddMappingContext(InputMappingContext.Get(), 0);
-				UE_LOG(LogTemp, Warning, TEXT("IMC_Character 등록됨"));
+				UE_LOG(LogTemp, Warning, TEXT("IMC_Character"));
 			}
 		}
 	}
 
-	// 1. 기본 전투 HUD
-	ShowCombatHUD();
-	// 2. 델리게이트 바인딩
-	SetupCharacterBindings();
+	// 현재 레벨 이름에 따라 분기b
+	const FString CurrentLevelName = GetWorld()->GetMapName();
+
+	if (CurrentLevelName.Contains(TEXT("MenuLevel")))
+	{
+		// 메뉴 레벨이면 타이틀 화면만 표시
+		ShowTitleWidget();
+	}
+	else
+	{
+		// 그 외(전투) 레벨이면 전투 HUD + 델리게이트 바인딩
+		ShowCombatHUD();
+		SetupCharacterBindings();
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
 }
 
 void ACosPlayerController::OnPossess(APawn* InPawn)
@@ -111,7 +124,7 @@ void ACosPlayerController::SetupCharacterBindings()
 
 			Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
 			Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
-			CachedMaxAmmo = Weapon->GetMaxAmmo();
+			CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
 			UpdateAmmoUI(Weapon->GetCurrentAmmo());
 		}
 		else
@@ -165,6 +178,25 @@ void ACosPlayerController::OnCharacterDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("플레이어 캐릭터 사망"));
 
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		// 입력 비활성화
+		ControlledPawn->DisableInput(this);
+
+		// 이동 강제 정지
+		if (ACharacter* PossessedCharacter = Cast<ACharacter>(ControlledPawn))
+		{
+			if (UCharacterMovementComponent* MoveComp = PossessedCharacter->GetCharacterMovement())
+			{
+				MoveComp->StopMovementImmediately();
+			}
+		}
+	}
+
+	ShowGameOver(0);
+
+
+
 }
 
 void ACosPlayerController::ShowCombatHUD()
@@ -177,9 +209,14 @@ void ACosPlayerController::ShowCombatHUD()
 		if (IsValid(CombatHUDInstance.Get()))
 		{
 			CombatHUDInstance->AddToViewport();
+
+			// 게임 입력모드 전환
+			SetInputMode(FInputModeGameOnly());
+			bShowMouseCursor = false;
 		}
 	}
 }
+
 
 void ACosPlayerController::CloseCombatHUD()
 {
@@ -197,12 +234,40 @@ UUserWidget* ACosPlayerController::GetHUDWidget() const
 
 void ACosPlayerController::ShowTitleWidget()
 {
+	// Class 유효성 검사, Instance가 이미 생성되었는지 확인
+	if (IsValid(TitleWidgetClass) && !IsValid(TitleWidgetInstance))
+	{
+		//일시 정
+		if (SetPause(false))
+		{
+			SetPause(true);
+		}
 
+		TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass); //위젯 인스턴스 생성(메모리상에 객체만 둠. 아직 화면에는 X)
+
+		if (IsValid(TitleWidgetInstance.Get()))
+		{
+			TitleWidgetInstance->AddToViewport();
+
+			// 메뉴 화면이므로 입력 모드를 UI 전용으로 전환
+			bShowMouseCursor = true;
+			SetInputMode(FInputModeUIOnly());
+		}
+	}
 }
 
 void ACosPlayerController::HideTitleWidget()
 {
+	if (IsValid(TitleWidgetInstance.Get()))
+	{
+		TitleWidgetInstance->RemoveFromParent(); // TitleWidgetInstance를 부모(뷰포트)로부터 분리
+		TitleWidgetInstance = nullptr; // nullptr로 리셋해서 인스턴스가 없음을 명확히 함 
+	}
 
+	// 메뉴를 닫으면 다시 게임 입력 모드로 전환
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
 }
 
 /*
@@ -228,14 +293,69 @@ void ACosPlayerController::CloseForgeWidget()
 
 }
 
-void ACosPlayerController::ShowResult(bool bWin, int32 Score)
-{
+void ACosPlayerController::ShowResult(bool bCleared) {
 
 }
 
-void ACosPlayerController::HideResult()
-{
+void ACosPlayerController::HideResult() {
 
+}
+
+void ACosPlayerController::ShowGameOver(int32 Score)
+{
+	CloseCombatHUD();
+
+	// 타이틀 위젯이 아직 안 떠있으면 새로 생성
+	if (IsValid(TitleWidgetClass) && !IsValid(TitleWidgetInstance))
+	{
+		TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass);
+
+		if (IsValid(TitleWidgetInstance.Get()))
+		{
+			TitleWidgetInstance->AddToViewport();
+		}
+	}
+
+	if (IsValid(TitleWidgetInstance.Get()))
+	{
+		// UI 입력 모드로 전환
+		bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(TitleWidgetInstance->TakeWidget());
+		SetInputMode(InputMode);
+
+		// 게임오버 그룹 보이기
+		if (UWidget* GameOverGroup = TitleWidgetInstance->GetWidgetFromName(TEXT("GameOverGroup")))
+		{
+			GameOverGroup->SetVisibility(ESlateVisibility::Visible);
+		}
+
+		// 시작 그룹 숨기기
+		if (UWidget* StartGroup = TitleWidgetInstance->GetWidgetFromName(TEXT("StartGroup")))
+		{
+			StartGroup->SetVisibility(ESlateVisibility::Collapsed);
+		}
+
+		// 점수 표시
+		if (UTextBlock* ScoreText = Cast<UTextBlock>(TitleWidgetInstance->GetWidgetFromName(TEXT("ScoreText"))))
+		{
+			ScoreText->SetText(FText::FromString(FString::Printf(TEXT("		Soul: %d"), Score)));
+		}
+	}
+
+}
+
+void ACosPlayerController::HideGameOver()
+{
+	if (IsValid(TitleWidgetInstance.Get()))
+	{
+		TitleWidgetInstance->RemoveFromParent();
+		TitleWidgetInstance = nullptr;
+	}
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
 }
 
 void ACosPlayerController::ToggleESCMenu()
@@ -253,5 +373,8 @@ void ACosPlayerController::SetUIInputMode(bool bUIMode)
 
 }
 
-void ACosPlayerController::ShowGameHUD() {
+void ACosPlayerController::ShowGameHUD() 
+{
+	HideTitleWidget();
+	ShowCombatHUD();
 }
