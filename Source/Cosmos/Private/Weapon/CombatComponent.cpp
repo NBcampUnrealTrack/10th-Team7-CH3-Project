@@ -8,10 +8,14 @@
 #include "GameFramework/Pawn.h"
 #include "Components/ChildActorComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Character/HealthComponent.h"
 
 UCombatComponent::UCombatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	PotionCount = 3;
+	PotionHealAmount = 30.f;
 }
 
 void UCombatComponent::BeginPlay()
@@ -80,9 +84,22 @@ void UCombatComponent::BeginPlay()
 		{
 			EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &UCombatComponent::OnReload); // R 누르면 재장전
 		}
+		if (IsValid(UsePotionAction))
+		{
+			EIC->BindAction(UsePotionAction, ETriggerEvent::Started, this, &UCombatComponent::OnUsePotion); // E 누르면 포션
+		}
 	}
 }
 
+bool UCombatComponent::CanAttack() const // 장전중 공격 방지
+{
+	if (IsValid(ShotgunWeapon) && ShotgunWeapon->IsReloading())
+	{
+		return false;
+	}
+
+	return true;
+}
 
 // 공격하는 함수랑 연결
 void UCombatComponent::OnNailAttack()
@@ -121,12 +138,18 @@ void UCombatComponent::OnReload()
 	}
 }
 
-bool UCombatComponent::CanAttack() const // 장전중 공격 방지
+void UCombatComponent::OnUsePotion()
 {
-	if (IsValid(ShotgunWeapon) && ShotgunWeapon->IsReloading())
+	UHealthComponent* HealthComponent = GetOwner()->FindComponentByClass<UHealthComponent>();
+	if (!IsValid(HealthComponent) || HealthComponent->IsDead())
 	{
-		return false;
+		return;
 	}
-
-	return true;
+	if (PotionCount <= 0|| HealthComponent->GetCurrentHealth() >= HealthComponent->GetMaxHealth())
+	{
+		return;
+	}
+	
+	PotionCount--;
+	HealthComponent->Heal(PotionHealAmount);
 }
