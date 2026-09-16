@@ -36,6 +36,7 @@ AEnemyBase::AEnemyBase()
 	Movement->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
 	//for Only walk on Nav place / Nav 위에서만 움직이게 
 	Movement->SetMovementMode(MOVE_NavWalking);
+	Movement->SetGroundMovementMode(MOVE_NavWalking);
 	// no clip each enemy, / 적들이 알아서 비켜가게
 	Movement->bUseRVOAvoidance = true;
 	Movement->AvoidanceConsiderationRadius = 150.0f; //No Clip Range
@@ -51,9 +52,10 @@ AEnemyBase::AEnemyBase()
 	Movement->bEnablePhysicsInteraction = false; 
 	//Disable Capsule Collision Overlap Each Monsters. ->  Use RVOAvoidance up there / 콜리전 계산 중지, 겹치기 방지는 위에 RVO가 함
 	Capsule->SetCollisionObjectType(ECC_Enemies);                      
-	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Block);
+	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Ignore);
 	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	Capsule->SetGenerateOverlapEvents(false);
+
 	Movement->bUseFlatBaseForFloorChecks = true;
 	Movement->MaxStepHeight = 25.f;
 	//avoid monster pop upto the sky
@@ -65,6 +67,9 @@ AEnemyBase::AEnemyBase()
 	MeshComp->SetGenerateOverlapEvents(false); // No Overlap -> use hitbox / 오버렙 안씀, 히트박스로 대체
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MeshComp->bComponentUseFixedSkelBounds = true; //Skip bound Calc  / 프레임 바운드 계산 안함
+
+	Movement->NavMeshProjectionInterval = 0.1f;
+	Movement->NavMeshProjectionInterpSpeed = 12.f;
 }
 
 // Called when the game starts or when spawned
@@ -175,6 +180,11 @@ void AEnemyBase::HandleDeath()
 		 PlayAnimMontage(DeathMontage);
 		 PlaySFX(DeathSound);
 	}
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
+	}
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, [this]() { Destroy(); }, DeathDelay, false);
 }
 
@@ -251,6 +261,23 @@ void AEnemyBase::ApplyStagger()
 		PlayAnimMontage(HitReactMontage);
 	}
 	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	[this]() { bIsStagger = false; }, StaggerDuration, false);
+}
+
+void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!Movement)
+	{
+		return;
+	}
+
+	if (Movement->MovementMode == MOVE_Falling)
+	{
+		Movement->Velocity.Z = 0.f;         
+		Movement->SetMovementMode(MOVE_NavWalking);
+	}
 }
 
 void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
