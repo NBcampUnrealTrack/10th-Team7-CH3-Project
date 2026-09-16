@@ -83,6 +83,7 @@ void AEnchantPickup::ActivateEnchant(AActor* Activator)
 		{
 			// 획득하지 못하면 (인챈트 인벤토리가 꽉 차서)
 			// 어떻게 처리??
+			// 일단 지금은 무한 획득 가능하게 되는 거라 딱히 별도의 처리는 불 필요
 		}
 	}
 	

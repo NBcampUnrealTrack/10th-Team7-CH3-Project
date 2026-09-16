@@ -23,9 +23,9 @@ void UEnchantEquipWidget::RefreshEquipped()
 	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
 	if (!GI) return;
 
-	for (int32 i = 0; i < GI->EquippedEnchant.Num(); i++)
+	for (int32 i = 0; i < MaxEnchantSlots; i++)
 	{
-		UEnchantData* Enchant = GI->EquippedEnchant[i];
+		UEnchantData* Enchant = GI->EquippedEnchant.IsValidIndex(i) ? GI->EquippedEnchant[i] : nullptr;
 		UEnchantSlotWidget* NewSlot = CreateWidget<UEnchantSlotWidget>(this, SlotWidgetClass);
 		if (!NewSlot) continue;
 

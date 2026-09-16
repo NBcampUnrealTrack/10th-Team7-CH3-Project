@@ -32,7 +32,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TArray<UEnchantData*> EquippedEnchant; // 장착한 인챈트
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
-	int32 EnchantMaxEquippedCount = 1;
+	int32 EnchantMaxEquippedCount = 3;
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	int32 EnchantMaxCollectedCount = 16;
 
@@ -66,6 +66,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Upgrade")
 	float GetShotgunStat(EShotgunModuleType Type) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void IncreaseMaxEquippedEnchant(int32 Amount);
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Soul")
 	int32 Soul = 0;

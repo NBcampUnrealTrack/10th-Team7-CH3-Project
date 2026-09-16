@@ -40,8 +40,21 @@ void UEnchantInventoryWidget::RefreshList()
 	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
 	if (!GI) return;
 
+	TArray<UEnchantData*> UnequippedEnchants;
+	for (UEnchantData* Enchant : GI->CollectedEnchant)
+	{
+		if (!GI->EquippedEnchant.Contains(Enchant))
+		{
+			UnequippedEnchants.Add(Enchant);
+		}
+	}
+
+	const int32 SafeSlotsPerPage = FMath::Max(1, SlotsPerPage);
+	const int32 MaxPage = FMath::Max(0, FMath::DivideAndRoundUp(UnequippedEnchants.Num(), SafeSlotsPerPage) - 1);
+	CurrentPage = FMath::Clamp(CurrentPage, 0, MaxPage);
+
 	const int32 StartIndex = CurrentPage * SlotsPerPage;
-	const int32 EndIndex = FMath::Min(StartIndex + SlotsPerPage, GI->CollectedEnchant.Num());
+	const int32 EndIndex = FMath::Min(StartIndex + SlotsPerPage, UnequippedEnchants.Num());
 
 	// 인챈트 인벤토리에서 순환을 돌며 각 인챈트에 접근
 	// 접근한 뒤 각 인챈트를 Setup(들어갈 슬롯에 인챈트 정보를 전달 (저장)
@@ -51,13 +64,12 @@ void UEnchantInventoryWidget::RefreshList()
 
 	for (int32 i = StartIndex; i < EndIndex; i++)
 	{
-		UEnchantData* Enchant = GI->CollectedEnchant[i];
+		UEnchantData* Enchant = UnequippedEnchants[i];
 
 		UEnchantSlotWidget* NewSlot = CreateWidget<UEnchantSlotWidget>(this, SlotWidgetClass);
 		if (!NewSlot) continue;
 
-		const bool bIsEquipped = GI->EquippedEnchant.Contains(Enchant);
-		NewSlot->Setup(Enchant, false, this);
+		NewSlot->Setup(Enchant, false);
 
 		const int32 LocalIndex = i - StartIndex;
 		SlotContainer->AddChildToUniformGrid(NewSlot, LocalIndex / ColumsPerRow, LocalIndex % ColumsPerRow);
@@ -89,24 +101,14 @@ void UEnchantInventoryWidget::OnUnEquipButtonClicked()
 
 void UEnchantInventoryWidget::NextPage()
 {
-	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
-	if (!GI) return;
-
-	const int32 MaxPage = FMath::Max(0, GI->CollectedEnchant.Num() - 1 / SlotsPerPage);
-	if (CurrentPage < MaxPage) 
-	{ 
-		CurrentPage++; 
-		RefreshList();
-	}
+	CurrentPage++;
+	RefreshList();
 }
 
 void UEnchantInventoryWidget::PrevPage()
 {
-	if (CurrentPage > 0)
-	{
-		CurrentPage--;
-		RefreshList();
-	}
+	CurrentPage--;
+	RefreshList();
 }
 
 void UEnchantInventoryWidget::ToggleEquip(UEnchantData* Enchant, bool bCurrentlyEquipped)

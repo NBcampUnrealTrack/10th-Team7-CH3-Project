@@ -20,6 +20,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UUniformGridPanel* SlotContainer;
 
+	UPROPERTY()
+	int32 MaxEnchantSlots = 3;
+
 	UFUNCTION()
 	void RefreshEquipped();
 };
