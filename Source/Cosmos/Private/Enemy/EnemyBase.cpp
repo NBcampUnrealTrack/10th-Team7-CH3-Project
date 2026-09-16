@@ -67,9 +67,6 @@ AEnemyBase::AEnemyBase()
 	MeshComp->SetGenerateOverlapEvents(false); // No Overlap -> use hitbox / 오버렙 안씀, 히트박스로 대체
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MeshComp->bComponentUseFixedSkelBounds = true; //Skip bound Calc  / 프레임 바운드 계산 안함
-
-	Movement->NavMeshProjectionInterval = 0.1f;
-	Movement->NavMeshProjectionInterpSpeed = 12.f;
 }
 
 // Called when the game starts or when spawned
@@ -263,19 +260,18 @@ void AEnemyBase::ApplyStagger()
 	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	[this]() { bIsStagger = false; }, StaggerDuration, false);
 }
 
-void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMode, uint8 PrevCustomMode)
 {
-	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	Super::OnMovementModeChanged(PrevMode, PrevCustomMode);
 
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	if (!Movement)
-	{
-		return;
-	}
+	if (!Movement) { return; }
+
+	if (Movement->NavAgentProps.bCanFly) { return; }
 
 	if (Movement->MovementMode == MOVE_Falling)
 	{
-		Movement->Velocity.Z = 0.f;         
+		Movement->Velocity.Z = 0.f;
 		Movement->SetMovementMode(MOVE_NavWalking);
 	}
 }

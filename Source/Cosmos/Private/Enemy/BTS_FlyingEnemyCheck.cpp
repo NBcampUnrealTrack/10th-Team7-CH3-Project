@@ -61,7 +61,7 @@ void UBTS_FlyingEnemyCheck::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* N
 			BB->SetValueAsBool(CloseToPlayerKey.SelectedKeyName, false);
 			return;
 		}
-		const float DistSq = FVector::DistSquared(Flying->GetActorLocation(), Target->GetActorLocation());
+		const float DistSq = FVector::DistSquaredXY(Flying->GetActorLocation(), Target->GetActorLocation());
 		const float AttackRange = Flying->GetAttackRange() * RangeTolerance;	
 		BB->SetValueAsBool(InRangeKey.SelectedKeyName, DistSq <= FMath::Square(AttackRange));
 
