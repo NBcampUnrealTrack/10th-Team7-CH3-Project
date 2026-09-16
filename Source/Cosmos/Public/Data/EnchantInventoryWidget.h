@@ -1,9 +1,10 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/EnchantData.h"
 #include "Data/EnchantSlotWidget.h"
+#include "Components/UniformGridPanel.h"
 #include "EnchantInventoryWidget.generated.h"
 
 UCLASS()
@@ -21,12 +22,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	void OnUnEquipButtonClicked();
 	
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void ToggleEquip(UEnchantData* Enchant, bool bCurrentlyEquipped);
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TObjectPtr<UEnchantData> SelectedEnchant;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enchant")
-	TSubclassOf<UEnchantSlotWidget> SlotWidgetClass; // ¿¡µğÅÍ¿¡¼­ WBP_EnchantSlotÀ¸·Î ÁöÁ¤ÇØµÒ
+	TSubclassOf<UEnchantSlotWidget> SlotWidgetClass; // ì—ë””í„°ì—ì„œ WBP_EnchantSlotìœ¼ë¡œ ì§€ì •í•´ë‘ 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<class UVerticalBox> SlotContainer; // UMG µğÀÚÀÌ³Ê¿¡¼­ ÀÌ¸§À» SlotContainer·Î ÁöÁ¤ÇØµÒ
+	TObjectPtr<class UUniformGridPanel> SlotContainer; // UMG ë””ìì´ë„ˆì—ì„œ ì´ë¦„ì„ SlotContainerë¡œ ì§€ì •í•´ë‘ 
+
+
+	// ì¸ì±ˆíŠ¸ ì¸ë²¤í† ë¦¬ Grid
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enchant")
+	int32 ColumsPerRow = 4;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enchant")
+	int32 SlotsPerPage = 8;
+	int32 CurrentPage = 0;
+
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void NextPage();
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	void PrevPage();
 
 protected:
 	virtual void NativeConstruct() override;
