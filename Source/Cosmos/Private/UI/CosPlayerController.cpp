@@ -216,9 +216,10 @@ void ACosPlayerController::OnCharacterDeath()
 		}
 	}
 
-	ShowGameOver(0);
-
-
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		GM->HandlePlayerDeath();
+	}
 
 }
 
@@ -236,6 +237,8 @@ void ACosPlayerController::ShowCombatHUD()
 			// 게임 입력모드 전환
 			SetInputMode(FInputModeGameOnly());
 			bShowMouseCursor = false;
+
+
 		}
 	}
 }
@@ -340,7 +343,7 @@ void ACosPlayerController::CloseForgeWidget()
 	// 다음 웨이브 호출
 	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
 	{
-		GM->StartNextWave();
+		GM->StartNextWave(true);
 	}
 }
 
@@ -390,7 +393,18 @@ bool ACosPlayerController::InputKey(const FInputKeyEventArgs& EventArgs)
 
 void ACosPlayerController::HideResult()
 {
+	if (IsValid(ResultWidgetInstance.Get()))
+	{
+		ResultWidgetInstance->RemoveFromParent();
+		ResultWidgetInstance = nullptr;
+	}
 
+	SetUIInputMode(false); // 상황에 맞게 게임 입력모드 복귀
+
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		GM->OnResultConfirmed(); // Forge/NextWave/GameClear 중 하나로 이어짐
+	}
 }
 
 void ACosPlayerController::ShowGameOver(int32 Score)
