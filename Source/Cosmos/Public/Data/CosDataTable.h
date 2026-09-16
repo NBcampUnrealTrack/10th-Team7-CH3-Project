@@ -117,8 +117,8 @@ struct FWaveData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 WaveIndex = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 PhaseIndex = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 StageIndex = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 WaveIndex	= 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float LimitTime = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 GhoulCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 EnhancedGhoulCount = 0;
