@@ -84,6 +84,17 @@ bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirec
 	return true;
 }
 
+float AWeaponBase::GetAnimationPlayRate() const
+{
+	const float CurrentInterval = GetCurrentAttackInterval();
+	if (CurrentInterval <= 0.f)
+	{
+		return 1.f;
+	}
+
+	return AttackInterval / CurrentInterval;
+}
+
 float AWeaponBase::GetEnchantStat(EEnchantStat Stat) const // 스탯 하나를 받아서 그 스탯의 보너스를 리턴
 {
 	if (Stat == EEnchantStat::None) // 따로 지정해두지 않았다면 0.f 리턴

@@ -26,6 +26,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon") // 애니메이션 구현 위해 이벤트로 호출
 	void OnAttackPlayed();
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	float GetAnimationPlayRate() const;
 
 protected:
 	virtual void BeginPlay() override;

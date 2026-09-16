@@ -4,7 +4,7 @@
 ANailWeapon::ANailWeapon()
 {
 	BaseDamage = 50.f;
-	AttackInterval = 0.3f;
+	AttackInterval = 0.6f;
 	AttackRange = 200.f;
 	MaxTargetPerSwing = 2;
 	SwingRadius = 75.f;
