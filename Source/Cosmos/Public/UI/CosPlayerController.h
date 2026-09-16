@@ -13,7 +13,20 @@ class UInputMappingContext;
 class UHealthComponent;
 class AShotgunWeapon;
 
+USTRUCT(BlueprintType)
+struct FWaveResultData
+{
+	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadOnly)
+	int32 WaveNumber = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Score = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	float ElapsedSeconds = 0.0f;
+};
 
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
@@ -91,7 +104,7 @@ public:
 	void CloseForgeWidget();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowResult(bool bCleared);
+	void ShowResult(const FWaveResultData& ResultData);
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void HideResult();
@@ -122,6 +135,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void HideGameOver();
+
+	UFUNCTION()
+	void HandleForgeRequested();
 /*
 	// 테스트용 임시
 	void TestDecreaseAmmo();
@@ -138,5 +154,5 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override; 
-
+	virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
 };

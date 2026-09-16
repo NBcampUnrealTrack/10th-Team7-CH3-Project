@@ -1,5 +1,6 @@
 ﻿#include "UI/CosPlayerController.h"
 #include "Character/CosCharacter.h"
+#include "Character/CosGameMode.h"
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
@@ -69,6 +70,12 @@ void ACosPlayerController::BeginPlay()
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
+
+	if (ACosGameMode* GM = Cast<ACosGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->OnForgeRequested.AddDynamic(this, &ACosPlayerController::HandleForgeRequested);
+	}
+
 }
 
 void ACosPlayerController::OnPossess(APawn* InPawn)
@@ -298,22 +305,91 @@ void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
 */
 
 
+void ACosPlayerController::HandleForgeRequested()
+{
+	OpenForgeWidget();
+}
 
 void ACosPlayerController::OpenForgeWidget()
 {
+	CloseCombatHUD();
 
+	if (IsValid(ForgeWidgetClass) && !IsValid(ForgeWidgetInstance))
+	{
+		ForgeWidgetInstance = CreateWidget<UUserWidget>(this, ForgeWidgetClass);
+	}
+
+	if (IsValid(ForgeWidgetInstance.Get()))
+	{
+		ForgeWidgetInstance->AddToViewport();
+		SetUIInputMode(true);
+	}
 }
 
 void ACosPlayerController::CloseForgeWidget()
 {
+	if (IsValid(ForgeWidgetInstance.Get()))
+	{
+		ForgeWidgetInstance->RemoveFromParent();
+		ForgeWidgetInstance = nullptr;
+	}
 
+	SetUIInputMode(false);
+	ShowCombatHUD();
+
+	// 다음 웨이브 호출
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		GM->StartNextWave();
+	}
 }
 
-void ACosPlayerController::ShowResult(bool bCleared) {
+void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
+{
+	CloseCombatHUD();
 
+	if (IsValid(ResultWidgetClass) && !IsValid(ResultWidgetInstance))
+	{
+		ResultWidgetInstance = CreateWidget<UUserWidget>(this, ResultWidgetClass);
+	}
+
+	if (IsValid(ResultWidgetInstance.Get()))
+	{
+		ResultWidgetInstance->AddToViewport();
+
+		const int32 TotalSeconds = FMath::FloorToInt(ResultData.ElapsedSeconds);
+		const int32 Minutes = TotalSeconds / 60;
+		const int32 Seconds = TotalSeconds % 60;
+
+		FString Cmd = FString::Printf(
+			TEXT("SetResult %d %d %d %d"),
+			ResultData.WaveNumber,
+			ResultData.Score,
+			Minutes,
+			Seconds
+		);
+		ResultWidgetInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+
+		bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+	}
 }
 
-void ACosPlayerController::HideResult() {
+bool ACosPlayerController::InputKey(const FInputKeyEventArgs& EventArgs)
+{
+	if (IsValid(ResultWidgetInstance.Get()) && EventArgs.Event == IE_Pressed)
+	{
+		HideResult();
+		return true; 
+	}
+
+	return Super::InputKey(EventArgs);
+}
+
+void ACosPlayerController::HideResult()
+{
 
 }
 
