@@ -39,8 +39,12 @@ private:
 
 public:
 
+
 	ACosPlayerController();
 	FTimerHandle WeaponBindRetryTimer;
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void UpdateWaveUI(int32 CurrentWave);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
@@ -149,6 +153,8 @@ public:
 	UFUNCTION()
 	void SetupInputComponent();
 
+	UFUNCTION()
+	void HandleGameStateChanged();
 
 
 protected:
