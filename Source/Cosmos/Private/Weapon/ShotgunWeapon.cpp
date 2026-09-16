@@ -14,18 +14,18 @@ AShotgunWeapon::AShotgunWeapon()
 
 void AShotgunWeapon::BeginPlay()
 {
-	Super::BeginPlay();
+	Super::BeginPlay(); // 오버라이드한 함수에서 Super:: 부르는건 거의 항상 옳음
 
-	if (UWorld* World = GetWorld())
+	if (UWorld* World = GetWorld()) // 현재 월드를 포인터로 받아오면서 널검사
 	{
-		if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance()))
+		if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance())) // 만들어둔 World로 게임인스턴스 찾고 그거를 CosGameInstance로 다운캐스트
 		{
-			GameInstance->OnLoadoutChange.AddDynamic(this, &AShotgunWeapon::OnLoadoutChanged);
+			GameInstance->OnLoadoutChange.AddDynamic(this, &AShotgunWeapon::OnLoadoutChanged); //인챈트 구성이 바뀌면 this에게 탄약 바뀌었다는 함수 호출하라고 알림
 		}
 	}
 
-	CurrentAmmo = GetCurrentMaxAmmo();
-	OnAmmoChanged.Broadcast(CurrentAmmo);
+	CurrentAmmo = GetCurrentMaxAmmo(); // 생성자 시점에는 인챈트를 알 수 없기에 여기서 초기화
+	OnAmmoChanged.Broadcast(CurrentAmmo); // 방송
 }
 
 bool AShotgunWeapon::PerformAttack()
