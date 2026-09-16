@@ -3,7 +3,10 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/EnchantData.h"
+#include "Components/Button.h"
+#include "Components/TextBlock.h"
 #include "EnchantSlotWidget.generated.h"
+
 
 UCLASS()
 class COSMOS_API UEnchantSlotWidget : public UUserWidget
@@ -16,8 +19,13 @@ public:
 	TObjectPtr<UEnchantData> MyEnchant;
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	bool bIsEquipped = false;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* EquipButton;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UTextBlock* SlotStatText;
+
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
-	void Setup(UEnchantData* InEnchant, bool bInIsEquipped, class UEnchantInventoryWidget* InOwner);
+	void Setup(UEnchantData* InEnchant, bool bInIsEquipped, UEnchantInventoryWidget* InOwner = nullptr);
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	void OnSlotClicked();
 	UFUNCTION(BlueprintImplementableEvent, Category = "Enchant")
@@ -26,7 +34,9 @@ public:
 	FString GetStatText() const;
 
 private:
-	UPROPERTY()
+
+	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
 	TObjectPtr<UEnchantInventoryWidget> OwnerInventory;
 };
 	

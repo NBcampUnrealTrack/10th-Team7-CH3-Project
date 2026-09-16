@@ -24,8 +24,15 @@ void UEnchantInventoryWidget::NativeConstruct()
 // 하지만 계속 지우고 채우는 행위를 반복하는 것은 비효율적.
 void UEnchantInventoryWidget::RefreshList()
 {
+	UE_LOG(LogTemp, Warning, TEXT("RefreshList called"));
+
 	// 연결된 슬롯 위젯 클래스가 없거나 슬롯을 어디에 놓을지 가리키는 자리가 없으면 return
-	if (!SlotWidgetClass || !SlotContainer) return;
+	if (!SlotWidgetClass || !SlotContainer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RefreshList early return - SlotWidgetClass:%d SlotContainer:%d"),
+			SlotWidgetClass != nullptr, SlotContainer != nullptr);
+		return;
+	}
 
 	// 우선 기존 컨테이너 (슬롯 자리)를 지워주고
 	SlotContainer->ClearChildren();
@@ -33,18 +40,27 @@ void UEnchantInventoryWidget::RefreshList()
 	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
 	if (!GI) return;
 
+	const int32 StartIndex = CurrentPage * SlotsPerPage;
+	const int32 EndIndex = FMath::Min(StartIndex + SlotsPerPage, GI->CollectedEnchant.Num());
+
 	// 인챈트 인벤토리에서 순환을 돌며 각 인챈트에 접근
 	// 접근한 뒤 각 인챈트를 Setup(들어갈 슬롯에 인챈트 정보를 전달 (저장)
 	// 다음 컨테이너에 슬롯을 채움
-	for (UEnchantData* Enchant : GI->CollectedEnchant)
+	UE_LOG(LogTemp, Warning, TEXT("StartIndex:%d EndIndex:%d Num:%d SlotsPerPage:%d ColumsPerRow:%d"),
+		StartIndex, EndIndex, GI->CollectedEnchant.Num(), SlotsPerPage, ColumsPerRow);
+
+	for (int32 i = StartIndex; i < EndIndex; i++)
 	{
-		UEnchantSlotWidget* NewSlot = CreateWidget<UEnchantSlotWidget>(GetWorld(), SlotWidgetClass);
-		if (!NewSlot) return;
+		UEnchantData* Enchant = GI->CollectedEnchant[i];
+
+		UEnchantSlotWidget* NewSlot = CreateWidget<UEnchantSlotWidget>(this, SlotWidgetClass);
+		if (!NewSlot) continue;
 
 		const bool bIsEquipped = GI->EquippedEnchant.Contains(Enchant);
-		NewSlot->Setup(Enchant, bIsEquipped, this);
+		NewSlot->Setup(Enchant, false, this);
 
-		SlotContainer->AddChildToVerticalBox(NewSlot);
+		const int32 LocalIndex = i - StartIndex;
+		SlotContainer->AddChildToUniformGrid(NewSlot, LocalIndex / ColumsPerRow, LocalIndex % ColumsPerRow);
 	}
 }
 
@@ -71,3 +87,41 @@ void UEnchantInventoryWidget::OnUnEquipButtonClicked()
 	}
 }
 
+void UEnchantInventoryWidget::NextPage()
+{
+	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	const int32 MaxPage = FMath::Max(0, GI->CollectedEnchant.Num() - 1 / SlotsPerPage);
+	if (CurrentPage < MaxPage) 
+	{ 
+		CurrentPage++; 
+		RefreshList();
+	}
+}
+
+void UEnchantInventoryWidget::PrevPage()
+{
+	if (CurrentPage > 0)
+	{
+		CurrentPage--;
+		RefreshList();
+	}
+}
+
+void UEnchantInventoryWidget::ToggleEquip(UEnchantData* Enchant, bool bCurrentlyEquipped)
+{
+	if (!Enchant) return;
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		if (bCurrentlyEquipped)
+		{
+			GI->UnEquipEnchant(Enchant);
+		}
+		else
+		{
+			GI->EquipEnchant(Enchant);
+		}
+	}
+}

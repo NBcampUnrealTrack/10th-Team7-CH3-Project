@@ -66,7 +66,7 @@ bool UCosGameInstance::EquipEnchant(UEnchantData* Enchant)
 	UE_LOG(LogTemp, Warning, TEXT("인챈트 장착"));
 	if (!Enchant || !CollectedEnchant.Contains(Enchant)) return false;
 
-	if (EquippedEnchant.Num() >= EnchantMaxEqippedCount)
+	if (EquippedEnchant.Num() >= EnchantMaxEquippedCount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 장착할 수 없습니다."));
 		return false;
@@ -88,7 +88,7 @@ void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 
 // GameMode에서 사용할 Recalc() 함수
 // 
-// void CosGameMode::Recalc()
+// void ACosGameMode::Recalc()
 // {
 //		UCosGameInstance* GI = Cast<UCosGameInstance>(GetWorld()->GetGameInstance());
 //		if (!GI) return;
@@ -113,7 +113,7 @@ void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 // 
 //		// Misc
 //		EnchantMaxHealthValue = GI->GetTotalStat(EEnchantStat::MaxHealth);
-//		EndhantMovementSpeedValue = GI->GetTotalStat(EEnchantStat::MovementSpeed);
+//		EnchantMovementSpeedValue = GI->GetTotalStat(EEnchantStat::MovementSpeed);
 //		EnchantSprintSpeedMultiValue = GI->GetTotalStat(EEnchantStat::SprintSpeedMulti);
 //		EnchantMaxPotionAddValue = GI->GetTotalStat(EEnchantStat::MaxPotionAdd);
 //		EnchantIncreasePotionValue = GI->GetTotalStat(EEnchantStat::IncreasePotionValue);

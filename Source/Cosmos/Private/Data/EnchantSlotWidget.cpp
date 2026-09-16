@@ -33,7 +33,7 @@ FString UEnchantSlotWidget::GetStatText() const
 
 	for (const FEnchantRolledStat& Stat : MyEnchant->RolledStats)
 	{
-		const UEnum* StatEnumPtr = StaticEnum<EEnchantValueType>();
+		const UEnum* StatEnumPtr = StaticEnum<EEnchantStat>();
 		const FString StatName = StatEnumPtr ? StatEnumPtr->GetDisplayNameTextByValue((int64)Stat.StatType).ToString() : TEXT("Unknown");
 
 		FString ValueText;
@@ -55,4 +55,14 @@ FString UEnchantSlotWidget::GetStatText() const
 	}
 
 	return Result;
+}
+
+FReply UEnchantSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+	if (OwnerInventory && MyEnchant)
+	{
+		OwnerInventory->ToggleEquip(MyEnchant, bIsEquipped);
+	}
+	return FReply::Handled();
 }

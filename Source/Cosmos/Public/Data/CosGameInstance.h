@@ -32,7 +32,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TArray<UEnchantData*> EquippedEnchant; // 장착한 인챈트
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
-	int32 EnchantMaxEqippedCount = 1;
+	int32 EnchantMaxEquippedCount = 1;
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	int32 EnchantMaxCollectedCount = 16;
 
