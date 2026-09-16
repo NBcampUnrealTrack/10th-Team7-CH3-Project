@@ -17,7 +17,8 @@ void AWaveSpawner::BeginPlay()
 	Super::BeginPlay();
 
 	CollectSpawnPoints();
-	
+
+	StartWave(1); // [임시 테스트] 게임모드 없이 바로 웨이브 시작. 테스트 후 삭제
 }
 
 
@@ -74,10 +75,11 @@ void AWaveSpawner::SpawnOne()
 {
 	// 스폰 포인트 중 하나를 무작위로 고릅니다.
 	// Num()은 개수이므로 마지막 인덱스는 Num() -1입니다.
-	const int32 Index = FMath::RandRange(0, SpawnPoints.Num() - 1);
-	AEnemySpawnPoint* Point = SpawnPoints[Index];
+	const int32 Index = FMath::RandRange(0, SpawnPoints.Num() - 1); // 1) 각주
+	AEnemySpawnPoint* Point = SpawnPoints[Index]; // 랜덤으로 뽑은 번호의 스폰 포인트 하나를 Point로 가리킵니다.
 
-	if (IsValid(Point))
+	if (IsValid(Point)) // Point가 진짜 살아있는 스폰 포인트인지 검사합니다. 통과해야 적을 만듭니다. nullptr 검사를 하지 않으면 크래시가 날 수 있습니다.
+		//IsValid는 언리얼 함수이고, nullptr 체크 + "삭제 예정인가"까지 같이 봅니다. 그래서 Point != nullptr보다 안전합니다. valid는 "유효한" 이라는 뜻을 가진 형용사입니다.
 	{
 		FActorSpawnParameters Params;
 		// 스폰 지점에 뭔가 겹쳐 있어도 위치를 보정해서 반드시 생성합니다.
@@ -87,7 +89,7 @@ void AWaveSpawner::SpawnOne()
 
 		AActor* Enemy = GetWorld()->SpawnActor<AActor>(
 			EnemyClass, Point->GetActorLocation(), Point->GetActorRotation(), Params);
-		
+		// 월드에, EnemyClass 종류의 적을, 스폰 포인트 위치에, 스폰 포인트 방향으로, 아까 만든 옵션으로 만들고, 만든 적을 Enemy로 가리켜라는 말입니다.
 		if (Enemy)
 		{
 			AliveEnemies.Add(Enemy);
@@ -96,21 +98,22 @@ void AWaveSpawner::SpawnOne()
 			// AddDynamic은 UFUNCION()이 붙은 함수만 받습니다.
 			Enemy->OnDestroyed.AddDynamic(this, &AWaveSpawner::HandleEnemyDestroyed);
 
+			Enemy->SetLifeSpan(3.0f); // [임시 테스트] 3초 뒤 자동으로 사라짐. 테스트 후 삭제
 		}
 
 	}
 	// ++SpawnedCount는 먼저 1 올린 뒤 비교합니다.
 	if (++SpawnedCount >= TargetSpawnCount)
-	{ 
+	{
 		GetWorld()->GetTimerManager().ClearTimer(SpawnTimer);
 		bIsSpawning = false;
 	}
 }
- 
+
 void AWaveSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
 {
 	AliveEnemies.Remove(DestroyedActor);
-	
+
 	// bIsSpawning 검사가 없으면, 첫 적을 바로 죽였을 때
 	// 아직 더 나올 예정인데도 클리어로 오판합니다.
 
@@ -143,3 +146,13 @@ void AWaveSpawner::CollectSpawnPoints()
 	}
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] SpawnPoint %d개 수집"), SpawnPoints.Num());
 }
+
+
+// ─────────────────────────────────────────────
+// 각주
+// ─────────────────────────────────────────────
+// 1) FMath::RandRange(최소, 최대)는 최소~최대 사이 정수를 랜덤하게 하나 뽑아주는 언리얼 함수입니다. 양끝도 포함됩니다.
+//    예시: int32 A = FMath::RandRange(1, 6); // 주사위처럼 1~6 사이 하나
+//    SpawnPoints는 헤더에 선언한 배열입니다. .Num()은 배열에 몇 개가 들어있는지 알려주는 함수입니다. vector.size()와 같습니다.
+//    배열 번호는 0부터 시작하므로, 스폰 포인트가 3개면 번호는 0, 1, 2입니다.
+//    그래서 -1을 해줍니다. 빼지 않으면 없는 3번이 뽑혀 크래시가 납니다.
