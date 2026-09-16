@@ -11,7 +11,6 @@
 AFlyingBase::AFlyingBase()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-
 	//change move_navwalk -> move_flying
 	Movement->SetMovementMode(MOVE_Flying);
 	//remove gravity
@@ -25,7 +24,9 @@ AFlyingBase::AFlyingBase()
 	Movement->GetNavAgentPropertiesRef().bCanWalk = false;
 	// check RVO again
 	Movement->bUseRVOAvoidance = true;
-	Movement->AvoidanceConsiderationRadius = 130.f;
+	Movement->AvoidanceConsiderationRadius = 200.f;
+
+	Movement->RotationRate = FRotator(0.f, 360.f, 0.f);
 }
 void AFlyingBase::BeginPlay() 
 {
@@ -35,7 +36,16 @@ void AFlyingBase::BeginPlay()
 	{
 		Movement->MaxFlySpeed = GetRunSpeed();
 	}
+	LastAttackTime = -1.f;
 	
+}
+bool AFlyingBase::CanAttack() const
+{
+	if (LastAttackTime < 0.0f)
+	{
+		return true;
+	}
+	return (GetWorld()->GetTimeSeconds() - LastAttackTime) >= GetAttackDelay();
 }
 void AFlyingBase::AttackHitCheck()
 {
@@ -43,7 +53,6 @@ void AFlyingBase::AttackHitCheck()
 	{
 		return;
 	}
-	PlaySFX(AttackSound);
 	if (!ProjectileClass)
 	{
 		return;
@@ -63,7 +72,7 @@ void AFlyingBase::AttackHitCheck()
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; //always shoot.
-
+	PlaySFX(AttackSound);
 	GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, AcutalFire, SpawnParams);
 }
 
