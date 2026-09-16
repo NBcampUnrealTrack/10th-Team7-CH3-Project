@@ -17,8 +17,6 @@ void AWaveSpawner::BeginPlay()
 	Super::BeginPlay();
 
 	CollectSpawnPoints();
-
-	StartWave(1); // [임시 테스트] 게임모드 없이 바로 웨이브 시작. 테스트 후 삭제
 }
 
 
@@ -98,7 +96,6 @@ void AWaveSpawner::SpawnOne()
 			// AddDynamic은 UFUNCION()이 붙은 함수만 받습니다.
 			Enemy->OnDestroyed.AddDynamic(this, &AWaveSpawner::HandleEnemyDestroyed);
 
-			Enemy->SetLifeSpan(3.0f); // [임시 테스트] 3초 뒤 자동으로 사라짐. 테스트 후 삭제
 		}
 
 	}
