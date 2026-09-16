@@ -62,6 +62,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Instances")
 	TObjectPtr<UUserWidget> ESCWidgetInstance;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<class UInputAction> ESCAction;
+
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowTitleWidget();
@@ -135,4 +138,5 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override; 
+
 };

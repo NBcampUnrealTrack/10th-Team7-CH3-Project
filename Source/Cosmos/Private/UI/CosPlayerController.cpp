@@ -4,7 +4,9 @@
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
 #include "EnhancedInputSubsystems.h"
+#include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
+#include "InputAction.h" 
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
@@ -145,9 +147,23 @@ void ACosPlayerController::SetupCharacterBindings()
 	}
 }
 
+// ESC 키 입력을 ToggleESCMenu에 바인딩해줌
 void ACosPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		if (IsValid(ESCAction))
+		{
+			EnhancedInput->BindAction(
+				ESCAction,
+				ETriggerEvent::Started,
+				this,
+				&ACosPlayerController::ToggleESCMenu
+			);
+		}
+	}
 }
 
 void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
@@ -360,17 +376,72 @@ void ACosPlayerController::HideGameOver()
 
 void ACosPlayerController::ToggleESCMenu()
 {
+	// 결과창 또는 게임오버 화면이 떠 있을 경우 ESC 창을 열지 않음
+	if (IsValid(ResultWidgetInstance.Get()) || IsValid(TitleWidgetInstance.Get()))
+	{
+		return;
+	}
 
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		// 이미 열려 있으면 닫음
+		HideESCMenu();
+		return;
+	}
+
+	// Class가 유효한지 확인 후 새로 생성
+	if (!IsValid(ESCWidgetClass))
+	{
+		return;
+	}
+
+	ESCWidgetInstance = CreateWidget<UUserWidget>(this, ESCWidgetClass);
+
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		ESCWidgetInstance->AddToViewport();
+
+		// UI 입력 모드로 전환
+		SetUIInputMode(true);
+
+		// 게임 일시정지
+		SetPause(true);
+	}
 }
 
 void ACosPlayerController::HideESCMenu()
 {
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		ESCWidgetInstance->RemoveFromParent();
+		ESCWidgetInstance = nullptr;
+	}
 
+	// 게임 입력 모드
+	SetUIInputMode(false);
+
+	// 일시정지 해제
+	SetPause(false);
 }
 
 void ACosPlayerController::SetUIInputMode(bool bUIMode)
 {
 
+	if (bUIMode)
+	{
+		FInputModeUIOnly InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+
+		UE_LOG(LogTemp, Warning, TEXT("설정 직후 bShowMouseCursor = %s"), bShowMouseCursor ? TEXT("true") : TEXT("false"));
+	}
+	else
+	{
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
 }
 
 void ACosPlayerController::ShowGameHUD() 
