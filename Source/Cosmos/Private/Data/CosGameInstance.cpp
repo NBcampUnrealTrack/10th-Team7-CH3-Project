@@ -46,8 +46,6 @@ bool UCosGameInstance::CollectEnchant(UEnchantData* Enchant)
 {
 	if (!Enchant) return false;
 
-	EnchantMaxCollectedCount = 16;
-
 	if (CollectedEnchant.Num() >= EnchantMaxCollectedCount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 획득할 수 없습니다."));
@@ -121,6 +119,7 @@ void UCosGameInstance::UnEquipEnchant(UEnchantData* Enchant)
 //		EnchantIncreaseSoulValue = GI->GetTotalStat(EEnchantStat::IncreaseSoulValue);
 //		EnchantGainHealValue = GI->GetTotalStat(EEnchantStat::GainHeal);
 // }
+// beginplay에서 GI->OnLoadoutChange.AddDynamic(this, &ACosGameMode::Recalc) 이거 해줘야함
 
 float UCosGameInstance::GetTotalStat(EEnchantStat Stat) const
 {
@@ -183,15 +182,31 @@ bool UCosGameInstance::UpgradeShotgun(EShotgunModuleType Type)
 	}
 }
 
+// GameMode에서
+// GI->GetSHotgunStat(EShoutgunModuleType::Damage)
+// GI->GetSHotgunStat(EShoutgunModuleType::FireSpeed)
+// GI->GetSHotgunStat(EShoutgunModuleType::Reload)
+// GI->GetSHotgunStat(EShoutgunModuleType::Magazine)
+
 float UCosGameInstance::GetShotgunStat(EShotgunModuleType Type) const
 {
 	// 현재 레벨 조회 (FindRef)
-
+	const int32 Level = ModuleLevels.FindRef(Type);
 	// 레벨이 0이면 0.0f 반환
-
+	if (Level <= 0.0f)
+	{
+		return 0.0f;
+	}
 	// FindUpgradeData(Type, 현재레벨)로 행 조회
-
+	const FUpgradeData* Row = FindUpgradeData(Type, Level);
 	// 행 있으면 EffectValue 반환, 없으면 0.0f
 
-	return 0.0f;
+	return Row ? Row->EffectValue : 0.0f;
+}
+
+// 장착 가능한 인챈트 크기를 늘리는 함수
+void UCosGameInstance::IncreaseMaxEquippedEnchant(int32 Amount)
+{
+	EnchantMaxEquippedCount += Amount;
+	OnLoadoutChange.Broadcast();
 }
