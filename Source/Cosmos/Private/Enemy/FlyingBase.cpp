@@ -43,10 +43,7 @@ void AFlyingBase::AttackHitCheck()
 	{
 		return;
 	}
-	if (AttackSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
-	}
+	PlaySFX(AttackSound);
 	if (!ProjectileClass)
 	{
 		return;

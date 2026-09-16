@@ -58,5 +58,19 @@ enum class ECosStatType : uint8     // StatType이라는 이름이 엔진에 있
     MAX                 UMETA(Hidden)                               
 };
 
+USTRUCT(BlueprintType)
+struct FSFXVolume 
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SFX")
+    TObjectPtr<USoundBase> Sound = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SFX", meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "2.0"))
+    float Volume = 1.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SFX", meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "2.0"))
+    float Pitch = 1.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SFX",  meta = (ClampMin = "0.0", ClampMax = "0.5"))
+    float RandomPitch = 0.f;
+};
 constexpr ECollisionChannel ECC_Enemies = ECollisionChannel::ECC_GameTraceChannel1;
 constexpr ECollisionChannel ECC_Weapon = ECollisionChannel::ECC_GameTraceChannel2;

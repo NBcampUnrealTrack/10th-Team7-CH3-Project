@@ -26,6 +26,10 @@ AEnemyBase::AEnemyBase()
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	USkeletalMeshComponent* MeshComp = GetMesh();
+
+	Movement->SetGroundMovementMode(MOVE_NavWalking);
+	//capsule Scale
+	Capsule->SetCapsuleRadius(25.f);
 	//for move / 움직임 기본 세팅
 	Movement->MaxWalkSpeed = RunSpeed;
 	Movement->bOrientRotationToMovement = true;
@@ -47,9 +51,14 @@ AEnemyBase::AEnemyBase()
 	Movement->bEnablePhysicsInteraction = false; 
 	//Disable Capsule Collision Overlap Each Monsters. ->  Use RVOAvoidance up there / 콜리전 계산 중지, 겹치기 방지는 위에 RVO가 함
 	Capsule->SetCollisionObjectType(ECC_Enemies);                      
-	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Ignore);
+	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Block);
 	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	Capsule->SetGenerateOverlapEvents(false);
+	Movement->bUseFlatBaseForFloorChecks = true;
+	Movement->MaxStepHeight = 25.f;
+	//avoid monster pop upto the sky
+	Movement->MaxDepenetrationWithPawn = 30.f;
+	Movement->MaxDepenetrationWithGeometry = 100.f;
 	//for Reduce Animations costs / 시야 밖 적들 애니메이션 줄이기
 	MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	MeshComp->bEnableUpdateRateOptimizations = true; // Skip Frames of distant enemies / 거리 멀면 애니메이션 줄이기
@@ -105,11 +114,18 @@ void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 float AEnemyBase::EnemyAttack() {
-	if (!AttackMontage) {
+	if (!AttackMontage1 || !AttackMontage2) {
 		GetWorldTimerManager().SetTimer(AttackHitTimerHandle, this, &AEnemyBase::AttackHitCheck, AttackPreDelay, false);
 		return AttackPreDelay + 0.5f;
 	}
-	const float Duration = PlayAnimMontage(AttackMontage);
+	float Duration = 0;
+	float Random = FMath::FRandRange(0.f, 1.f);
+	if (Random <= 0.5f) {
+		Duration = PlayAnimMontage(AttackMontage1);
+	}
+	if (Random  > 0.5f) {
+		Duration = PlayAnimMontage(AttackMontage2);
+	}
 	return Duration > 0.0f ? Duration : 1.0f;
 }
 
@@ -124,9 +140,13 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		return;
 	}
-	if (HitSound)
+	if (Weapon == EWeaponType::Nail)	
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
+		PlaySFX(HitbyMeleeSound);
+	}
+	if (Weapon == EWeaponType::Shotgun)
+	{
+		PlaySFX(HitbyRangeSound);
 	}
 	ApplyStagger();
 
@@ -149,13 +169,11 @@ void AEnemyBase::HandleDeath()
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
 
-	if (DeathSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
-	}
+	PlaySFX(DeathHitSound);
 	if (DeathMontage)
 	{
 		 PlayAnimMontage(DeathMontage);
+		 PlaySFX(DeathSound);
 	}
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, [this]() { Destroy(); }, DeathDelay, false);
 }
@@ -166,10 +184,7 @@ void AEnemyBase::AttackHitCheck()
 	{
 		return;
 	}
-	if (AttackSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
-	}
+	PlaySFX(AttackSound);
 	//set radius
 	const FVector Start = GetActorLocation() + GetActorForwardVector() * AttackOffset;
 	// const FVector End = Start + GetActorForwardVector() * AttackRange;
@@ -217,11 +232,8 @@ void AEnemyBase::ApplyStagger()
 	}
 	LastStaggerTime = Now;
 	bIsStagger = true;
-//stop attacking
-	if (AttackMontage)
-	{
-		StopAnimMontage(AttackMontage);
-	}
+//stop animation
+	StopAnimMontage();
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	//stop movement
 	if (AAIController* AI = Cast<AAIController>(GetController()))
@@ -241,3 +253,12 @@ void AEnemyBase::ApplyStagger()
 	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	[this]() { bIsStagger = false; }, StaggerDuration, false);
 }
 
+void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
+{
+	if (!SFX.Sound)
+	{
+		return;
+	}
+	const float FinalResult = SFX.Pitch * (1.f + FMath::FRandRange(-SFX.RandomPitch, SFX.RandomPitch));
+	UGameplayStatics::PlaySoundAtLocation(this, SFX.Sound, GetActorLocation(), SFX.Volume, FinalResult);
+}
