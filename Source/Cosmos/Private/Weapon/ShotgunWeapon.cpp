@@ -8,7 +8,6 @@ AShotgunWeapon::AShotgunWeapon()
 	AttackInterval = 1.f;
 	AttackRange = 1000.f;
 	MaxAmmo = 4;
-	CurrentAmmo = MaxAmmo;
 	ReloadTime = 2.f;
 }
 
@@ -56,7 +55,7 @@ bool AShotgunWeapon::PerformAttack()
 		HitResult, // 결과 담는 곳
 		StartLocation, // 시작 
 		EndLocation, // 끝
-		ECC_Weapon, //시각적 오브젝트 기준 충돌
+		ECC_Weapon, // 무기 판정 전용 채널
 		QueryParams // 트레이스 설정
 	); 
 
@@ -79,11 +78,6 @@ bool AShotgunWeapon::PerformAttack()
 	return true;
 }
 
-int32 AShotgunWeapon::GetCurrentAmmo() const
-{
-	return CurrentAmmo;
-}
-
 void AShotgunWeapon::Reload()
 {
 	if (bIsReloading || CurrentAmmo == GetCurrentMaxAmmo())
@@ -98,7 +92,7 @@ void AShotgunWeapon::Reload()
 		ReloadTimerHandle,
 		this,
 		&AShotgunWeapon::FinishReload, // 시간이 되면 호출할 함수
-		ReloadTime, // 드는 시간
+		GetCurrentReloadTime(), // 드는 시간
 		false
 	);
 }
@@ -115,24 +109,24 @@ void AShotgunWeapon::FinishReload()
 	OnReloadFinished();
 }
 
-EWeaponType AShotgunWeapon::GetWeaponType() const
+int32 AShotgunWeapon::GetCurrentAmmo() const
 {
-	return EWeaponType::Shotgun;
-}
-
-void AShotgunWeapon::OnLoadoutChanged()
-{
-	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());
-	OnAmmoChanged.Broadcast(CurrentAmmo);
+	return CurrentAmmo;
 }
 
 int32 AShotgunWeapon::GetCurrentMaxAmmo() const
 {
-	return MaxAmmo + FMath::RoundToInt(GetEnchantStat(EEnchantStat::RangeMaxAmmo));
-}
+	return MaxAmmo + FMath::RoundToInt(GetEnchantStat(EEnchantStat::RangeMaxAmmo)); // 인챈트로 최대 탄약이 늘었을 수도 있으니 더해서 알려줌
+}                                                                                   // 인챈트값이 float이라 인트로 변환
 
-float AShotgunWeapon::GetCurrentReloadTime() const
+float AShotgunWeapon::GetCurrentReloadTime() const // 공격 속도랑 같은 방식
 {
 	const float SpeedBonus = GetEnchantStat(EEnchantStat::RangeReloadSpeed);
 	return ReloadTime / (1.f + SpeedBonus * 0.01f);
+}
+
+void AShotgunWeapon::OnLoadoutChanged() // 인챈트 끼거나 뺄때 호출돼서 현재 탄약수 설정
+{
+	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());
+	OnAmmoChanged.Broadcast(CurrentAmmo);
 }
