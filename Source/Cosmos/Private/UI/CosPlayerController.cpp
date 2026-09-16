@@ -1,10 +1,13 @@
 ﻿#include "UI/CosPlayerController.h"
 #include "Character/CosCharacter.h"
+#include "Character/CosGameMode.h"
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
 #include "EnhancedInputSubsystems.h"
+#include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
+#include "InputAction.h" 
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
@@ -67,6 +70,12 @@ void ACosPlayerController::BeginPlay()
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
+
+	if (ACosGameMode* GM = Cast<ACosGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->OnForgeRequested.AddDynamic(this, &ACosPlayerController::HandleForgeRequested);
+	}
+
 }
 
 void ACosPlayerController::OnPossess(APawn* InPawn)
@@ -145,9 +154,23 @@ void ACosPlayerController::SetupCharacterBindings()
 	}
 }
 
+// ESC 키 입력을 ToggleESCMenu에 바인딩해줌
 void ACosPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		if (IsValid(ESCAction))
+		{
+			EnhancedInput->BindAction(
+				ESCAction,
+				ETriggerEvent::Started,
+				this,
+				&ACosPlayerController::ToggleESCMenu
+			);
+		}
+	}
 }
 
 void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
@@ -282,22 +305,91 @@ void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
 */
 
 
+void ACosPlayerController::HandleForgeRequested()
+{
+	OpenForgeWidget();
+}
 
 void ACosPlayerController::OpenForgeWidget()
 {
+	CloseCombatHUD();
 
+	if (IsValid(ForgeWidgetClass) && !IsValid(ForgeWidgetInstance))
+	{
+		ForgeWidgetInstance = CreateWidget<UUserWidget>(this, ForgeWidgetClass);
+	}
+
+	if (IsValid(ForgeWidgetInstance.Get()))
+	{
+		ForgeWidgetInstance->AddToViewport();
+		SetUIInputMode(true);
+	}
 }
 
 void ACosPlayerController::CloseForgeWidget()
 {
+	if (IsValid(ForgeWidgetInstance.Get()))
+	{
+		ForgeWidgetInstance->RemoveFromParent();
+		ForgeWidgetInstance = nullptr;
+	}
 
+	SetUIInputMode(false);
+	ShowCombatHUD();
+
+	// 다음 웨이브 호출
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		GM->StartNextWave();
+	}
 }
 
-void ACosPlayerController::ShowResult(bool bCleared) {
+void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
+{
+	CloseCombatHUD();
 
+	if (IsValid(ResultWidgetClass) && !IsValid(ResultWidgetInstance))
+	{
+		ResultWidgetInstance = CreateWidget<UUserWidget>(this, ResultWidgetClass);
+	}
+
+	if (IsValid(ResultWidgetInstance.Get()))
+	{
+		ResultWidgetInstance->AddToViewport();
+
+		const int32 TotalSeconds = FMath::FloorToInt(ResultData.ElapsedSeconds);
+		const int32 Minutes = TotalSeconds / 60;
+		const int32 Seconds = TotalSeconds % 60;
+
+		FString Cmd = FString::Printf(
+			TEXT("SetResult %d %d %d %d"),
+			ResultData.WaveNumber,
+			ResultData.Score,
+			Minutes,
+			Seconds
+		);
+		ResultWidgetInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+
+		bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+	}
 }
 
-void ACosPlayerController::HideResult() {
+bool ACosPlayerController::InputKey(const FInputKeyEventArgs& EventArgs)
+{
+	if (IsValid(ResultWidgetInstance.Get()) && EventArgs.Event == IE_Pressed)
+	{
+		HideResult();
+		return true; 
+	}
+
+	return Super::InputKey(EventArgs);
+}
+
+void ACosPlayerController::HideResult()
+{
 
 }
 
@@ -360,17 +452,72 @@ void ACosPlayerController::HideGameOver()
 
 void ACosPlayerController::ToggleESCMenu()
 {
+	// 결과창 또는 게임오버 화면이 떠 있을 경우 ESC 창을 열지 않음
+	if (IsValid(ResultWidgetInstance.Get()) || IsValid(TitleWidgetInstance.Get()))
+	{
+		return;
+	}
 
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		// 이미 열려 있으면 닫음
+		HideESCMenu();
+		return;
+	}
+
+	// Class가 유효한지 확인 후 새로 생성
+	if (!IsValid(ESCWidgetClass))
+	{
+		return;
+	}
+
+	ESCWidgetInstance = CreateWidget<UUserWidget>(this, ESCWidgetClass);
+
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		ESCWidgetInstance->AddToViewport();
+
+		// UI 입력 모드로 전환
+		SetUIInputMode(true);
+
+		// 게임 일시정지
+		SetPause(true);
+	}
 }
 
 void ACosPlayerController::HideESCMenu()
 {
+	if (IsValid(ESCWidgetInstance.Get()))
+	{
+		ESCWidgetInstance->RemoveFromParent();
+		ESCWidgetInstance = nullptr;
+	}
 
+	// 게임 입력 모드
+	SetUIInputMode(false);
+
+	// 일시정지 해제
+	SetPause(false);
 }
 
 void ACosPlayerController::SetUIInputMode(bool bUIMode)
 {
 
+	if (bUIMode)
+	{
+		FInputModeUIOnly InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+
+		UE_LOG(LogTemp, Warning, TEXT("설정 직후 bShowMouseCursor = %s"), bShowMouseCursor ? TEXT("true") : TEXT("false"));
+	}
+	else
+	{
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
 }
 
 void ACosPlayerController::ShowGameHUD() 
