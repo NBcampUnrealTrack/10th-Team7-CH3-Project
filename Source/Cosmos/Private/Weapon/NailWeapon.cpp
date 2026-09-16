@@ -74,7 +74,7 @@ bool ANailWeapon::PerformAttack()
 
 	if (!bHit) // 안맞은 경우
 	{
-		return true; // 재장전중, 탄약없음 이 아니라면 트루
+		return true; // 안맞아도 모션은 나가야하니 트루
 	}
 
 	TSet<AActor*> AlreadyHit; // 맞은 적 기록. 중복데미지 방지
@@ -104,11 +104,6 @@ bool ANailWeapon::PerformAttack()
 	}
 
 	return true;
-}
-
-EWeaponType ANailWeapon::GetWeaponType() const // 무기타입 대못 반환
-{
-	return EWeaponType::Nail;
 }
 
 void ANailWeapon::UpdateSwingDirection() // 좌공격모션 후 몇 초 동안은 우공격 모션이 나오도록.
