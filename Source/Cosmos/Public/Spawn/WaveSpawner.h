@@ -6,6 +6,8 @@
 
 
 class AEnemySpawnPoint; // 어디에 적이 생성될지 에디터 상에 찍어주는 EnemySpawnPoint를 전방선언합니다.
+class UDataTable; // 웨이브 데이터 테이블 전방선언
+
 
 // 델리게이트 선언. 스폰 완료 + 생존 적 0 -> 방송됨. 게임 모드가 구독합니다.
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWaveCleared, int32 /*WaveIndex*/); // OneParam은 인자 1개를 넘긴다, TwoParam은 인자 2개를 넘긴다. 없으면 안넘김.
@@ -54,16 +56,30 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	// PIE 할 때랑 패키징 후랑 액터의 순서차이가 날 수도 있나본데요. 아무튼 그렇습니다.
 	void CollectSpawnPoints();
 
+	// [DT] 게임모드가 넘긴 번호(1~26)를 DT의 Row Name(Stage1_Wave1의 형식)으로 바꿔줍니다.
+	FName MakeRowName(int32 WaveIndex) const;
 
-	// -- 에디터 설정값 (점심먹고 나서 실행해보고 되면 FWaveData로 대체할거임)
+	// -- 에디터 설정값 
+	// 웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 
 	UPROPERTY(EditAnywhere, Category = "Wave")
-	TSubclassOf<AActor> EnemyClass;
+	TObjectPtr<UDataTable> WaveDataTable;
 
-	// meta는 에디터 내에서 조정할 수 있는 옵션 묶음입니다. ClampMin이라고 하면 에디터에서 1보다 작은 값을 못 넣습니다.
-	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "1")) 
-	int32 TargetSpawnCount = 5; // 스폰할 적의 수
-	// 
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> GhoulClass;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> EnhancedGhoulClass;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> GargoyleClass;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> CrowClass;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> BossClass;
+
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "0.1"))  // 0을 넣으면 무한생성됩니다. 0.1로 막아놓은 것.
 	float SpawnInterval = 1.0f; // 스폰하는 인터벌
 
@@ -73,9 +89,12 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> AliveEnemies;
+	UPROPERTY()
+	TArray<TSubclassOf<AActor>> SpawnQueue;
 
 	FTimerHandle SpawnTimer; // 타이머의 이름표입니다. 타이머 그자체는 아니고 내가 걸어놓은 타이머를 찾기 위한 식별자입니다.
 	int32 CurrentWave = 0; // 지금이 몇 번째 웨이브인지 클리어 방송할 때 이 번호를 같이 넘깁니다.
 	int32 SpawnedCount = 0; // 이 웨이브에서 지금까지 몇 마리 만들었는지.
+	int32 TargetSpawnCount = 0; // 이번 웨이브에 만들 총 마리 수 . 에디터가 아니라 DT에서 채워서 작동함.
 	bool bIsSpawning = false; // 아직 스폰중인지?
 };
