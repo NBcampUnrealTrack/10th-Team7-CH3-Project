@@ -416,12 +416,13 @@ void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
 		const int32 Seconds = TotalSeconds % 60;
 
 		FString Cmd = FString::Printf(
-			TEXT("SetResult %d %d %d %d"),
+			TEXT("SetResult %d %d %d %d %d"), // 인자 5개
 			ResultData.WaveNumber,
-			ResultData.Score,
 			Minutes,
-			Seconds
-		);
+			Seconds,
+			ResultData.SoulEarned,
+			ResultData.TotalSoul
+	);
 		ResultWidgetInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 
 		bShowMouseCursor = true;

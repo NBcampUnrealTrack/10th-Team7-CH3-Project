@@ -21,11 +21,15 @@ struct FWaveResultData
 	UPROPERTY(BlueprintReadOnly)
 	int32 WaveNumber = 0;
 
-	UPROPERTY(BlueprintReadOnly)
-	int32 Score = 0;
 
 	UPROPERTY(BlueprintReadOnly)
 	float ElapsedSeconds = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 SoulEarned = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 TotalSoul = 0;
 };
 
 UCLASS()
