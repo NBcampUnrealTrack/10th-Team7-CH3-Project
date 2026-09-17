@@ -72,7 +72,11 @@ void ACosPlayerController::BeginPlay()
 
 		if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
 		{
+			UpdateKillUI(GS->GetKillCount());
+			UpdateStageTimeUI(GS->GetStageRemainingTime());
+
 			GS->OnStateChanged.RemoveDynamic(this, &ACosPlayerController::HandleGameStateChanged);
+			GS->OnStageTimeChanged.AddDynamic(this, &ACosPlayerController::HandleStageTimeChanged);
 			GS->OnStateChanged.AddDynamic(this, &ACosPlayerController::HandleGameStateChanged);
 
 			// 처음 HUD가 켜졌을 때 초기 웨이브 UI 즉시 갱신
@@ -86,6 +90,8 @@ void ACosPlayerController::BeginPlay()
 	{
 		GM->OnForgeRequested.AddDynamic(this, &ACosPlayerController::HandleForgeRequested);
 	}
+
+		
 
 }
 
@@ -172,6 +178,8 @@ void ACosPlayerController::SetupCharacterBindings()
 		UpdateSoulUI(GI->GetSoul());
 	}
 
+
+
 }
 
 // ESC 키 입력을 ToggleESCMenu에 바인딩해줌
@@ -200,7 +208,7 @@ void ACosPlayerController::HandleGameStateChanged()
 	{
 		// GameState에서 WaveIndex를 가져와 UI 업데이트
 		UpdateWaveUI(GS->GetWaveIndex());
-		UpdateKillCountUI(GS->GetKillCount());
+		UpdateKillUI(GS->GetKillCount());
 	}
 }
 
@@ -253,13 +261,23 @@ void ACosPlayerController::UpdateSoulUI(int32 CurrentSoul)
 	}
 }
 
-void ACosPlayerController::UpdateKillCountUI(int32 CurrentKillCount)
+void ACosPlayerController::UpdateKillUI(int32 KillCount)
 {
 	if (IsValid(CombatHUDInstance.Get()))
 	{
-		FString Cmd = FString::Printf(TEXT("SetKillCountText %d"), CurrentKillCount);
+		FString Cmd = FString::Printf(TEXT("SetKillText %d"), KillCount);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
+}
+
+void ACosPlayerController::HandleStageTimeChanged(float RemainingSeconds)
+{
+	UpdateStageTimeUI(RemainingSeconds);
+}
+
+void ACosPlayerController::UpdateStageTimeUI(float RemainingSeconds)
+{
+
 }
 
 void ACosPlayerController::OnCharacterDeath()
@@ -429,7 +447,7 @@ void ACosPlayerController::CloseForgeWidget()
 	// 다음 웨이브 호출
 	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
 	{
-		GM->StartNextWave(true);
+		GM->StartNextWave();
 	}
 }
 

@@ -21,7 +21,6 @@ struct FWaveResultData
 	UPROPERTY(BlueprintReadOnly)
 	int32 WaveNumber = 0;
 
-
 	UPROPERTY(BlueprintReadOnly)
 	float ElapsedSeconds = 0.0f;
 
@@ -89,8 +88,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<class UInputAction> ESCAction;
 
+	void UpdateKillUI(int32 KillCount);
+
 	UFUNCTION()
-	void UpdateKillCountUI(int32 CurrentKillCount);
+	void HandleStageTimeChanged(float RemainingSeconds);
+
+	void UpdateStageTimeUI(float RemainingSeconds);
 
 	UFUNCTION()
 	void RefreshCombatHUD();
