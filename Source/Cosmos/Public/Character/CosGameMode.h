@@ -66,7 +66,6 @@ private:
 	TObjectPtr<AWaveSpawner> WaveSpawner;//WaveSpawner 참조, 게임모드에서 언제 시작할지 결정
 	
 	int32 CurrentWaveIndex = 0;//몇번째 웨이브인지
-	int32 LastForgeWave = 0;//대장간 체크포인트
 	
 	float CurrentWaveStartTime = 0.0f;// 현재 웨이브 구간 시작 시간 추가
 

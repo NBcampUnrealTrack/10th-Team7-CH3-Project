@@ -22,23 +22,33 @@ void ACosGameMode::BeginPlay()
 		)
 	);
 
-	//웨이브 스포너에서 웨이브 클리어 델리게이트 구독
-	//웨이브 끝나면 HandleWaveCleared가 자동 호출
-	if (WaveSpawner)
+	if (!WaveSpawner)
 	{
-		WaveSpawner->OnWaveCleared.AddUObject(
-			this,
-			&ACosGameMode::HandleWaveCleared
-		);
+		UE_LOG(LogTemp, Error,
+			TEXT("[GameMode] WaveSpawner를 찾지 못함"));
+		return;
 	}
 
-	//indPlayerDeath();
+	UE_LOG(LogTemp, Warning,
+		TEXT("[GameMode] WaveSpawner 찾음"));
+
+	// 웨이브 종료 신호 구독
+	WaveSpawner->OnWaveCleared.AddUObject(
+		this,
+		&ACosGameMode::HandleWaveCleared
+	);
+
+	// 첫 웨이브 시작
 	StartNextWave(true);
 }
 
 void ACosGameMode::StartNextWave(bool bResetTimer)
 {//CurrentWaveIndex+1->  웨이브 스포너에 현재 웨이브 번호 전달(적 스폰)-> GameState에서도 번호 저장
 	++CurrentWaveIndex;
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[GameMode] StartNextWave -> %d"),
+		CurrentWaveIndex);
 
 	if (bResetTimer)
 	{
@@ -64,18 +74,18 @@ void ACosGameMode::StartGame()//타이들에서 게임 시작 누르면 전투(�
 
 void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 {
+	UE_LOG(LogTemp, Warning,
+		TEXT("[GameMode] HandleWaveCleared 호출 / WaveIndex = %d"),
+		WaveIndex);
 	if (WaveIndex == 26)//보스 웨이브 클리어
 	{
 		PendingAction = EPostResultAction::GameClear;
 	}
 	else if (WaveIndex % 5 == 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[GameMode] Forge 분기 진입"));
+
 		PendingAction = EPostResultAction::Forge;
-
-		LastForgeWave = WaveIndex;
-
-		UE_LOG(LogTemp, Log, TEXT("[GameMode] 체크포인트 저장 : Wave %d"), LastForgeWave);
-
 	}
 	else
 	{
@@ -137,51 +147,14 @@ void ACosGameMode::OnResultConfirmed()
 
 void ACosGameMode::HandlePlayerDeath()
 {
+
 	if (WaveSpawner)
 	{
 		WaveSpawner->StopWave();
 	}
+	
+	UE_LOG(LogTemp, Log, TEXT("[GameMode] PLayer Death -> Game Over"));
 
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	// 죽은 캐릭터 제거
-	if (APawn* OldPawn = PlayerController->GetPawn())
-	{
-		PlayerController->UnPossess();
-		OldPawn->Destroy();
-	}
-
-	// 새 캐릭터 리스폰
-	RestartPlayer(PlayerController);
-
-	if (LastForgeWave == 0)//대장간 도달도 전에 죽으면 그냥 처음부터 시작하게
-	{
-		CurrentWaveIndex = 0;
-
-		PendingAction = EPostResultAction::NextWave;
-
-		StartNextWave(true);
-		return;
-
-	}
-
-	CurrentWaveIndex = LastForgeWave;
-
-	if (ACosGameState* GS = GetGameState<ACosGameState>())
-	{
-		GS->SetWaveIndex(LastForgeWave);
-	}
-
-	UE_LOG(LogTemp, Log, TEXT("[GameMode] 마지막 대장간으로 복귀: Wave %d"), LastForgeWave);
-
-	PendingAction = EPostResultAction::Forge;
-
-	//웨이브 다시 시작이 아니라 대장간 화면부터 다시 띄움
-	OnForgeRequested.Broadcast();
+	OnGameOver.Broadcast();
 }
 
