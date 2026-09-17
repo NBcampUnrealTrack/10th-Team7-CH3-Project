@@ -15,17 +15,25 @@ class COSMOS_API ACosGameState : public AGameStateBase
 public:
 	int32 GetKillCount() const { return KillCount; }
 	int32 GetWaveIndex() const { return WaveIndex; }
-	
+
 	//킬수/ 웨이브/ 점수 바꾸는 함수
 	void AddKill();
 	void SetWaveIndex(int32 NewWaveIndex);
 	void AddScore(int32 Amount);
 
+	float GetElapsedWaveTime() const;//추가 : 웨이브 경과시간
+
 	UPROPERTY(BlueprintAssignable)
 	FOnStateChanged OnStateChanged;
+
+	UFUNCTION(BlueprintPure)
+	int32 GetScore() const { return Score; }
 
 protected:
 	int32 KillCount = 0;
 	int32 WaveIndex = 0;
 	int32 Score = 0;
+	float WaveStartTime = 0.f;
+
+
 };

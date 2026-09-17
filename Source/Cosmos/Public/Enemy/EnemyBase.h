@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Weapon/Damageable.h"
+#include "Data/EnchantPickup.h"
 #include "EnemyBase.generated.h"
 
 
@@ -70,7 +71,8 @@ protected:
 	//HealthComponent
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite, Category = "AI")
 	TObjectPtr<UHealthComponent> HealthComponent;
-
+	UPROPERTY(EditAnywhere, Category = "AI|Drop")
+	TSubclassOf<AEnchantPickup> EnchantPickupClass;
 	//Assets / Need to Set AnimBP <- for using Anim in cpp
 	////
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
@@ -126,6 +128,7 @@ protected:
 	UFUNCTION()
 	void HandleDeath();
 
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 private:
 	
 

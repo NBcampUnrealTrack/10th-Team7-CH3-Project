@@ -47,7 +47,7 @@ EBTNodeResult::Type UBTT_FlyingTo::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	{
 		return EBTNodeResult::Failed;
 	}
-	const float Arrived = FMath::Square(Flying->GetArriveCheck());
+	const float Arrived = FMath::Square(Flying->GetArriveRadius());
 	if (FVector::DistSquared(Flying->GetActorLocation(), Goal) <= Arrived)
 	{
 		return EBTNodeResult::Succeeded;
@@ -111,7 +111,7 @@ void UBTT_FlyingTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemor
 		}
 		const FVector Current = Flying->GetActorLocation();
 		const FVector ToGoal = Goal - Current;
-		const float AcceptSq = FMath::Square(Flying->GetArriveCheck());
+		const float AcceptSq = FMath::Square(Flying->GetArriveRadius());
 		if (ToGoal.SizeSquared() <= AcceptSq)
 		{
 			FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
