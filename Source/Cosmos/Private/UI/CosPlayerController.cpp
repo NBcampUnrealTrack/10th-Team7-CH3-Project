@@ -5,6 +5,7 @@
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
+#include "Data/CosGameInstance.h" 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
@@ -160,10 +161,17 @@ void ACosPlayerController::SetupCharacterBindings()
 			);
 		}
 	}
-	else
+
+	// 3. GameInstance의 소울(재화) 변경 이벤트 바인딩
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
-		UE_LOG(LogTemp, Error, TEXT("CombatComponent를 찾을 수 없음"));
+		GI->OnCurrencyChanged.RemoveDynamic(this, &ACosPlayerController::UpdateSoulUI);
+		GI->OnCurrencyChanged.AddDynamic(this, &ACosPlayerController::UpdateSoulUI);
+
+		// 초기값 UI 즉시 반영
+		UpdateSoulUI(GI->GetSoul());
 	}
+
 }
 
 // ESC 키 입력을 ToggleESCMenu에 바인딩해줌
@@ -229,6 +237,21 @@ void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo)
 	}
 }
 
+// 소울이 변경될 때마다 호출
+void ACosPlayerController::UpdateSoulUI(int32 CurrentSoul)
+{
+	UE_LOG(LogTemp, Warning, TEXT("UpdateSoulUI 호출됨: %d"), CurrentSoul);
+
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+
+		FString Cmd = FString::Printf(TEXT("SetSoulText %d"), CurrentSoul);
+		UE_LOG(LogTemp, Warning, TEXT("호출할 커맨드: %s"), *Cmd);  
+
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
 void ACosPlayerController::OnCharacterDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("플레이어 캐릭터 사망"));
@@ -247,11 +270,7 @@ void ACosPlayerController::OnCharacterDeath()
 			}
 		}
 	}
-
-	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
-	{
-		GM->HandlePlayerDeath();
-	}
+		ShowGameOver(0);
 
 }
 

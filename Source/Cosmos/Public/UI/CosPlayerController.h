@@ -43,6 +43,9 @@ public:
 	ACosPlayerController();
 	FTimerHandle WeaponBindRetryTimer;
 
+	UFUNCTION()
+	void UpdateSoulUI(int32 CurrentSoul);
+
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateWaveUI(int32 CurrentWave);
 
