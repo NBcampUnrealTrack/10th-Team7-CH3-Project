@@ -5,17 +5,12 @@
 #include "WaveSpawner.generated.h"
 
 
-class AEnemySpawnPoint; // 플레이어 근처 위치를 못 찾았을 때 대신 쓸 예비 스폰 위치입니다.
-class UDataTable; // 스테이지·웨이브 데이터 테이블 전방선언
+class AEnemySpawnPoint; // 어디에 적이 생성될지 에디터 상에 찍어주는 EnemySpawnPoint를 전방선언합니다.
+class UDataTable; // 웨이브 데이터 테이블 전방선언
 class AEnemyBase; // 스폰된 적을 델리게이트로 넘기기 위해 전방선언합니다. 포인터로만 쓰므로 include 없이 충분합니다.
 
 
-// 용어
-//   Stage (5분) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
-//   Wave  (1분) : 스테이지 안에서 1분마다 적을 누적 추가하는 내부 박자. UI에 노출하지 않습니다.
-
-
-// 델리게이트 선언. 모든 웨이브가 순서표에 들어갔고 + 전부 스폰됐고 + 생존 적 0 -> 스테이지당 한 번 방송됨. 게임 모드가 구독합니다.
+// 델리게이트 선언. 5페이즈 스폰 완료 + 생존 적 0 -> 웨이브당 한 번 방송됨. 게임 모드가 구독합니다.
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWaveCleared, int32 /*WaveIndex*/); // OneParam은 인자 1개를 넘긴다, TwoParam은 인자 2개를 넘긴다. 없으면 안넘김.
 
 // 델리게이트 선언. 적 하나가 스폰에 성공한 순간 방송됨. 게임 모드가 구독합니다.
@@ -31,77 +26,69 @@ class COSMOS_API AWaveSpawner : public AActor
 public:
 	AWaveSpawner();
 
-	// 스테이지 하나를 시작합니다. 게임모드가 부르는 유일한 진입점.
-	// 함수 시그니처는 팀 합의대로 StartWave를 유지합니다. 넘기는 번호는 스테이지(5분) 번호입니다.
-	// 게임모드는 스테이지 단위(1, 2, 3...)로 한 번만 부릅니다. 1분 웨이브 단위로 부르지 않습니다.
-	// 내부에서 웨이브 1을 즉시 추가하고, 이후 WaveInterval(60초)마다 WavesPerStage(5)개까지 누적 추가합니다.
+	// 웨이브 하나를 시작합니다. 게임모드가 부르는 유일한 진입점.
+	// 내부에서 PhaseInterval(1분)마다 페이즈를 PhasesPerWave(5)개까지 누적 추가합니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave") // BlueprintCallable은 실행핀을 뽑을 수 있는 뭔가를 바꿀 수 있는 함수입니다.
-		void StartWave(int32 WaveIndex); // WaveIndex = 스테이지 번호
+		void StartWave(int32 WaveIndex); // WaveIndex를 매개변수로 넣습니다.
 
-	// 진행 중인 스폰과 웨이브 추가를 중단합니다. 이미 스폰된 적을 지우지는 않습니다.
+	// 진행 중인 스폰을 중단합니다. 이미 스폰된 적을 지우지는 않습니다. 스폰만 중단합니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave")
 	void StopWave();
 
-	// 살아있는 적 수. AliveEnemies 배열에 지금 몇 마리 들어있는지 알려줍니다.
+	// 살아있는 적을 리턴해줍니다. AliveEnemies 라는 살아있는 적 목록을 담는 배열 안에 .Num 지금 몇 마리 들어있는지 알려줍니다. 3마리 살아있으면 3을 돌려줌.
 	UFUNCTION(BlueprintPure, Category = "Wave") // BlueprintPure은 실행핀 없고 값만 돌려줍니다.
 		int32 GetAliveCount() const // .cpp로 따로 안빼고 인라인 정의함. 
 	{
 		return AliveEnemies.Num();
 	}
 
-	// 이번 스테이지의 남은 시간(초). UI가 5분 카운트다운을 표시할 때 읽습니다.
-	// 1분 웨이브는 내부 스폰 박자이므로 노출하지 않습니다.
+	// 이번 웨이브의 남은 시간(초). UI가 5분 카운트다운을 표시할 때 읽습니다.
+	// 1분 페이즈는 내부 스폰 박자이므로 노출하지 않습니다.
 	// 5분이 지나도 적이 남아 있으면 0에서 멈춥니다.
 	UFUNCTION(BlueprintPure, Category = "Wave")
 	float GetRemainingWaveTime() const // 헤더에서 UWorld를 몰라도 되도록 AActor 함수인 GetGameTimeSinceCreation을 씁니다.
 	{
-		if (!bIsStageActive) // 스테이지 진행 중이 아니면 0
+		if (CurrentPhase == 0) // 웨이브가 시작 전이면 0
 		{
 			return 0.0f;
 		}
-		const float TotalTime = WaveInterval * WavesPerStage; // 60 × 5 = 300초
-		const float Elapsed = GetGameTimeSinceCreation() - StageStartTime; // 스테이지 시작 후 흐른 시간
+		const float TotalTime = PhaseInterval * PhasesPerWave; // 60 × 5 = 300초
+		const float Elapsed = GetGameTimeSinceCreation() - WaveStartTime; // 웨이브 시작 후 흐른 시간
 		return FMath::Max(0.0f, TotalTime - Elapsed); // 음수로 안 내려가게
 	}
 
-	FOnWaveCleared OnWaveCleared; // 스테이지(5분) 클리어 시 방송. 게임모드가 AddUObject로 구독합니다.
+	FOnWaveCleared OnWaveCleared; // FOnWaveCleared 델리게이트 타입의 OnWaveCleared 변수를 선언.
 
-	FOnEnemySpawned OnEnemySpawned; // 게임모드가 AddUObject로 구독합니다.
+	FOnEnemySpawned OnEnemySpawned; // FOnEnemySpawned 델리게이트 타입의 OnEnemySpawned 변수를 선언. 게임모드가 AddUObject로 구독합니다.
 
 protected:
 	virtual void BeginPlay() override;
 
 
 private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 public
-
-	// WaveTimer(60초)마다 호출되어 다음 웨이브의 적을 순서표 "뒤에" 추가합니다. 5) 각주
-	void AddNextWave();
-
-	// SpawnTimer(1초)마다 호출되어 순서표에서 한 마리씩 꺼내 실제로 만듭니다.
+	// SpawnOne은 적하나를 실제로 만드는 함수입니다. SpawnTimer(1초)마다 순서표에서 한 마리씩 꺼냅니다.
 	void SpawnOne();
 
-	// 플레이어 주변 NavMesh 위에서 스폰 위치를 찾습니다. 찾으면 true, 실패하면 false. 6) 각주
-	bool FindSpawnLocationNearPlayer(FVector& OutLocation);
-
-	// 클리어 조건을 한 곳에서 검사하고, 맞으면 한 번만 방송합니다.
-	// 적 사망 / 스폰 종료 / 마지막 웨이브 추가 세 곳에서 부릅니다.
-	void TryBroadcastStageCleared();
+	// PhaseTimer(60초)마다 호출되어 다음 페이즈의 적을 순서표 뒤에 추가합니다.
+	void AddNextPhase();
 
 	UFUNCTION() // 적이 파괴되었을 때 언리얼이 자동 호출합니다.
 		// cpp에서 Enemy->OnDestroyed.AddDynamic(this, ...)으로 등록해두기 때문입니다.
 		// AddDynamic은 UFUNCTION() 매크로가 붙은 함수만 받습니다.
 		void HandleEnemyDestroyed(AActor* DestroyedActor);
 
-	// 레벨의 AEnemySpawnPoint를 전부 찾아 SpawnPoints에 담아줍니다.
-	// 이제는 플레이어 근처 위치를 못 찾았을 때만 쓰는 예비용입니다.
+
+	// 레벨의 AEnemySpawnPoint를 전부 찾아 SpawnPoints에 담아줍니다. 패키징할 때 문제가 있어서 넣어봤습니다.
+	// BeginPlay와 StartWave 양쪽에서 부르므로 함수로 일단 분리했습니다만, 9월15일 알파패키징 이후로는 쓸모가 없을 것 같다고 생각중입니다.
+	// PIE 할 때랑 패키징 후랑 액터의 순서차이가 날 수도 있나본데요. 아무튼 그렇습니다.
 	void CollectSpawnPoints();
 
-	// [DT] 스테이지 번호 + 웨이브 번호를 DT의 Row Name("Stage2_Wave3" 형식)으로 바꿔줍니다.
-	FName MakeRowName(int32 StageIndex, int32 WaveIndex) const;
+	// [DT] 게임모드가 넘긴 번호(1~26)를 DT의 Row Name(Stage1_Wave1의 형식)으로 바꿔줍니다.
+	FName MakeRowName(int32 WaveIndex) const;
 
 	// -- 에디터 설정값 
+	// 웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 
-	// 스테이지·웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 	UPROPERTY(EditAnywhere, Category = "Wave")
 	TObjectPtr<UDataTable> WaveDataTable;
 
@@ -121,39 +108,15 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	TSubclassOf<AActor> BossClass;
 
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "0.1"))  // 0을 넣으면 무한생성됩니다. 0.1로 막아놓은 것.
-		float SpawnInterval = 1.0f; // 한 마리씩 꺼내는 간격(초)
+		float SpawnInterval = 1.0f; // 스폰하는 인터벌
 
-	// 웨이브 사이 간격(초). 기획서 기준 1분입니다.
+	// 페이즈 사이 간격(초). 기획서 기준 1분입니다.
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "1.0"))
-	float WaveInterval = 60.0f;
+	float PhaseInterval = 60.0f;
 
-	// 한 스테이지에 들어있는 웨이브 수. 기획서 기준 5개입니다.
+	// 한 웨이브에 들어있는 페이즈 수. 기획서 기준 5개입니다.
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "1"))
-	int32 WavesPerStage = 5;
-
-	// 플레이어로부터 최소 스폰 거리(cm). 안개 시야 밖이어야 하므로 시야 거리(기준선 25m)보다 크게 둡니다.
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
-	float MinSpawnRadius = 3000.0f;
-
-	// 플레이어로부터 최대 스폰 거리(cm).
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
-	float MaxSpawnRadius = 4000.0f;
-
-	// 360도를 몇 칸으로 나눠 돌아가며 쓸지. 한쪽으로 몰리지 않고 사방에서 나오게 합니다.
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "1"))
-	int32 SpawnDirectionSlices = 8;
-
-	// 적당한 위치를 못 찾았을 때 몇 번까지 다시 뽑을지.
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "1"))
-	int32 MaxSpawnAttempts = 10;
-
-	// 경로 길이가 직선거리의 몇 배를 넘으면 버릴지. 영묘 반대편처럼 빙 돌아오는 위치를 거릅니다.
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "1.0"))
-	float MaxPathRatio = 1.5f;
-
-	// NavMesh 점은 바닥 표면 높이라, 캐릭터 캡슐이 땅에 박히지 않게 올려주는 값(cm).
-	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
-	float SpawnHeightOffset = 100.0f;
+	int32 PhasesPerWave = 5;
 
 	// ---런타임 상태--- 아래는 에디터에서 설정하는 값이 아니라 게임이 돌면서 변하는 값들입니다.
 	UPROPERTY()
@@ -161,21 +124,16 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> AliveEnemies;
-
 	UPROPERTY()
-	TArray<TSubclassOf<AActor>> SpawnQueue; // 스테이지 전체 스폰 순서표. 웨이브마다 뒤에 이어 붙습니다.
+	TArray<TSubclassOf<AActor>> SpawnQueue;
 
-	FTimerHandle SpawnTimer; // 1초마다 한 마리 꺼내는 타이머의 이름표
-	FTimerHandle WaveTimer;  // 60초마다 웨이브를 추가하는 타이머의 이름표. SpawnTimer와 별개라 서로 안 꺼집니다.
-
-	int32 CurrentStage = 0;     // 지금 몇 번째 스테이지인지. 클리어 방송할 때 이 번호를 같이 넘깁니다.
-	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지 (1~5). 0이면 스테이지 시작 전.
-	int32 SpawnedCount = 0;     // 순서표에서 지금까지 몇 칸 꺼냈는지. 곧 다음에 꺼낼 칸 번호입니다.
-	int32 NextSliceIndex = 0;   // 다음에 쓸 방향 칸 번호 (0 ~ SpawnDirectionSlices-1)
-
-	bool bIsStageActive = false;  // 스테이지 진행 중인지. 클리어 방송을 한 번만 하기 위한 잠금 역할도 합니다.
-	bool bIsSpawning = false;     // SpawnTimer가 돌고 있는지
-	bool bAllWavesQueued = false; // 마지막 웨이브까지 순서표에 들어갔는지. 클리어 조기 방송 방지용.
-
-	float StageStartTime = 0.0f; // 스테이지가 시작된 시각. GetGameTimeSinceCreation() 기준으로 저장합니다.
+	FTimerHandle SpawnTimer; // 타이머의 이름표입니다. 타이머 그자체는 아니고 내가 걸어놓은 타이머를 찾기 위한 식별자입니다.
+	FTimerHandle PhaseTimer; // 60초 페이즈 타이머의 이름표. SpawnTimer(1초)와 별개라 서로 안 꺼집니다.
+	int32 CurrentWave = 0; // 지금이 몇 번째 웨이브인지 클리어 방송할 때 이 번호를 같이 넘깁니다.
+	int32 CurrentPhase = 0; // 지금 몇 번째 페이즈까지 추가했는지 (1~5). 0이면 웨이브 시작 전.
+	int32 SpawnedCount = 0; // 이 웨이브에서 지금까지 몇 마리 만들었는지.
+	int32 TargetSpawnCount = 0; // 이번 웨이브에 만들 총 마리 수 . 에디터가 아니라 DT에서 채워서 작동함.
+	bool bIsSpawning = false; // 아직 스폰중인지?
+	bool bAllPhasesQueued = false; // 5페이즈가 전부 순서표에 들어갔는지. 클리어 조기 방송 방지용.
+	float WaveStartTime = 0.0f; // 웨이브가 시작된 시각. GetGameTimeSinceCreation() 기준으로 저장합니다.
 };

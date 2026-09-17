@@ -53,14 +53,17 @@ void ACosGameMode::BeginPlay()
 
 void ACosGameMode::StartNextWave()
 {//CurrentWaveIndex+1->  웨이브 스포너에 현재 웨이브 번호 전달(적 스폰)-> GameState에서도 번호 저장
-	++CurrentWaveIndex; // 의미가 스테이지 번호(1~6)로 바뀜
+	++CurrentWaveIndex;
 
 	UE_LOG(LogTemp, Warning,
 		TEXT("[GameMode] StartNextWave -> %d"),
 		CurrentWaveIndex);
-
-	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
-
+	
+	if (CurrentWaveIndex <= 25 && (CurrentWaveIndex - 1) % 5 == 0)// 새 스테이지 마다 5분 타이머 시작함
+	{
+		StartStageTimer();
+	}
+	
 	if (WaveSpawner)//웨이브 스포너에 현재 웨이브 번호 전달, 적 스폰 시작함
 	{
 		WaveSpawner->StartWave(CurrentWaveIndex);
@@ -180,20 +183,22 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 	UE_LOG(LogTemp, Warning,
 		TEXT("[GameMode] HandleWaveCleared 호출 / WaveIndex = %d"),
 		WaveIndex);
-
-	StopStageTimer();
-
-	if (WaveIndex == 6) // 보스 스테이지
+	if (WaveIndex == 26)//보스 웨이브 클리어
 	{
 		PendingAction = EPostResultAction::GameClear;
 	}
-	else
+	else if (WaveIndex % 5 == 0)
 	{
+		StopStageTimer();
+
 		UE_LOG(LogTemp, Warning, TEXT("[GameMode] Forge 분기 진입"));
 
 		PendingAction = EPostResultAction::Forge;
 	}
-	// NextWave 분기는 스포너가 1분 박자를 내부에서 처리하므로 삭제
+	else
+	{
+		PendingAction = EPostResultAction::NextWave;
+	}
 
 	if (PendingAction == EPostResultAction::NextWave)
 	{
@@ -225,7 +230,7 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		}
 	}
 }
-
+	
 void ACosGameMode::OnResultConfirmed()
 {
 	switch (PendingAction)
