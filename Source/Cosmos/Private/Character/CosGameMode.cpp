@@ -216,7 +216,7 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
-		ResultData.Score = GI->GetSoul();
+		ResultData.TotalSoul = GI->GetSoul();
 	}
 
 	// [추가] PlayerController에게 결과창 표시 요청
