@@ -3,6 +3,7 @@
 #include "Character/CosGameState.h"//CosGameState 연결
 #include "UI/CosPlayerController.h"
 #include "Spawn/WaveSpawner.h"
+#include "Enemy/EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 
 ACosGameMode::ACosGameMode()
@@ -36,6 +37,11 @@ void ACosGameMode::BeginPlay()
 	WaveSpawner->OnWaveCleared.AddUObject(
 		this,
 		&ACosGameMode::HandleWaveCleared
+	);
+
+	WaveSpawner->OnEnemySpawned.AddUObject(
+		this,
+		&ACosGameMode::HandleEnemySpawned
 	);
 
 	// 첫 웨이브 시작
@@ -158,3 +164,29 @@ void ACosGameMode::HandlePlayerDeath()
 	OnGameOver.Broadcast();
 }
 
+void ACosGameMode::HandleEnemyKilled(AEnemyBase* DeadEnemy)
+{
+	if (ACosGameState* GS = GetGameState<ACosGameState>())
+	{
+		GS->AddKill();
+
+		UE_LOG(LogTemp, Log,
+			TEXT("[GameMode] KillCount 증가 -> %d"),
+			GS->GetKillCount());
+	}
+}
+
+void ACosGameMode::HandleEnemySpawned(AEnemyBase* Enemy)
+{
+	if (!Enemy)
+	{
+		return;
+	}
+
+	// 새로 생성된 적이 죽었을 때
+	// GameMode의 HandleEnemyKilled가 호출되도록 연결
+	Enemy->OnEnemyKilled.AddUObject(
+		this,
+		&ACosGameMode::HandleEnemyKilled
+	);
+}

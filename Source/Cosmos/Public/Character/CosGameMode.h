@@ -5,7 +5,7 @@
 #include "CosGameMode.generated.h"
 
 class AWaveSpawner;
-//class UHealthComponent;
+class AEnemyBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForgeRequested);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOver);
@@ -42,10 +42,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void HandlePlayerDeath();
 
-	//플레이어 사망, 리스폰 일단 보류
-	//void HandlePlayerDeath();//플레이어 사망 시
+	void HandleEnemySpawned(AEnemyBase* Enemy);//새로 스폰된 적의 사망 델리게이트를 구독함
 
-	//void ResPawnPlayer();// 플레이어 리스폰
+
+	void HandleEnemyKilled(AEnemyBase* DeadEnemy);	// 적 사망 신호를 받으면 GameState의 킬 수를 증가시킴
 
 	UPROPERTY(BlueprintAssignable)
 	FOnForgeRequested OnForgeRequested;
