@@ -1,22 +1,23 @@
 #include "Data/EnchantSlotWidget.h"
 #include "Data/EnchantInventoryWidget.h"
+#include "Data/CosGameInstance.h"
 
-void UEnchantSlotWidget::Setup(UEnchantData* InEnchant, bool InIsEquipped, UEnchantInventoryWidget* InOwner)
+void UEnchantSlotWidget::Setup(UEnchantData* InEnchant, bool InIsEquipped)
 {
 	MyEnchant = InEnchant;
 	bIsEquipped = InIsEquipped;
-	OwnerInventory = InOwner;
 
+	if (!MyEnchant)
+	{
+		SetToolTipText(FText::GetEmpty());
+		OnEnchantSet();
+		return;
+	}
+
+	SetToolTipText(FText::FromString(GetStatText()));
 	OnEnchantSet();
 }
 
-void UEnchantSlotWidget::OnSlotClicked()
-{
-	if (OwnerInventory)
-	{
-		OwnerInventory->SelectEnchant(MyEnchant);
-	}
-}
 
 FString UEnchantSlotWidget::GetStatText() const
 {
@@ -60,9 +61,21 @@ FString UEnchantSlotWidget::GetStatText() const
 FReply UEnchantSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
-	if (OwnerInventory && MyEnchant)
+	
+	if (MyEnchant)
 	{
-		OwnerInventory->ToggleEquip(MyEnchant, bIsEquipped);
+		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+		{
+			if (bIsEquipped)
+			{
+				GI->UnEquipEnchant(MyEnchant);
+			}
+			else
+			{
+				GI->EquipEnchant(MyEnchant);
+			}
+		}
 	}
+
 	return FReply::Handled();
 }
