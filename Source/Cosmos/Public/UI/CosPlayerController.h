@@ -89,6 +89,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<class UInputAction> ESCAction;
 
+	UFUNCTION()
+	void UpdateKillCountUI(int32 CurrentKillCount);
+
+	UFUNCTION()
+	void RefreshCombatHUD();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowTitleWidget();

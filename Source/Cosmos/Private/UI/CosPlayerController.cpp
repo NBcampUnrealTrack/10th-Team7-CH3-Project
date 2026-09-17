@@ -200,6 +200,7 @@ void ACosPlayerController::HandleGameStateChanged()
 	{
 		// GameState에서 WaveIndex를 가져와 UI 업데이트
 		UpdateWaveUI(GS->GetWaveIndex());
+		UpdateKillCountUI(GS->GetKillCount());
 	}
 }
 
@@ -252,6 +253,15 @@ void ACosPlayerController::UpdateSoulUI(int32 CurrentSoul)
 	}
 }
 
+void ACosPlayerController::UpdateKillCountUI(int32 CurrentKillCount)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("SetKillCountText %d"), CurrentKillCount);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
 void ACosPlayerController::OnCharacterDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("플레이어 캐릭터 사망"));
@@ -274,6 +284,31 @@ void ACosPlayerController::OnCharacterDeath()
 
 }
 
+void ACosPlayerController::RefreshCombatHUD()
+{
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		if (UHealthComponent* HealthComp = ControlledPawn->FindComponentByClass<UHealthComponent>())
+		{
+			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+		}
+
+		if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
+		{
+			if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
+			{
+				CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
+				UpdateAmmoUI(Weapon->GetCurrentAmmo());
+			}
+		}
+	}
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		UpdateSoulUI(GI->GetSoul());
+	}
+}
+
 void ACosPlayerController::ShowCombatHUD()
 {
 	// Class 유효성 및 Instance가 이미 생성되었는지 IsValid로 검사
@@ -289,7 +324,7 @@ void ACosPlayerController::ShowCombatHUD()
 			SetInputMode(FInputModeGameOnly());
 			bShowMouseCursor = false;
 
-
+			RefreshCombatHUD();
 		}
 	}
 }
