@@ -12,6 +12,7 @@ AFlyingBase::AFlyingBase()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	//change move_navwalk -> move_flying
+	Movement->DefaultLandMovementMode = MOVE_Flying;
 	Movement->SetMovementMode(MOVE_Flying);
 	//remove gravity
 	Movement->GravityScale = 0.0f;
