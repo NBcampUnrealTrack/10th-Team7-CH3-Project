@@ -1,5 +1,6 @@
 ﻿#include "Spawn/WaveSpawner.h"
 #include "Spawn/EnemySpawnPoint.h"
+#include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
 #include "Data/CosDataTable.h"
 #include "Engine/DataTable.h"
 #include "Kismet/GameplayStatics.h"
@@ -151,6 +152,12 @@ void AWaveSpawner::SpawnOne()
 			// AddDynamic은 UFUNCTION()이 붙은 함수만 받습니다.
 			Enemy->OnDestroyed.AddDynamic(this, &AWaveSpawner::HandleEnemyDestroyed);
 
+			// 스폰된 적이 AEnemyBase 계열이면 게임모드에 방송합니다. 4) 각주
+			// 게임모드는 이걸 받아서 그 적의 OnEnemyKilled를 구독합니다.
+			if (AEnemyBase* SpawnedEnemy = Cast<AEnemyBase>(Enemy))
+			{
+				OnEnemySpawned.Broadcast(SpawnedEnemy);
+			}
 		}
 	}
 	// ++SpawnedCount는 먼저 1 올린 뒤 비교합니다.
@@ -221,3 +228,8 @@ FName AWaveSpawner::MakeRowName(int32 WaveIndex) const
 // 3) SpawnQueue는 이번 웨이브의 스폰 순서표입니다.
 //    DT가 구울 3, 가고일 2라면 [구울, 구울, 구울, 가고일, 가고일]이 됩니다.
 //    SpawnOne은 SpawnedCount번째 칸을 꺼내 만들기 때문에 0번부터 차례대로 나옵니다.
+//
+// 4) Cast<AEnemyBase>는 Enemy가 AEnemyBase이거나 그 자식이면 포인터를, 아니면 nullptr을 돌려줍니다.
+//    스포너는 적을 AActor로 만들기 때문에, AEnemyBase 전용 기능(OnEnemyKilled)을 쓰려면 이 변환이 필요합니다.
+//    주의: 까마귀(AFlyingEnemy)는 APawn 상속이라 AEnemyBase가 아니므로 Cast가 실패해 방송되지 않습니다.
+//    까마귀 킬 카운트가 필요하면 이수님·민정님과 구조를 따로 맞춰야 합니다.
