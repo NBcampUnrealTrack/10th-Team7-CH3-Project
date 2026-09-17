@@ -1,6 +1,7 @@
 ﻿#include "Weapon/WeaponBase.h"
 #include "Weapon/Damageable.h"
 #include "Data/CosGameInstance.h"
+#include "Weapon/SkillComponent.h"
 
 AWeaponBase::AWeaponBase()
 {
@@ -12,6 +13,16 @@ AWeaponBase::AWeaponBase()
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //캐릭터와 무기의 물리적 충돌로 인한 버그 예방
 
 	LastAttackTime = -100.f;
+}
+
+void AWeaponBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (AActor* ParentActor = GetAttachParentActor()) // 캐릭터 얻기
+	{
+		SkillComponent = ParentActor->FindComponentByClass<USkillComponent>(); // 무기가 붙어있는 캐릭터의 스킬 컴포넌트를 저장해두기
+	}
 }
 
 void AWeaponBase::TryAttack() //공격 쿨타임이 지났으면 공격
@@ -73,6 +84,17 @@ bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirec
 	return true;
 }
 
+float AWeaponBase::GetAnimationPlayRate() const
+{
+	const float CurrentInterval = GetCurrentAttackInterval();
+	if (CurrentInterval <= 0.f)
+	{
+		return 1.f;
+	}
+
+	return AttackInterval / CurrentInterval;
+}
+
 float AWeaponBase::GetEnchantStat(EEnchantStat Stat) const // 스탯 하나를 받아서 그 스탯의 보너스를 리턴
 {
 	if (Stat == EEnchantStat::None) // 따로 지정해두지 않았다면 0.f 리턴
@@ -80,19 +102,22 @@ float AWeaponBase::GetEnchantStat(EEnchantStat Stat) const // 스탯 하나를 �
 		return 0.f;
 	}
 
-	UWorld* World = GetWorld();// this->GetWorld(); 웨폰베이스가 속한 월드 얻기. 인스턴스를 알기 위해
-	if (!IsValid(World))
+	float Total = 0.f; // 총 보너스 담을 변수
+
+	if (UWorld* World = GetWorld()) // this->GetWorld(); 웨폰베이스가 속한 월드 얻기. 인스턴스를 알기 위해
 	{
-		return 0.f;
+		if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance())) //다운캐스트로 CosGameInstance 얻기
+		{
+			Total += GameInstance->GetTotalStat(Stat);// 스탯부분 보너스 
+		}
 	}
 
-	UCosGameInstance* GameInstance = Cast<UCosGameInstance>(World->GetGameInstance()); //다운캐스트 GetGameInstance()는 UGameInstance*를 돌려 주는데 GetTotalStat은 UCosGameInstance 로 쓸 수 있기 때문에.
-	if (!IsValid(GameInstance))
+	if (IsValid(SkillComponent))
 	{
-		return 0.f;
+		Total += SkillComponent->GetActiveSkillBonus(Stat); // 스킬에서 오는 보너스 추가
 	}
 
-	return GameInstance->GetTotalStat(Stat); // 보너스 리턴
+	return Total; // 스탯 + 스킬 보너스 리턴
 }
 
 float AWeaponBase::GetCurrentAttackInterval() const // 최종 공격 속도
@@ -107,7 +132,7 @@ float AWeaponBase::GetCurrentAttackInterval() const // 최종 공격 속도
 float AWeaponBase::GetCurrentDamage() const // 최종 데미지
 {
 	const float AddBonus =
-		GetEnchantStat(EEnchantStat::AllDamageAdd) + // 공격 속도 구하는 것과 동일
+		GetEnchantStat(EEnchantStat::AllDamageAdd) +   // 공격 속도 구하는 것과 동일
 		GetEnchantStat(GetDamageAddStatType());
 
 	const float MultiBonus =

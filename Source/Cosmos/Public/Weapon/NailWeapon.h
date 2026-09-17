@@ -12,6 +12,7 @@ class COSMOS_API ANailWeapon : public AWeaponBase
 public:
 	ANailWeapon();
 
+	// 공격 모션
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsSwingLeftToRight() const { return bSwingLeftToRight; }
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -19,10 +20,11 @@ public:
 
 protected:
 	virtual bool PerformAttack() override;
-	virtual EWeaponType GetWeaponType() const override;
-	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::MeleeSpeed; }
-	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::MeleeDamageAdd; }
-	virtual EEnchantStat GetDamageMultiStatType() const override { return EEnchantStat::MeleeDamageMulti; }
+
+	virtual EWeaponType GetWeaponType() const override { return EWeaponType::Nail; }; // 타입
+	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::MeleeSpeed; } // 공속 타입 
+	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::MeleeDamageAdd; } // 공격력 타입, 깡뎀
+	virtual EEnchantStat GetDamageMultiStatType() const override { return EEnchantStat::MeleeDamageMulti; } // 공격력 타입, 배율
 
 	int32 GetCurrentMaxTarget() const;
 	float GetCurrentRange() const;
