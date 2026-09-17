@@ -31,3 +31,10 @@ void ACosGameState::AddScore(int32 Amount)
 	Score += Amount;
 	OnStateChanged.Broadcast();
 }
+
+void ACosGameState::SetStageRemainingTime(float InRemainingTime)
+{
+	StageRemainingTime = FMath::Max(0.0f, InRemainingTime);
+
+	OnStageTimeChanged.Broadcast(StageRemainingTime);
+}
