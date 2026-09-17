@@ -1,6 +1,7 @@
 ﻿#include "UI/CosPlayerController.h"
 #include "Character/CosCharacter.h"
 #include "Character/CosGameMode.h"
+#include "Character/CosGameState.h"
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
@@ -67,6 +68,15 @@ void ACosPlayerController::BeginPlay()
 		// 그 외(전투) 레벨이면 전투 HUD + 델리게이트 바인딩
 		ShowCombatHUD();
 		SetupCharacterBindings();
+
+		if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+		{
+			GS->OnStateChanged.RemoveDynamic(this, &ACosPlayerController::HandleGameStateChanged);
+			GS->OnStateChanged.AddDynamic(this, &ACosPlayerController::HandleGameStateChanged);
+
+			// 처음 HUD가 켜졌을 때 초기 웨이브 UI 즉시 갱신
+			UpdateWaveUI(GS->GetWaveIndex());
+		}
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
@@ -77,6 +87,8 @@ void ACosPlayerController::BeginPlay()
 	}
 
 }
+
+
 
 void ACosPlayerController::OnPossess(APawn* InPawn)
 {
@@ -118,7 +130,7 @@ void ACosPlayerController::SetupCharacterBindings()
 			HealthComp->OnDeath.RemoveDynamic(this, &ACosPlayerController::OnCharacterDeath);
 			HealthComp->OnDeath.AddDynamic(this, &ACosPlayerController::OnCharacterDeath);
 
-			// 초기 체력값 UI 즉시 반영 함수 여야되는데 일단 Getter 받기 전까지 임시 함수
+			// 초기 체력값 UI 즉시 반영 함수
 			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
 		}
 	}
@@ -170,6 +182,26 @@ void ACosPlayerController::SetupInputComponent()
 				&ACosPlayerController::ToggleESCMenu
 			);
 		}
+	}
+}
+
+// OnStateChanged가 실행되면 자동 호출
+void ACosPlayerController::HandleGameStateChanged()
+{
+	if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+	{
+		// GameState에서 WaveIndex를 가져와 UI 업데이트
+		UpdateWaveUI(GS->GetWaveIndex());
+	}
+}
+
+// UI 호출 함수
+void ACosPlayerController::UpdateWaveUI(int32 CurrentWave)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("SetWaveText %d"), CurrentWave);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
 }
 
