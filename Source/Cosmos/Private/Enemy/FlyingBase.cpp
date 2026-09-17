@@ -46,14 +46,29 @@ bool AFlyingBase::CanAttack() const
 	{
 		return true;
 	}
-	return (GetWorld()->GetTimeSeconds() - LastAttackTime) >= GetAttackDelay();
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	return (World->GetTimeSeconds() - LastAttackTime) >= GetAttackDelay();
 }
+FVector AFlyingBase::GetMuzzleLocation() const
+{
+	return GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
+}
+
 void AFlyingBase::AttackHitCheck()
 {
 	if (!IsAlive())
 	{
 		return;
 	}
+	if (const UWorld* World = GetWorld())
+	{
+		LastAttackTime = World->GetTimeSeconds();
+	}
+	PlaySFX(AttackSound);
 	if (!ProjectileClass)
 	{
 		return;
@@ -66,15 +81,15 @@ void AFlyingBase::AttackHitCheck()
 	}
 	//for shoot to body not foot
 	const FVector AimOffset = TargetPlayer->GetActorLocation() + FVector(0.f, 0.f, AimHeightOffset);
-	const FRotator AcutalFire = AimOffset.Rotation();
 	const FVector MuzzleLocation = GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
+	const FRotator FirePoint = (AimOffset - MuzzleLocation).Rotation();
 	//spawn setting
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; //always shoot.
-	PlaySFX(AttackSound);
-	GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, AcutalFire, SpawnParams);
+
+	GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, FirePoint, SpawnParams);
 }
 
 FVector AFlyingBase::GetFlyLocation(const FVector& Ground) const
@@ -90,4 +105,18 @@ FVector AFlyingBase::GetFlyLocation(const FVector& Ground) const
 		return FVector(Ground.X, Ground.Y, Hit.ImpactPoint.Z + FlyHeight);
 	}
 	return Ground + FVector(0.0f, 0.0f, FlyHeight);
+}
+FVector AFlyingBase::GetDropLocation() const
+{
+	const FVector Self = GetActorLocation();
+	const FVector TraceEnd = Self - FVector(0.f, 0.f, GroundCheck);
+
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(EnemyDropGround), false, this);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Self, TraceEnd, ECC_WorldStatic, Params))
+	{
+		return Hit.ImpactPoint + FVector(0.f, 0.f, 20.f);
+	}
+		return Self;
 }

@@ -17,9 +17,9 @@ class COSMOS_API AFlyingBase : public AEnemyBase
 public:
 	AFlyingBase();
 
-	UFUNCTION(BlueprintPure, Category = "AI|Gettes")
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetFlyHeight() const { return FlyHeight; }
-	UFUNCTION(BlueprintPure, Category = "AI|Gettes")
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetRoamRadius() const { return RoamRadius; } // roam after attack
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetDistanceCheck() const { return DistanceCheck; } // check ditance between player and monster
@@ -34,10 +34,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AI|Combat")
 	bool CanAttack() const;
 
+	UFUNCTION(BlueprintPure, Category = "AI|Combat")
+	FVector GetMuzzleLocation() const;
 protected:
 	virtual void BeginPlay()override;
 	virtual void AttackHitCheck()override;
-	
+	virtual FVector GetDropLocation() const override;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Fly")
 	float FlyHeight = 600.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Fly")

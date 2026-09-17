@@ -19,6 +19,8 @@ UBTT_PickFlyingMode::UBTT_PickFlyingMode()
 }
 void UBTT_PickFlyingMode::InitializeFromAsset(UBehaviorTree& Asset)
 {
+	Super::InitializeFromAsset(Asset);
+
 	if (UBlackboardData* BB = GetBlackboardAsset())
 	{
 		TargetActorKey.ResolveSelectedKey(*BB);

@@ -50,7 +50,7 @@ void UBTS_FlyingEnemyCheck::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* N
 		{
 			return;
 		}
-		APawn* Target = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+		APawn* Target = UGameplayStatics::GetPlayerPawn(OwnerComp.GetWorld(), 0);
 
 		BB->SetValueAsObject(TargetActorKey.SelectedKeyName, Target);
 		BB->SetValueAsBool(CanAttackKey.SelectedKeyName, Flying->CanAttack());

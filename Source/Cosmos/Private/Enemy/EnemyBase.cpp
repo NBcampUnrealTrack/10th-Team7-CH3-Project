@@ -3,12 +3,14 @@
 #include "Enemy/EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Data/CosDataTable.h" 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AIController.h"
 #include "BrainComponent.h" 
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Animation/AnimMontage.h"
+#include "Character/CosGameState.h" 
 #include "Kismet/GameplayStatics.h"
 //for debug
 #include "DrawDebugHelpers.h" 
@@ -27,7 +29,6 @@ AEnemyBase::AEnemyBase()
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	USkeletalMeshComponent* MeshComp = GetMesh();
 
-	Movement->SetGroundMovementMode(MOVE_NavWalking);
 	//capsule Scale
 	Capsule->SetCapsuleRadius(25.f);
 	//for move / 움직임 기본 세팅
@@ -35,14 +36,13 @@ AEnemyBase::AEnemyBase()
 	Movement->bOrientRotationToMovement = true;
 	Movement->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
 	//for Only walk on Nav place / Nav 위에서만 움직이게 
-	Movement->SetMovementMode(MOVE_NavWalking);
 	Movement->SetGroundMovementMode(MOVE_NavWalking);
+	Movement->SetMovementMode(MOVE_NavWalking);
 	// no clip each enemy, / 적들이 알아서 비켜가게
 	Movement->bUseRVOAvoidance = true;
 	Movement->AvoidanceConsiderationRadius = 150.0f; //No Clip Range
 	//DIsable unnecessary Functions / 이동 방향으로 알아서 회전
 	Movement->bUseControllerDesiredRotation = false;
-	Movement->bOrientRotationToMovement = true;
 	//disable unused function in cmc / 안쓰는 기능 꺼서 계산 줄이기
 	Movement->GetNavAgentPropertiesRef().bCanCrouch = false;
 	Movement->GetNavAgentPropertiesRef().bCanFly = false;
@@ -78,11 +78,26 @@ void AEnemyBase::BeginPlay()
 
 void AEnemyBase::SetEnemyAtStart()
 {
+	if (EnemyDataTable && !EnemyRowName.IsNone())
+	{
+		if (const FEnemyData* Row = EnemyDataTable->FindRow<FEnemyData>(EnemyRowName, TEXT("EnemyInit")))
+		{
+			EnemyData = *Row;
+
+			// 데이터 테이블 값을 기존 스탯 변수에도 반영
+			MaxHP = EnemyData.HP;
+			AttackDamage = EnemyData.AttackPower;
+			RunSpeed = EnemyData.MoveSpeed;
+		}
+	}
+
 	SetMovementSpeed(RunSpeed);
 	if (HealthComponent)
 	{
 		HealthComponent->SetHPAtStart(MaxHP);
 	}
+	bIsStagger = false;
+	LastStaggerTime = -1.f;
 }
 bool AEnemyBase::IsAlive() const
 {
@@ -103,10 +118,6 @@ void AEnemyBase::PostInitializeComponents()
 	{
 		HealthComponent->OnDeath.AddDynamic(this, &AEnemyBase::HandleDeath);
 	}
-	else
-	{
-		return;
-	}
 }
 
 void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -114,19 +125,53 @@ void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	GetWorldTimerManager().ClearAllTimersForObject(this);
 	Super::EndPlay(EndPlayReason);
 }
+AActor* AEnemyBase::GetAttackTarget() const
+{
+	return UGameplayStatics::GetPlayerPawn(this, 0);
+}
+void AEnemyBase::FaceTarget(const AActor* Target)
+{
+	if (!Target)
+	{
+		return;
+	}
+	FRotator NewRot = (Target->GetActorLocation() - GetActorLocation()).Rotation();
+	NewRot.Pitch = 0.f;
+	NewRot.Roll = 0.f;
 
+	SetActorRotation(NewRot);
+}
 float AEnemyBase::EnemyAttack() {
-	if (!AttackMontage1 || !AttackMontage2) {
+	if (bFaceTargetOnAttack)
+	{
+		FaceTarget(GetAttackTarget());
+	}
+	if (!AttackMontage1 && !AttackMontage2) {
 		GetWorldTimerManager().SetTimer(AttackHitTimerHandle, this, &AEnemyBase::AttackHitCheck, AttackPreDelay, false);
 		return AttackPreDelay + 0.5f;
 	}
 	float Duration = 0;
 	float Random = FMath::FRandRange(0.f, 1.f);
 	if (Random <= 0.5f) {
-		Duration = PlayAnimMontage(AttackMontage1);
+		if (AttackMontage1)
+		{
+			Duration = PlayAnimMontage(AttackMontage1);
+		}
+		else
+		{
+			Duration = PlayAnimMontage(AttackMontage2);
+		}
+		
 	}
 	if (Random  > 0.5f) {
-		Duration = PlayAnimMontage(AttackMontage2);
+		if (AttackMontage2)
+		{
+			Duration = PlayAnimMontage(AttackMontage2);
+		}
+		else
+		{
+			Duration = PlayAnimMontage(AttackMontage1);
+		}
 	}
 	return Duration > 0.0f ? Duration : 1.0f;
 }
@@ -142,13 +187,11 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		return;
 	}
-	if (Weapon == EWeaponType::Nail)	
+	switch (Weapon)
 	{
-		PlaySFX(HitbyMeleeSound);
-	}
-	if (Weapon == EWeaponType::Shotgun)
-	{
-		PlaySFX(HitbyRangeSound);
+	case EWeaponType::Nail:    PlaySFX(HitbyMeleeSound); break;
+	case EWeaponType::Shotgun: PlaySFX(HitbyRangeSound); break;
+	default: break;
 	}
 	ApplyStagger();
 
@@ -156,6 +199,11 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 
 void AEnemyBase::HandleDeath()
 {
+	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
+	{ 
+		GameInstance->AddSoul(SoulAmount); 
+	}
+	OnEnemyKilled.Broadcast(this);
 	if (AAIController* AI = Cast<AAIController>(GetController()))
 	{
 		AI->StopMovement();
@@ -178,6 +226,10 @@ void AEnemyBase::HandleDeath()
 		 PlaySFX(DeathSound);
 	}
 	UWorld* World = GetWorld();
+	if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+	{
+		GS->AddKill();
+	}
 	if (World)
 	{
 		World->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
@@ -257,7 +309,12 @@ void AEnemyBase::ApplyStagger()
 	{
 		PlayAnimMontage(HitReactMontage);
 	}
-	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	[this]() { bIsStagger = false; }, StaggerDuration, false);
+	GetWorldTimerManager().SetTimer(StaggerTimerHandle,	FTimerDelegate::CreateWeakLambda(this, [this]()	
+		{
+			bIsStagger = false;
+			SetStaggerBlackboard(false);
+		}),
+		StaggerDuration, false);
 }
 
 void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMode, uint8 PrevCustomMode)
@@ -267,7 +324,10 @@ void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMode, uint8 PrevCustomM
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	if (!Movement) { return; }
 
-	if (Movement->NavAgentProps.bCanFly) { return; }
+	if (Movement->NavAgentProps.bCanFly) 
+	{
+		return; 
+	}
 
 	if (Movement->MovementMode == MOVE_Falling)
 	{
@@ -275,7 +335,10 @@ void AEnemyBase::OnMovementModeChanged(EMovementMode PrevMode, uint8 PrevCustomM
 		Movement->SetMovementMode(MOVE_NavWalking);
 	}
 }
-
+FVector AEnemyBase::GetDropLocation() const
+{
+	return GetActorLocation();
+}
 void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
 {
 	if (!SFX.Sound)
@@ -284,4 +347,14 @@ void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
 	}
 	const float FinalResult = SFX.Pitch * (1.f + FMath::FRandRange(-SFX.RandomPitch, SFX.RandomPitch));
 	UGameplayStatics::PlaySoundAtLocation(this, SFX.Sound, GetActorLocation(), SFX.Volume, FinalResult);
+}
+void AEnemyBase::SetStaggerBlackboard(bool bValue)
+{
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(StaggerKeyName, bValue);
+		}
+	}
 }

@@ -21,6 +21,7 @@ uint16 UBTT_EnemyAttack::GetInstanceMemorySize() const
 
 EBTNodeResult::Type UBTT_EnemyAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
+
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	if (!AIController)
 	{
@@ -28,7 +29,7 @@ EBTNodeResult::Type UBTT_EnemyAttack::ExecuteTask(UBehaviorTreeComponent& OwnerC
 	}
 
 	AEnemyBase* Enemy = Cast<AEnemyBase>(AIController->GetPawn());
-	if (!Enemy)
+	if (!Enemy || !Enemy->IsAlive())
 	{
 		return EBTNodeResult::Failed;
 	}

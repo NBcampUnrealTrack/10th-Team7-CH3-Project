@@ -13,7 +13,6 @@ class AFlyingBase;
  */
 struct FBTFlyMemory
 {
-	FVector CachedGoal = FVector::ZeroVector;
 	float ElapsedTime = 0.0f;
 };
 UCLASS()
@@ -35,7 +34,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Fly")
 	bool bAddFlyOffset = true;
 	UPROPERTY(EditAnywhere, Category = "Fly")
-	float MaxDuration = 0.0f;
+	float MaxDuration = 5.0f;
 
 private:
 	bool CalcGoal(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,const AFlyingBase* Flyer, FVector& OutGoal) const;
