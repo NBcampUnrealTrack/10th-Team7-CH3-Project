@@ -10,8 +10,8 @@ int32 UCosGameInstance::GetSoul() const
 
 // 재화를 얻는 로직
 // 몬스터 쪽에서 사망 처리 로직에 AddSoul 호출
-// if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
-// { GameInstance->AddSoul(EnemyData.SoulDrop); }
+// if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+// { GI->AddSoul(EnemyData.SoulDrop); }
 void UCosGameInstance::AddSoul(int32 Amount)
 {
 	if (Amount <= 0) return;
@@ -20,9 +20,9 @@ void UCosGameInstance::AddSoul(int32 Amount)
 }
 
 // 재화를 사용할 때 상태 업데이트 로직
-// if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
+// if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 // { 
-//		if (GameInstance->TrySpendSoul(Amount)
+//		if (GI->TrySpendSoul(Amount)
 //		{
 //			성공: 실제로 구매/업그레이드 적용
 //		}
@@ -209,4 +209,10 @@ void UCosGameInstance::IncreaseMaxEquippedEnchant(int32 Amount)
 {
 	EnchantMaxEquippedCount += Amount;
 	OnLoadoutChange.Broadcast();
+}
+
+// 테스트
+void UCosGameInstance::Debug_AddSoul(int32 Amount)
+{
+	AddSoul(Amount);
 }
