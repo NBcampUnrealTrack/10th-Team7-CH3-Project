@@ -42,6 +42,8 @@ EBTNodeResult::Type UBTT_FlyingTo::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	{
 		return EBTNodeResult::Failed;
 	}
+	FBTFlyMemory* Memory = reinterpret_cast<FBTFlyMemory*>(NodeMemory);
+	Memory->ElapsedTime = 0.f;
 	FVector Goal;
 	if (!CalcGoal(OwnerComp, NodeMemory, Flying, Goal))
 	{
@@ -78,10 +80,8 @@ bool UBTT_FlyingTo::CalcGoal(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemor
 
 	if (TargetKey.SelectedKeyType == UBlackboardKeyType_Vector::StaticClass())
 	{
-		OutGoal = reinterpret_cast<FBTFlyMemory*>(NodeMemory)->CachedGoal;
-
-		
-		return !OutGoal.IsNearlyZero();
+		OutGoal = BB->GetValueAsVector(TargetKey.SelectedKeyName);
+		return BB->IsVectorValueSet(TargetKey.SelectedKeyName);
 	}
 	return false;
 }
@@ -114,7 +114,7 @@ void UBTT_FlyingTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemor
 		const float AcceptSq = FMath::Square(Flying->GetArriveRadius());
 		if (ToGoal.SizeSquared() <= AcceptSq)
 		{
-			FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			return;
 		}
 		Flying->AddMovementInput(ToGoal.GetSafeNormal(), 1.f);

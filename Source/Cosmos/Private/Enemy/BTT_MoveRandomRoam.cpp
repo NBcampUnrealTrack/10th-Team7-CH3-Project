@@ -43,7 +43,7 @@ EBTNodeResult::Type UBTT_MoveRandomRoam::ExecuteTask(UBehaviorTreeComponent& Own
 		return EBTNodeResult::Failed;
 	}
 	const AActor* Center = Cast<AActor>(BB->GetValueAsObject(CenterActorKey.SelectedKeyName));
-	if (Center)
+	if (!Center)
 	{
 		return EBTNodeResult::Failed;
 	}

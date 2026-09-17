@@ -6,8 +6,9 @@
 #include "GameFramework/Character.h"
 #include "Weapon/Damageable.h"
 #include "Data/EnchantPickup.h"
+#include "Data/CosDataTable.h"
 #include "EnemyBase.generated.h"
-
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnEnemyKilled, AEnemyBase*);
 
 class UHealthComponent;
 class UAnimMontage;
@@ -30,6 +31,7 @@ public:
 
 	void SetMovementSpeed(float NewSpeed);
 
+	FOnEnemyKilled OnEnemyKilled;
 	//stats getter
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE UBehaviorTree* GetBehaviorTree() const { return BehaviorTreeAsset; }
@@ -48,6 +50,8 @@ public:
 	bool IsAlive() const;
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	bool IsStagger() const { return bIsStagger; };
+	UFUNCTION(BlueprintPure, Category = "AI|Getters")
+	virtual AActor* GetAttackTarget() const;
 	//attack hit
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
 	virtual void AttackHitCheck();
@@ -63,7 +67,12 @@ protected:
 	virtual void PostInitializeComponents() override;
 	// Called when Destroy, or moved level / 엑터가 파괴되거나 레벨 이동으로 제거 될 때 실행 -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Data")
+	TObjectPtr<UDataTable> EnemyDataTable;
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Data")
+	FName EnemyRowName;
+	UPROPERTY(BlueprintReadOnly, Category = "AI|Data")
+	FEnemyData EnemyData;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
@@ -96,6 +105,8 @@ protected:
 	FSFXVolume DeathHitSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume DeathSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
+	FSFXVolume ProjectileHitSound;
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
 	//Delay for Dead Animation
@@ -112,6 +123,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackDamage = 15.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float AttackSpeed = 1200.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackDelay = 1.5f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackPreDelay = 0.5f;
@@ -123,10 +136,18 @@ protected:
 	float StaggerDuration = 0.3f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float StaggerDelay = 0.5f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	int32 SoulAmount = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Combat")
+	bool bFaceTargetOnAttack = true;
 	void SetEnemyAtStart();
 
 	UFUNCTION()
 	void HandleDeath();
+
+	void FaceTarget(const AActor* Target);
+	void SetStaggerBlackboard(bool bValue);
+	virtual FVector GetDropLocation() const;
 
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 private:
@@ -135,7 +156,6 @@ private:
 	FTimerHandle DeathTimerHandle;
 	FTimerHandle AttackHitTimerHandle;
 	FTimerHandle StaggerTimerHandle;
-
 	bool  bIsStagger = false;
 	float LastStaggerTime = -1.f;
 
