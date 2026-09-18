@@ -78,6 +78,11 @@ void AEnemyBase::BeginPlay()
 
 void AEnemyBase::SetEnemyAtStart()
 {
+	SetMovementSpeed(RunSpeed);
+	if (HealthComponent)
+	{
+		HealthComponent->SetHPAtStart(MaxHP);
+	}
 	if (EnemyDataTable && !EnemyRowName.IsNone())
 	{
 		if (const FEnemyData* Row = EnemyDataTable->FindRow<FEnemyData>(EnemyRowName, TEXT("EnemyInit")))
@@ -88,13 +93,8 @@ void AEnemyBase::SetEnemyAtStart()
 			MaxHP = EnemyData.HP;
 			AttackDamage = EnemyData.AttackPower;
 			RunSpeed = EnemyData.MoveSpeed;
+			SoulAmount = EnemyData.SoulDrop; //추가된 부분
 		}
-	}
-
-	SetMovementSpeed(RunSpeed);
-	if (HealthComponent)
-	{
-		HealthComponent->SetHPAtStart(MaxHP);
 	}
 	bIsStagger = false;
 	LastStaggerTime = -1.f;
@@ -199,6 +199,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 
 void AEnemyBase::HandleDeath()
 {
+	PlaySFX(DeathHitSound);
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{ 
 		GameInstance->AddSoul(SoulAmount); 
@@ -219,17 +220,13 @@ void AEnemyBase::HandleDeath()
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
 
-	PlaySFX(DeathHitSound);
+
 	if (DeathMontage)
 	{
 		 PlayAnimMontage(DeathMontage);
 		 PlaySFX(DeathSound);
 	}
 	UWorld* World = GetWorld();
-	if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
-	{
-		GS->AddKill();
-	}
 	if (World)
 	{
 		World->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
