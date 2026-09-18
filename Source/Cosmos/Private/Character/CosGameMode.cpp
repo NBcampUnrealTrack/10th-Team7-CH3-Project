@@ -59,7 +59,15 @@ void ACosGameMode::StartNextWave()
 		TEXT("[GameMode] StartNextWave -> %d"),
 		CurrentWaveIndex);
 
+	TotalEnemiesThisWave = 0;
+	RemainingEnemiesThisWave = 0;
+
 	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		CycleStartSoul = GI->GetSoul();
+	}
 
 	if (WaveSpawner)//웨이브 스포너에 현재 웨이브 번호 전달, 적 스폰 시작함
 	{
@@ -211,6 +219,8 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
+		ResultData.SoulEarned = GI->GetSoul() - CycleStartSoul;
+
 		ResultData.TotalSoul = GI->GetSoul();
 	}
 
@@ -263,6 +273,10 @@ void ACosGameMode::HandleEnemyKilled(AEnemyBase* DeadEnemy)
 			TEXT("[GameMode] KillCount 증가 -> %d"),
 			GS->GetKillCount());
 	}
+
+	RemainingEnemiesThisWave = FMath::Max(0, RemainingEnemiesThisWave - 1);
+	PushEnemyCountUI();
+
 }
 
 void ACosGameMode::HandleEnemySpawned(AEnemyBase* Enemy)
@@ -272,10 +286,25 @@ void ACosGameMode::HandleEnemySpawned(AEnemyBase* Enemy)
 		return;
 	}
 
+	++TotalEnemiesThisWave;
+	++RemainingEnemiesThisWave;
+	PushEnemyCountUI();
+
 	// 새로 생성된 적이 죽었을 때
 	// GameMode의 HandleEnemyKilled가 호출되도록 연결
 	Enemy->OnEnemyKilled.AddUObject(
 		this,
 		&ACosGameMode::HandleEnemyKilled
 	);
+}
+
+void ACosGameMode::PushEnemyCountUI()
+{
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (ACosPlayerController* CosPC = Cast<ACosPlayerController>(PC))
+		{
+			CosPC->UpdateEnemyCountUI(RemainingEnemiesThisWave, TotalEnemiesThisWave);
+		}
+	}
 }
