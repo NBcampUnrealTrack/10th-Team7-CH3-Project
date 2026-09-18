@@ -9,18 +9,20 @@
 #include "Components/ChildActorComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Character/HealthComponent.h"
+#include "Data/CosGameInstance.h"
 
 UCombatComponent::UCombatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
-	PotionCount = 3;
-	PotionHealAmount = 30.f;
 }
 
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay(); //부모가 해둔 초기화가 있을 수 있으니 관례적 호출
+	
+	PotionCount = GetMaxPotionCount();
+	OnPotionCountChanged.Broadcast(PotionCount);
 
 	APawn* OwnerPawn = Cast<APawn>(GetOwner()); // 이 컴포넌트가 붙어있는 캐릭터를 가져옴 입력 컴포넌트에 접근하기 위해
 	if (!IsValid(OwnerPawn))
@@ -142,9 +144,25 @@ void UCombatComponent::OnUsePotion()
 	{
 		return;
 	}
+	UCosGameInstance* GI = Cast<UCosGameInstance>(GetWorld()->GetGameInstance());
+	if (!IsValid(GI))
+	{
+		return;
+	}
 	
 	PotionCount--;
-	HealthComponent->Heal(PotionHealAmount);
+	HealthComponent->Heal(static_cast<float>(GI->GetPotionHealAmount()));
+	OnPotionCountChanged.Broadcast(PotionCount);
+}
 
+int32 UCombatComponent::GetMaxPotionCount() const
+{
+	const UCosGameInstance* GI = Cast<UCosGameInstance>(GetWorld()->GetGameInstance());
+	return GI ? GI->GetPotionMaxCount() : 0;
+}
+
+void UCombatComponent::RefillPotions()
+{
+	PotionCount = GetMaxPotionCount();
 	OnPotionCountChanged.Broadcast(PotionCount);
 }

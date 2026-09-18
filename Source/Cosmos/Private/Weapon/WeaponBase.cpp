@@ -117,6 +117,8 @@ float AWeaponBase::GetEnchantStat(EEnchantStat Stat) const // 스탯 하나를 �
 		Total += SkillComponent->GetActiveSkillBonus(Stat); // 스킬에서 오는 보너스 추가
 	}
 
+	Total += GetUpgradeBonus(Stat); // 강화 보너스 추가
+
 	return Total; // 스탯 + 스킬 보너스 리턴
 }
 
