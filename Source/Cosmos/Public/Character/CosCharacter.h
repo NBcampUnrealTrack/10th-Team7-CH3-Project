@@ -58,7 +58,12 @@ protected:
 	UInputAction* SprintAction;
 	// =========================================================================
 
+	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION()
+	void OnLoadoutChanged();
+	void RecalculateMovementSpeed();
 	
 
 
@@ -74,4 +79,7 @@ protected:
 	void StartSprint(const FInputActionValue& Value);
 	UFUNCTION()
 	void StopSprint(const FInputActionValue& Value);
+
+	
+	
 };
