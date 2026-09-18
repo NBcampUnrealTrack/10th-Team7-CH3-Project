@@ -332,7 +332,7 @@ int32 UCosGameInstance::GetMaxSocketLevel() const
 {
 	if (!SocketUnlockPool) return 0;
 	int32 MaxLevel = 0;
-	PotionUpgradePool->ForeachRow<FSocketUnlockData>(TEXT("GetMaxSocketLevel"), [&](const FName& RowName, const FSocketUnlockData& Row)
+	SocketUnlockPool->ForeachRow<FSocketUnlockData>(TEXT("GetMaxSocketLevel"), [&](const FName& RowName, const FSocketUnlockData& Row)
 		{
 			if (Row.Level > MaxLevel)
 			{
