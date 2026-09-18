@@ -1,10 +1,12 @@
 ﻿#include "Character/HealthComponent.h"
+#include "Data/CosGameInstance.h"
 
 UHealthComponent::UHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	
-	MaxHealth = 100.0f;
+
+	BaseMaxHealth = 100.0f;
+	MaxHealth = BaseMaxHealth;
 	CurrentHealth = MaxHealth;
 }
 
@@ -35,7 +37,7 @@ void UHealthComponent::Heal(float Amount)
 	{
 		return;
 	}
-	
+
 	CurrentHealth = FMath::Clamp(//Clamp로 최소, 최대 정함
 		CurrentHealth + Amount,
 		0.0f,
@@ -52,4 +54,15 @@ void UHealthComponent::SetHPAtStart(float MaxHP)
 {
 	MaxHealth = MaxHP;
 	CurrentHealth = MaxHealth;
+}
+
+void UHealthComponent::ApplyMaxHealthBonus(float Bonus)
+{
+	const float OldMaxHealth = MaxHealth;
+	MaxHealth = BaseMaxHealth + Bonus;
+
+	// 체력 변화량 맡큼 현재 체력도 같이 변화해줌
+	CurrentHealth = FMath::Clamp(CurrentHealth + (MaxHealth - OldMaxHealth), 0.0f, MaxHealth);
+
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }

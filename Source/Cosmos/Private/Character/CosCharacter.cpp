@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/CombatComponent.h"
+#include "Data/CosGameInstance.h"
 
 ACosCharacter::ACosCharacter()
 {
@@ -145,4 +146,43 @@ void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		HealthComponent->ApplyDamage(Damage, Weapon);
 	}
+}
+
+
+void ACosCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		GI->OnLoadoutChange.AddDynamic(this, &ACosCharacter::OnLoadoutChanged);
+	}
+
+	OnLoadoutChanged();
+}
+
+void ACosCharacter::OnLoadoutChanged()
+{
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		if (HealthComponent)
+		{
+			HealthComponent->ApplyMaxHealthBonus(GI->GetTotalStat(EEnchantStat::MaxHealth));
+		}
+	}
+
+	RecalculateMovementSpeed();
+	UE_LOG(LogTemp, Warning, TEXT("MaxHealth=%.1f, WalkSpeed=%.1f"), HealthComponent->GetMaxHealth(), GetCharacterMovement()->MaxWalkSpeed);
+}
+
+void ACosCharacter::RecalculateMovementSpeed()
+{
+	if (!GetCharacterMovement()) return;
+
+	UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance());
+	const float SpeedBonus = GI ? GI->GetTotalStat(EEnchantStat::MovementSpeed) : 0.0f;
+
+	const float CurrentBaseSpeed = NormalSpeed + SpeedBonus;
+
+	GetCharacterMovement()->MaxWalkSpeed = CurrentBaseSpeed;
 }

@@ -8,10 +8,7 @@
 
 class UHealthComponent;
 class UCameraComponent;
-// [추가] Enhanced Input 클래스 전방 선언
-class UInputMappingContext;
-class UInputAction;
-// ㄴ 테스트용
+
 
 UCLASS()
 class COSMOS_API ACosCharacter : public ACharacter, public IDamageable// IDamageable 상속 추가
@@ -34,7 +31,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeedMultiplier;
 
+	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION()
+	void OnLoadoutChanged();
+	void RecalculateMovementSpeed();
 
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
@@ -48,4 +50,7 @@ protected:
 	void StartSprint(const FInputActionValue& Value);
 	UFUNCTION()
 	void StopSprint(const FInputActionValue& Value);
+
+	
+	
 };

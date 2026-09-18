@@ -30,6 +30,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetHPAtStart(float MaxHP);
+	UFUNCTION()
+	void ApplyMaxHealthBonus(float Bonus);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
@@ -37,6 +39,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
 	float CurrentHealth;
+	
 
 public:	
 	//체력변경 시 호출되는 델리게이트
@@ -48,4 +51,7 @@ public:
 	//나중에 게임 오버, 적 사망, 킬카운트? 등에 연결
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeath OnDeath;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	float BaseMaxHealth = 100.0f;
 };
