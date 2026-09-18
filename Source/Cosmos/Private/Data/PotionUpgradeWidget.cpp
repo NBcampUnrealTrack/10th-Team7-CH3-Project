@@ -3,6 +3,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Weapon/CombatComponent.h"
 
 void UPotionUpgradeWidget::NativeConstruct()
 {
@@ -34,6 +35,13 @@ void UPotionUpgradeWidget::TryUpgrade()
 	if (GI->UpgradePotion())
 	{
 		UGameplayStatics::PlaySound2D(this, UpgradeSuccessSound);
+		if (APawn* Pawn = GetOwningPlayerPawn())
+		{
+			if (UCombatComponent* Combat = Pawn->FindComponentByClass<UCombatComponent>())
+			{
+				Combat->RefillPotions();
+			}
+		}
 	}
 	else
 	{
