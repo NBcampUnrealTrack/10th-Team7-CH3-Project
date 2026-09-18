@@ -42,6 +42,8 @@ private:
 
 public:
 
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies);
 
 	ACosPlayerController();
 	FTimerHandle WeaponBindRetryTimer;
@@ -171,6 +173,8 @@ public:
 	UFUNCTION()
 	void HandleGameStateChanged();
 
+	UFUNCTION()
+	void UpdatePotionUI(int32 CurrentPotion);
 
 protected:
 	virtual void BeginPlay() override;

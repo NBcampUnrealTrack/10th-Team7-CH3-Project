@@ -166,6 +166,9 @@ void ACosPlayerController::SetupCharacterBindings()
 				false
 			);
 		}
+		CombatComp->OnPotionCountChanged.RemoveDynamic(this, &ACosPlayerController::UpdatePotionUI);
+		CombatComp->OnPotionCountChanged.AddDynamic(this, &ACosPlayerController::UpdatePotionUI);
+		UpdatePotionUI(CombatComp->GetPotionCount());
 	}
 
 	// 3. GameInstance의 소울(재화) 변경 이벤트 바인딩
@@ -277,7 +280,41 @@ void ACosPlayerController::HandleStageTimeChanged(float RemainingSeconds)
 
 void ACosPlayerController::UpdateStageTimeUI(float RemainingSeconds)
 {
+	// 분/초 단위 계산
+	const int32 TotalSeconds = FMath::Max(0, FMath::FloorToInt(RemainingSeconds));
+	const int32 Minutes = TotalSeconds / 60;
+	const int32 Seconds = TotalSeconds % 60;
 
+	// 2. 전투 HUD에 남은 시간 전달
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		// 블프 SetStageTimeText(Minutes, Seconds) 함수 호출
+		FString Cmd = FString::Printf(TEXT("SetStageTimeText %d %d"), Minutes, Seconds);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+
+	// 3. 게임오버 처리
+	if (RemainingSeconds <= 0.f)
+	{
+		int32 CurrentSoul = 0;
+		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+		{
+			CurrentSoul = GI->GetSoul();
+		}
+
+		// 게임오버 위젯 호출 및 획득한 소울 점수 
+		ShowGameOver(CurrentSoul);
+	}
+}
+
+void ACosPlayerController::UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		// 블루프린트 커스텀 이벤트 호출
+		FString Cmd = FString::Printf(TEXT("SetEnemyCountText %d %d"), RemainingEnemies, TotalEnemies);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
 }
 
 void ACosPlayerController::OnCharacterDeath()
@@ -318,6 +355,8 @@ void ACosPlayerController::RefreshCombatHUD()
 				CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
 				UpdateAmmoUI(Weapon->GetCurrentAmmo());
 			}
+
+			UpdatePotionUI(CombatComp->GetPotionCount());
 		}
 	}
 
@@ -643,4 +682,13 @@ void ACosPlayerController::ShowGameHUD()
 {
 	HideTitleWidget();
 	ShowCombatHUD();
+}
+
+void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("SetPotionText %d"), CurrentPotion);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
 }
