@@ -109,6 +109,7 @@ protected:
 	FSFXVolume ProjectileHitSound;
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
+
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
 	float DeathDelay = 2.0f;
