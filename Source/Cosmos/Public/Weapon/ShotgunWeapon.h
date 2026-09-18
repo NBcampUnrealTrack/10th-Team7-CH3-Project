@@ -43,7 +43,7 @@ protected:
 	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::RangeFiringRate; } // 공속 타입
 	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::RangeDamageAdd; } // 공격 타입, 깡뎀
 	virtual EEnchantStat GetDamageMultiStatType() const override { return EEnchantStat::RangeDamageMulti; }// 공격 타입, 배율
-
+	virtual float GetUpgradeBonus(EEnchantStat Stat) const override;
 	UFUNCTION()
 	void OnLoadoutChanged(); // 탄약 최대치 줄어들었을때 현재탄약수도 그에 맞게 줄어들도록
 

@@ -125,6 +125,22 @@ float AShotgunWeapon::GetCurrentReloadTime() const // 공격 속도랑 같은 �
 	return ReloadTime / (1.f + SpeedBonus * 0.01f);
 }
 
+float AShotgunWeapon::GetUpgradeBonus(EEnchantStat Stat) const
+{
+	const UWorld* World = GetWorld();
+	const UCosGameInstance* GI = World ? Cast<UCosGameInstance>(World->GetGameInstance()) : nullptr;
+	if (!GI) return 0.f;
+
+	switch (Stat)
+	{
+	case EEnchantStat::RangeDamageAdd:   return GI->GetShotgunStat(EShotgunModuleType::Damage);    // 깡뎀
+	case EEnchantStat::RangeFiringRate:  return GI->GetShotgunStat(EShotgunModuleType::FireSpeed); // 연사 %
+	case EEnchantStat::RangeReloadSpeed: return GI->GetShotgunStat(EShotgunModuleType::Reload);    // 재장전 %
+	case EEnchantStat::RangeMaxAmmo:     return GI->GetShotgunStat(EShotgunModuleType::Magazine);  // 탄창 +N
+	default:                             return 0.f;
+	}
+}
+
 void AShotgunWeapon::OnLoadoutChanged() // 인챈트 끼거나 뺄때 호출돼서 현재 탄약수 설정
 {
 	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());

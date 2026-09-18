@@ -97,7 +97,9 @@ void USkillComponent::ActivateSkills() // 지금 쓸 수 있는 스킬 찾아서 종료시간 �
 		NewSkill.EndTime = CurrentTime + Enchant->SkillDuration; // 지속 시간
 		ActiveSkills.Add(NewSkill); //배열에 넣기
 
-		SkillReadyTime.FindOrAdd(Enchant->SkillType) = CurrentTime + Enchant->SkillCooldown; // 게임 10초 시점에 8초짜리 스킬을 쓰면 18.0 이 저장됨. 
+		const float CooldownReduction = GameInstance->GetTotalStat(EEnchantStat::DecreaseSkillCooldown);
+		const float FinalCooldown = FMath::Max(Enchant->SkillCooldown - CooldownReduction, 0.0f);
+		SkillReadyTime.FindOrAdd(Enchant->SkillType) = CurrentTime + FinalCooldown;
 		bActivatedAny = true;
 	}
 

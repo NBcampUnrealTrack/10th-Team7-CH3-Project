@@ -8,6 +8,7 @@ class UInputAction;
 class UInputMappingContext;
 class ANailWeapon;
 class AShotgunWeapon;
+class UCosGameInstance;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPotionCountChanged, int32, NewCount);
 UCLASS(meta = (BlueprintSpawnableComponent)) //BP_CosCharacter 에서 CombatComponent 표시
@@ -17,20 +18,21 @@ class COSMOS_API UCombatComponent : public UActorComponent
 
 public:
 	UCombatComponent();
-	//UI쪽에서 써야돼서 public
-	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
-	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPotionCountChanged OnPotionCountChanged;
 
+	//UI쪽에서 써야돼서 public
+	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
+	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
+	
+	
+	UFUNCTION(BlueprintPure, Category = "Potion")
 	int32 GetPotionCount() const { return PotionCount; }
-	/*UFUNCTION(BlueprintPure, Category = "Potion")
-	int32 GetCurrentPotionCount() const;
 	UFUNCTION(BlueprintPure, Category = "Potion")
-	int32 GetCurrentMaxPotionCount() const;
-	UFUNCTION(BlueprintPure, Category = "Potion")
-	float GetCurrentPotionHealAmount() const;*/
+	int32 GetMaxPotionCount() const;
+	UFUNCTION(BlueprintCallable, Category = "Potion")
+	void RefillPotions();
 
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	bool CanAttack() const;
@@ -52,9 +54,9 @@ protected:
 
 	//포션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	int32 PotionCount;
+	int32 PotionCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	float PotionHealAmount;
+	int32 MaxPotionCount = 0;
 
 	//TryAttack() 호출을 위한 포인터
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")

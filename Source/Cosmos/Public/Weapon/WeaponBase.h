@@ -47,6 +47,7 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetCurrentDamage() const;
 	float GetEnchantStat(EEnchantStat Stat) const; // 인챈트로 얼마나 스탯이 늘어나는지.
+	virtual float GetUpgradeBonus(EEnchantStat Stat) const { return 0.f; }
 
 	//메쉬
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
