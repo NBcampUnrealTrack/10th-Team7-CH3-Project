@@ -178,6 +178,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float MaxCooldown = 0.f;
 };
 
+USTRUCT(BlueprintType)
+struct FPotionUpgradeData : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Level = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Cost = 100;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 MaxPotionCount = 3;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 HealAmount = 30;
+};
+
 UCLASS()
 class COSMOS_API UCosDataTable : public UDataTable
 {
