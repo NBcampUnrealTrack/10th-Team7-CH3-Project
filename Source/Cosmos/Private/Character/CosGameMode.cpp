@@ -62,8 +62,6 @@ void ACosGameMode::StartNextWave()
 	TotalEnemiesThisWave = 0;
 	RemainingEnemiesThisWave = 0;
 
-	StartStageTimer();
-
 	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
 
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
