@@ -88,7 +88,15 @@ void ACosPlayerController::BeginPlay()
 
 	if (ACosGameMode* GM = Cast<ACosGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
-		GM->OnForgeRequested.AddDynamic(this, &ACosPlayerController::HandleForgeRequested);
+		GM->OnForgeRequested.AddDynamic(
+			this,
+			&ACosPlayerController::HandleForgeRequested
+		);
+
+		GM->OnGameOver.AddDynamic(
+			this,
+			&ACosPlayerController::HandleGameOverRequested
+		);
 	}
 
 		
@@ -335,7 +343,11 @@ void ACosPlayerController::OnCharacterDeath()
 			}
 		}
 	}
-		ShowGameOver(0);
+
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		GM->HandlePlayerDeath();
+	}
 
 }
 
@@ -417,6 +429,9 @@ void ACosPlayerController::ShowTitleWidget()
 		if (IsValid(TitleWidgetInstance.Get()))
 		{
 			TitleWidgetInstance->AddToViewport();
+
+			// 타이틀 BGM 시작
+			OnTitleBGMRequested();
 
 			// 메뉴 화면이므로 입력 모드를 UI 전용으로 전환
 			bShowMouseCursor = true;
@@ -691,4 +706,16 @@ void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
 		FString Cmd = FString::Printf(TEXT("SetPotionText %d"), CurrentPotion);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
+}
+
+void ACosPlayerController::HandleGameOverRequested()
+{
+	int32 CurrentSoul = 0;
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		CurrentSoul = GI->GetSoul();
+	}
+
+	ShowGameOver(CurrentSoul);
 }

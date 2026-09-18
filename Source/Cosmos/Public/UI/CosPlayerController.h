@@ -45,6 +45,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnForgeBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnCombatBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnGameOverBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnTitleBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnStopBGMRequested();
+
+	UFUNCTION()
+	void HandleGameOverRequested();
+
 	ACosPlayerController();
 	FTimerHandle WeaponBindRetryTimer;
 
