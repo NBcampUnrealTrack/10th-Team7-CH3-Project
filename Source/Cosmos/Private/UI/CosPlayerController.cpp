@@ -166,6 +166,9 @@ void ACosPlayerController::SetupCharacterBindings()
 				false
 			);
 		}
+		CombatComp->OnPotionCountChanged.RemoveDynamic(this, &ACosPlayerController::UpdatePotionUI);
+		CombatComp->OnPotionCountChanged.AddDynamic(this, &ACosPlayerController::UpdatePotionUI);
+		UpdatePotionUI(CombatComp->GetPotionCount());
 	}
 
 	// 3. GameInstance의 소울(재화) 변경 이벤트 바인딩
@@ -352,6 +355,8 @@ void ACosPlayerController::RefreshCombatHUD()
 				CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
 				UpdateAmmoUI(Weapon->GetCurrentAmmo());
 			}
+
+			UpdatePotionUI(CombatComp->GetPotionCount());
 		}
 	}
 
@@ -677,4 +682,13 @@ void ACosPlayerController::ShowGameHUD()
 {
 	HideTitleWidget();
 	ShowCombatHUD();
+}
+
+void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		FString Cmd = FString::Printf(TEXT("SetPotionText %d"), CurrentPotion);
+		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
 }

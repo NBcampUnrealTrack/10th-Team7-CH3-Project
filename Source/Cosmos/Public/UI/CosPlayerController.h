@@ -173,6 +173,8 @@ public:
 	UFUNCTION()
 	void HandleGameStateChanged();
 
+	UFUNCTION()
+	void UpdatePotionUI(int32 CurrentPotion);
 
 protected:
 	virtual void BeginPlay() override;
