@@ -110,8 +110,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enchant")
 	int32 GetMaxSocketLevel() const;
 	
-	
-private:
-	UPROPERTY(VisibleAnywhere, Category = "Soul")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Soul")
 	int32 Soul = 999;
+private:
+	
 };
