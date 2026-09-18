@@ -190,6 +190,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 HealAmount = 30;
 };
 
+USTRUCT(BlueprintType)
+struct FSocketUnlockData : public FTableRowBase
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Level = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Cost = 100;
+};
 UCLASS()
 class COSMOS_API UCosDataTable : public UDataTable
 {
