@@ -211,8 +211,68 @@ void UCosGameInstance::IncreaseMaxEquippedEnchant(int32 Amount)
 	OnLoadoutChange.Broadcast();
 }
 
-// 테스트
-void UCosGameInstance::Debug_AddSoul(int32 Amount)
+
+
+const FPotionUpgradeData* UCosGameInstance::FindPotionUpgradeData(int32 Level) const
 {
-	AddSoul(Amount);
+	if (!PotionUpgradePool) return nullptr;
+
+	const FPotionUpgradeData* FoundRow = nullptr;
+	PotionUpgradePool->ForeachRow<FPotionUpgradeData>(TEXT("FindPotionUpgradeData"), [&](const FName& RowName, const FPotionUpgradeData& Row)
+		{
+			if (Row.Level == Level)
+			{
+				FoundRow = &Row;
+			}
+		});
+
+	return FoundRow;
+}
+
+bool UCosGameInstance::UpgradePotion()
+{
+	const FPotionUpgradeData* UpgradePotion = FindPotionUpgradeData(PotionLevel + 1);
+
+	if (!UpgradePotion)
+	{
+		return false;
+	}
+
+	if (SpendSoul(UpgradePotion->Cost))
+	{
+		PotionLevel++;
+		OnLoadoutChange.Broadcast();
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+}
+
+int32 UCosGameInstance::GetPotionMaxCount() const
+{
+	const FPotionUpgradeData* Data = FindPotionUpgradeData(PotionLevel);
+	return Data ? Data->MaxPotionCount : 0;
+}
+
+int32 UCosGameInstance::GetPotionHealAmount() const
+{
+	const FPotionUpgradeData* Data = FindPotionUpgradeData(PotionLevel);
+	return Data ? Data->HealAmount : 0;
+}
+
+int32 UCosGameInstance::GetMaxPotionLevel() const
+{
+	if (!PotionUpgradePool) return 0;
+	int32 MaxLevel = 0;
+	PotionUpgradePool->ForeachRow<FPotionUpgradeData>(TEXT("GetMaxPotionLevel"), [&](const FName& RowName, const FPotionUpgradeData& Row)
+		{
+			if (Row.Level > MaxLevel)
+			{
+				MaxLevel = Row.Level;
+			}
+		});
+	return MaxLevel;
 }

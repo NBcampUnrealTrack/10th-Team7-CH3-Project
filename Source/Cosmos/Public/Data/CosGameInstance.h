@@ -23,6 +23,8 @@ class COSMOS_API UCosGameInstance : public UGameInstance
 	
 public:
 
+	// 인챈트 변수
+
 	UPROPERTY(BlueprintAssignable, Category = "Soul")
 	FOnCurrencyChanged OnCurrencyChanged;
 	UPROPERTY(BlueprintAssignable, Category = "Change")
@@ -36,11 +38,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	int32 EnchantMaxCollectedCount = 16;
 
+	// 샷건 업그레이드 변수
+
 	UPROPERTY(BlueprintReadOnly, Category = "Upgrade")
 	TMap<EShotgunModuleType, int32> ModuleLevels;
 	UPROPERTY(EditDefaultsOnly, Category = "Upgrade")
 	UDataTable* UpgradePool;
 	
+	// 포션 강화 변수
+	UPROPERTY(EditDefaultsOnly, Category = "Potion")
+	UDataTable* PotionUpgradePool;
+	UPROPERTY(BlueprintReadOnly, Category = "Potion")
+	int32 PotionLevel = 1;
+
 	UFUNCTION(BlueprintPure, Category = "Soul")
 	int32 GetSoul() const;
 	UFUNCTION(BlueprintCallable, Category = "Soul")
@@ -65,6 +75,7 @@ public:
 	float GetTotalStat(EEnchantStat Stat) const;
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	void IncreaseMaxEquippedEnchant(int32 Amount);
+	
 
 	// 샷건 함수
 
@@ -78,9 +89,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Shotgun")
 	int32 GetMaxUpgradeLevel(EShotgunModuleType Type) const { return ShotgunMaxUpgradeLevel; }
 
-	// 테스트
-	UFUNCTION(Exec)
-	void Debug_AddSoul(int32 Amount);
+	// 포션 강화 함수
+	
+	UFUNCTION(BlueprintCallable, Category = "Potion")
+	bool UpgradePotion();
+	const FPotionUpgradeData* FindPotionUpgradeData(int32 Level) const;
+	UFUNCTION(BlueprintPure, Category = "Potion")
+	int32 GetPotionMaxCount() const;
+	UFUNCTION(BlueprintPure, Category = "Potion")
+	int32 GetPotionHealAmount() const;
+	UFUNCTION(BlueprintPure, Category = "Potion")
+	int32 GetMaxPotionLevel() const;
+
+	
+	
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Soul")
 	int32 Soul = 999;
