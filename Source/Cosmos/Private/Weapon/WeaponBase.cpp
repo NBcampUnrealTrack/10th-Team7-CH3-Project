@@ -57,7 +57,7 @@ bool AWeaponBase::TryApplyDamage(AActor* HitActor) // 데미지를 준 경우에
 
 	//Damageable->TakeDamage(GetCurrentDamage(), HitResult);
 	Damageable->TakeHit(GetCurrentDamage(), GetWeaponType());
-
+	UE_LOG(LogTemp, Warning, TEXT("Current Damage : %f"), GetCurrentDamage());
 	OnHitConfirmed.Broadcast(HitActor); // 적이 맞았을때 방송
 
 	return true; // 데미지를 준 경우

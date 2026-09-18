@@ -104,7 +104,6 @@ void UCombatComponent::OnNailAttack()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("OnNailAttack called")); // IMC ,IA 바인딩 확인 
 	if (IsValid(NailWeapon))
 	{
 		NailWeapon->TryAttack();
@@ -118,7 +117,6 @@ void UCombatComponent::OnShotgunAttack()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("OnShotgunAttack called"));
 	if (IsValid(ShotgunWeapon))
 	{
 		ShotgunWeapon->TryAttack();
@@ -135,7 +133,7 @@ void UCombatComponent::OnReload()
 
 void UCombatComponent::OnUsePotion()
 {
-	UHealthComponent* HealthComponent = GetOwner()->FindComponentByClass<UHealthComponent>();
+	UHealthComponent* HealthComponent = GetOwner()->FindComponentByClass<UHealthComponent>(); // HealthComponent 얻기
 	if (!IsValid(HealthComponent) || HealthComponent->IsDead())
 	{
 		return;
@@ -147,4 +145,6 @@ void UCombatComponent::OnUsePotion()
 	
 	PotionCount--;
 	HealthComponent->Heal(PotionHealAmount);
+
+	OnPotionCountChanged.Broadcast(PotionCount);
 }
