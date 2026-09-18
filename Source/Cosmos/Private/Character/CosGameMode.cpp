@@ -61,6 +61,11 @@ void ACosGameMode::StartNextWave()
 
 	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
 
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		CycleStartSoul = GI->GetSoul();
+	}
+
 	if (WaveSpawner)//웨이브 스포너에 현재 웨이브 번호 전달, 적 스폰 시작함
 	{
 		WaveSpawner->StartWave(CurrentWaveIndex);
@@ -211,6 +216,8 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
+		ResultData.SoulEarned = GI->GetSoul() - CycleStartSoul;
+
 		ResultData.TotalSoul = GI->GetSoul();
 	}
 
