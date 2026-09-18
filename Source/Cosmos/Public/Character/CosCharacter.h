@@ -7,7 +7,6 @@
 #include "CosCharacter.generated.h"
 
 class UHealthComponent;
-class USpringArmComponent;
 class UCameraComponent;
 // [추가] Enhanced Input 클래스 전방 선언
 class UInputMappingContext;
@@ -24,9 +23,6 @@ public:
 	void TakeHit(float Damage, EWeaponType Weapon) override;//추가한 IDamageable 구현부분
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	USpringArmComponent* SpringArmComp;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* CameraComp;
 

@@ -5,7 +5,6 @@
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/CombatComponent.h"
 
@@ -13,15 +12,10 @@ ACosCharacter::ACosCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-
-	SpringArmComp->SetupAttachment(RootComponent);
-	SpringArmComp->TargetArmLength = 300.0f;
-	SpringArmComp->bUsePawnControlRotation = true;
-
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
-	CameraComp->bUsePawnControlRotation = false;
+	CameraComp->SetupAttachment(RootComponent);
+	CameraComp->SetRelativeLocation(FVector(0.0f, 0.0f, 64.0f));
+	CameraComp->bUsePawnControlRotation = true;
 
 	NormalSpeed = 600.0f;
 	SprintSpeedMultiplier = 1.5f;

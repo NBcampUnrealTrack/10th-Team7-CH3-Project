@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -90,6 +90,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<class UInputAction> ESCAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+
 	void UpdateKillUI(int32 KillCount);
 
 	UFUNCTION()
@@ -160,7 +169,7 @@ public:
 	UFUNCTION()
 	void HandleForgeRequested();
 /*
-	// Å×½ºÆ®¿ë ÀÓ½Ã
+	// í…ŒìŠ¤íŠ¸ìš© ìž„ì‹œ
 	void TestDecreaseAmmo();
 	void TestReloadAmmo();
 	void TestDecreaseHP();
