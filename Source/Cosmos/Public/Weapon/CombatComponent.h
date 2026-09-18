@@ -26,7 +26,6 @@ public:
 	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
 	FORCEINLINE ANailWeapon* GetNailWeapon() const { return NailWeapon; }
 	
-	
 	UFUNCTION(BlueprintPure, Category = "Potion")
 	int32 GetPotionCount() const { return PotionCount; }
 	UFUNCTION(BlueprintPure, Category = "Potion")
@@ -54,9 +53,9 @@ protected:
 
 	//포션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	int32 PotionCount = 0;
+	int32 PotionCount = 3;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	int32 MaxPotionCount = 0;
+	int32 MaxPotionCount = 3;
 
 	//TryAttack() 호출을 위한 포인터
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
