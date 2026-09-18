@@ -2,6 +2,9 @@
 #include "Data/EnchantData.h"
 #include "Weapon/NailWeapon.h"
 #include "Weapon/ShotgunWeapon.h"
+#include "Character/CosCharacter.h"
+#include "Kismet/GameplayStatics.h"
+#include "Character/HealthComponent.h"
 
 int32 UCosGameInstance::GetSoul() const
 {
@@ -14,9 +17,20 @@ int32 UCosGameInstance::GetSoul() const
 // { GI->AddSoul(EnemyData.SoulDrop); }
 void UCosGameInstance::AddSoul(int32 Amount)
 {
+	const int32 OriginalAmount = Amount;
 	if (Amount <= 0) return;
+	Amount = FMath::RoundToInt(Amount * (1.0f + GetTotalStat(EEnchantStat::IncreaseSoulValue)));
 	Soul += Amount;
 	OnCurrencyChanged.Broadcast(Soul);
+
+	if (ACosCharacter* PlayerCharacter = Cast<ACosCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+	{
+		if (UHealthComponent* PlayerHealth = PlayerCharacter->FindComponentByClass<UHealthComponent>())
+		{
+			PlayerHealth->Heal(GetTotalStat(EEnchantStat::GainHeal));
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Soul added: raw=%d, final=%d, total=%d"), OriginalAmount, Amount, Soul);
 }
 
 // 재화를 사용할 때 상태 업데이트 로직
@@ -254,13 +268,15 @@ bool UCosGameInstance::UpgradePotion()
 int32 UCosGameInstance::GetPotionMaxCount() const
 {
 	const FPotionUpgradeData* Data = FindPotionUpgradeData(PotionLevel);
-	return Data ? Data->MaxPotionCount : 0;
+	const int32 Base =  Data ? Data->MaxPotionCount : 0;
+	return Base + FMath::RoundToInt(GetTotalStat(EEnchantStat::MaxPotionAdd));
 }
 
 int32 UCosGameInstance::GetPotionHealAmount() const
 {
 	const FPotionUpgradeData* Data = FindPotionUpgradeData(PotionLevel);
-	return Data ? Data->HealAmount : 0;
+	const int32 Base = Data ? Data->HealAmount : 0;
+	return Base + FMath::RoundToInt(GetTotalStat(EEnchantStat::IncreasePotionValue));
 }
 
 int32 UCosGameInstance::GetMaxPotionLevel() const
@@ -268,6 +284,55 @@ int32 UCosGameInstance::GetMaxPotionLevel() const
 	if (!PotionUpgradePool) return 0;
 	int32 MaxLevel = 0;
 	PotionUpgradePool->ForeachRow<FPotionUpgradeData>(TEXT("GetMaxPotionLevel"), [&](const FName& RowName, const FPotionUpgradeData& Row)
+		{
+			if (Row.Level > MaxLevel)
+			{
+				MaxLevel = Row.Level;
+			}
+		});
+	return MaxLevel;
+}
+
+const FSocketUnlockData* UCosGameInstance::FindSocketUnlockData(int32 Level) const
+{
+	if (!SocketUnlockPool) return nullptr;
+
+	const FSocketUnlockData* FoundRow = nullptr;
+	SocketUnlockPool->ForeachRow<FSocketUnlockData>(TEXT("FindSocketUnlockData"), [&](const FName& RowName, const FSocketUnlockData& Row)
+		{
+			if (Row.Level == Level)
+			{
+				FoundRow = &Row;
+			}
+		});
+
+	return FoundRow;
+}
+
+bool UCosGameInstance::UnlockEnchantSocket()
+{
+	const FSocketUnlockData* UnlockData = FindSocketUnlockData(EnchantMaxEquippedCount + 1);
+
+	if (!UnlockData)
+	{
+		return false;
+	}
+
+	if (SpendSoul(UnlockData->Cost))
+	{
+		EnchantMaxEquippedCount++;
+		OnLoadoutChange.Broadcast();
+		return true;
+	}
+
+	return false;
+}
+
+int32 UCosGameInstance::GetMaxSocketLevel() const
+{
+	if (!SocketUnlockPool) return 0;
+	int32 MaxLevel = 0;
+	PotionUpgradePool->ForeachRow<FSocketUnlockData>(TEXT("GetMaxSocketLevel"), [&](const FName& RowName, const FSocketUnlockData& Row)
 		{
 			if (Row.Level > MaxLevel)
 			{

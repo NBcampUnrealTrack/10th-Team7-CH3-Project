@@ -12,9 +12,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrencyChanged, int32, NewSoul);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadoutChanged); 
 
 
-
-
-
 UCLASS()
 class COSMOS_API UCosGameInstance : public UGameInstance
 {
@@ -34,7 +31,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TArray<UEnchantData*> EquippedEnchant; // 장착한 인챈트
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
-	int32 EnchantMaxEquippedCount = 3;
+	int32 EnchantMaxEquippedCount = 1;
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	int32 EnchantMaxCollectedCount = 16;
 
@@ -50,6 +47,10 @@ public:
 	UDataTable* PotionUpgradePool;
 	UPROPERTY(BlueprintReadOnly, Category = "Potion")
 	int32 PotionLevel = 1;
+
+	// 소켓 강화 변수
+	UPROPERTY(EditDefaultsOnly, Category = "Enchant")
+	UDataTable* SocketUnlockPool;
 
 	UFUNCTION(BlueprintPure, Category = "Soul")
 	int32 GetSoul() const;
@@ -101,6 +102,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Potion")
 	int32 GetMaxPotionLevel() const;
 
+	// 소켓 강화 함수
+	const FSocketUnlockData* FindSocketUnlockData(int32 Level) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Enchant")
+	bool UnlockEnchantSocket();
+	UFUNCTION(BlueprintPure, Category = "Enchant")
+	int32 GetMaxSocketLevel() const;
 	
 	
 private:
