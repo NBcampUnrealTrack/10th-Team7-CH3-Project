@@ -83,11 +83,16 @@ private:
 
 	void TriggerGameOver();//타임오버/ 사망하는 경우 모아두려고 넣음
 
+	void PushEnemyCountUI();
+
 	// 같은 순간에 사망 + 시간 초과가 같이 발생했을 때 GameOver가 두 번 실행되는 것을 막기 위함
 	bool bGameOver = false;
 
 	int32 CycleStartSoul = 0;
 
+	int32 TotalEnemiesThisWave = 0;     // 추가. 이번 웨이브에 스폰된 총 적 수
+
+	int32 RemainingEnemiesThisWave = 0; // 추가. 이번 웨이브에 아직 살아있는 적 수
 
 	EPostResultAction PendingAction = EPostResultAction::NextWave;//결과창 닫은 후 실행할 행동
 	
