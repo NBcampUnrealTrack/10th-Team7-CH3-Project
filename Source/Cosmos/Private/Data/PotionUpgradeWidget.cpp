@@ -39,7 +39,7 @@ void UPotionUpgradeWidget::TryUpgrade()
 		{
 			if (UCombatComponent* Combat = Pawn->FindComponentByClass<UCombatComponent>())
 			{
-				//Combat->RefillPotions();
+				Combat->RefillPotions();
 			}
 		}
 	}
