@@ -1,0 +1,6 @@
+Forest Floor PBR texture - Poly Haven, author eye-candy.xyz.
+Source: https://polyhaven.com/a/forest_floor
+License: CC0 https://polyhaven.com/license
+Files: forest_floor_diff_2k.jpg, forest_floor_nor_dx_2k.jpg, forest_floor_arm_2k.jpg
+Physical tile width: 2.1 m. ARM: red AO, green roughness, blue metallic.
+Imported textures are used only by M_AstraScannedForest on the Astra test-map floor.
