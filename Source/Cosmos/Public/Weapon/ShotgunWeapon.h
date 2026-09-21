@@ -4,7 +4,7 @@
 #include "WeaponBase.h"
 #include "ShotgunWeapon.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int32, NewAmmo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, NewAmmo, int32, MaxAmmo);
 
 UCLASS()
 class COSMOS_API AShotgunWeapon : public AWeaponBase
@@ -39,6 +39,8 @@ protected:
 	virtual void BeginPlay() override; // 샷건탄 초기화
 	virtual bool PerformAttack() override; // 공격
 
+	void BroadcastAmmo(); // 현재/최대 탄약을 함께 방송
+
 	virtual EWeaponType GetWeaponType() const override { return EWeaponType::Shotgun; } //타입
 	virtual EEnchantStat GetSpeedStatType() const override { return EEnchantStat::RangeFiringRate; } // 공속 타입
 	virtual EEnchantStat GetDamageAddStatType() const override { return EEnchantStat::RangeDamageAdd; } // 공격 타입, 깡뎀
@@ -54,6 +56,8 @@ protected:
 	int32 CurrentAmmo;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float ReloadTime;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float ShotRadius = 10.f;
 	bool bIsReloading = false;
 	FTimerHandle ReloadTimerHandle;
 };

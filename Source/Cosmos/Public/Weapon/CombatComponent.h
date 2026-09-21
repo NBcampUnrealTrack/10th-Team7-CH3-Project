@@ -11,6 +11,7 @@ class AShotgunWeapon;
 class UCosGameInstance;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPotionCountChanged, int32, NewCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatReady);
 UCLASS(meta = (BlueprintSpawnableComponent)) //BP_CosCharacter 에서 CombatComponent 표시
 class COSMOS_API UCombatComponent : public UActorComponent
 {
@@ -21,6 +22,10 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPotionCountChanged OnPotionCountChanged;
+	UPROPERTY(BlueprintAssignable)
+	FOnCombatReady OnCombatReady; // 초기화 완료 알림
+
+	bool IsCombatReady() const { return bCombatReady; }
 
 	//UI쪽에서 써야돼서 public
 	FORCEINLINE AShotgunWeapon* GetShotgunWeapon() const { return ShotgunWeapon; }
@@ -62,6 +67,8 @@ protected:
 	ANailWeapon* NailWeapon;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	AShotgunWeapon* ShotgunWeapon;
+
+	bool bCombatReady = false; // 초기화 완료 여부
 
 	//입력 연결 함수
 	void OnNailAttack();
