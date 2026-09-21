@@ -3,6 +3,7 @@
 #include "Character/CosGameMode.h"
 #include "Character/CosGameState.h"
 #include "Character/HealthComponent.h"
+#include "Weapon/WeaponBase.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
 #include "Data/CosGameInstance.h" 
@@ -171,6 +172,17 @@ void ACosPlayerController::SetupCharacterBindings()
 			CombatComp->OnPotionCountChanged.RemoveDynamic(this, &ACosPlayerController::UpdatePotionUI);
 			CombatComp->OnPotionCountChanged.AddDynamic(this, &ACosPlayerController::UpdatePotionUI);
 			UpdatePotionUI(CombatComp->GetPotionCount());
+
+			TArray<AActor*> AttachedActors;
+			ControlledPawn->GetAttachedActors(AttachedActors, true, true); // 하위 부착까지 포함
+			for (AActor* Attached : AttachedActors)
+			{
+				if (AWeaponBase* Weapon = Cast<AWeaponBase>(Attached))
+				{
+					Weapon->OnKillConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleKillConfirmed);
+					Weapon->OnKillConfirmed.AddDynamic(this, &ACosPlayerController::HandleKillConfirmed);
+				}
+			}
 		}
 	}
 
@@ -708,6 +720,14 @@ void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
 	{
 		FString Cmd = FString::Printf(TEXT("SetPotionText %d"), CurrentPotion);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
+void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayKillMarker"), *GLog, nullptr, true);
 	}
 }
 
