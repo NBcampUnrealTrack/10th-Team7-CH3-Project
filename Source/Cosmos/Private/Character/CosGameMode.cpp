@@ -64,6 +64,14 @@ void ACosGameMode::StartNextWave()
 
 	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
 
+	//전투 BGM 추가
+	if (ACosPlayerController* CosPC =
+		Cast<ACosPlayerController>(
+			UGameplayStatics::GetPlayerController(this, 0)))
+	{
+		CosPC->OnCombatBGMRequested();
+	}
+
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
 		CycleStartSoul = GI->GetSoul();
@@ -174,6 +182,13 @@ void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통
 	UE_LOG(LogTemp, Log,
 		TEXT("[GameMode] Game Over"));
 
+	if (ACosPlayerController* CosPC =
+		Cast<ACosPlayerController>(
+			UGameplayStatics::GetPlayerController(this, 0)))
+	{
+		CosPC->OnGameOverBGMRequested();
+	}
+
 	// UI 등에게 GameOver 알림
 	OnGameOver.Broadcast();
 }
@@ -190,6 +205,14 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		WaveIndex);
 
 	StopStageTimer();
+
+	// 전투 종료 → BGM 정지
+	if (ACosPlayerController* CosPC =
+		Cast<ACosPlayerController>(
+			UGameplayStatics::GetPlayerController(this, 0)))
+	{
+		CosPC->OnStopBGMRequested();
+	}
 
 	if (WaveIndex == 6) // 보스 스테이지
 	{
@@ -246,6 +269,13 @@ void ACosGameMode::OnResultConfirmed()
 		break;
 
 	case EPostResultAction::Forge:
+
+		if (ACosPlayerController* CosPC =
+			Cast<ACosPlayerController>(
+				UGameplayStatics::GetPlayerController(this, 0)))
+		{
+			CosPC->OnForgeBGMRequested();
+		}
 
 		// 결과창 → 대장간
 		OnForgeRequested.Broadcast();

@@ -5,7 +5,6 @@
 #include "Character/HealthComponent.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/CombatComponent.h"
 #include "Data/CosGameInstance.h"
@@ -14,15 +13,10 @@ ACosCharacter::ACosCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-
-	SpringArmComp->SetupAttachment(RootComponent);
-	SpringArmComp->TargetArmLength = 300.0f;
-	SpringArmComp->bUsePawnControlRotation = true;
-
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
-	CameraComp->bUsePawnControlRotation = false;
+	CameraComp->SetupAttachment(RootComponent);
+	CameraComp->SetRelativeLocation(FVector(0.0f, 0.0f, 64.0f));
+	CameraComp->bUsePawnControlRotation = true;
 
 	NormalSpeed = 600.0f;
 	SprintSpeedMultiplier = 1.5f;
@@ -35,26 +29,10 @@ ACosCharacter::ACosCharacter()
 void ACosCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	// =========================================================================
-	// [추가] 테스트용 IMC(Input Mapping Context) 등록
-	// =========================================================================
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	{
-
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-		{
-			if (DefaultIMC)
-			{
-				Subsystem->AddMappingContext(DefaultIMC, 0);
-			}
-		}
-	}
 
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		/* =====================================================================
-		   [기존 코드 주석 처리] - 해주 님 ACosPlayerController 연동 완료 후 복구용
-		========================================================================
+
 		if (ACosPlayerController* PlayerController = Cast<ACosPlayerController>(GetController()))
 		{
 			if (PlayerController->MoveAction)
@@ -70,7 +48,7 @@ void ACosCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 			{
 				EnhancedInput->BindAction(
 					PlayerController->JumpAction,
-					ETriggerEvent::Triggered,
+					ETriggerEvent::Started,
 					this,
 					&ACosCharacter::StartJump
 				);
@@ -91,7 +69,7 @@ void ACosCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 					&ACosCharacter::Look
 				);
 			}
-			if (PlayerController->SprintAction)
+		/*	if (PlayerController->SprintAction)
 			{
 				EnhancedInput->BindAction(
 					PlayerController->SprintAction,
@@ -105,31 +83,10 @@ void ACosCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 					this,
 					&ACosCharacter::StopSprint
 				);
-			}
-====================================================================== */
-
-// =========================================================================
-// [현재 작동 코드] 테스트용 임시 바인딩
-// =========================================================================
-		if (MoveAction)
-		{
-			EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACosCharacter::Move);
+			}*/
 		}
-		if (JumpAction)
-		{
-			EnhancedInput->BindAction(JumpAction, ETriggerEvent::Started, this, &ACosCharacter::StartJump);
-			EnhancedInput->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACosCharacter::StopJump);
-		}
-		if (LookAction)
-		{
-			EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACosCharacter::Look);
-		}
-		if (SprintAction)
-		{
-			EnhancedInput->BindAction(SprintAction, ETriggerEvent::Started, this, &ACosCharacter::StartSprint);
-			EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACosCharacter::StopSprint);
-		}//나중에 지워야함
 	}
+
 }
 void ACosCharacter::Move(const FInputActionValue& Value)
 {

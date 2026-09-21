@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -45,6 +45,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnForgeBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnCombatBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnGameOverBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnTitleBGMRequested();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
+	void OnStopBGMRequested();
+
+	UFUNCTION()
+	void HandleGameOverRequested();
+
 	ACosPlayerController();
 	FTimerHandle WeaponBindRetryTimer;
 
@@ -89,6 +107,15 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<class UInputAction> ESCAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
 
 	void UpdateKillUI(int32 KillCount);
 
@@ -160,7 +187,7 @@ public:
 	UFUNCTION()
 	void HandleForgeRequested();
 /*
-	// Å×½ºÆ®¿ë ÀÓ½Ã
+	// í…ŒìŠ¤íŠ¸ìš© ìž„ì‹œ
 	void TestDecreaseAmmo();
 	void TestReloadAmmo();
 	void TestDecreaseHP();
