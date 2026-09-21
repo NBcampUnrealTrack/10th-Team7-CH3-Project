@@ -14,6 +14,7 @@ class UHealthComponent;
 class UAnimMontage;
 class UBehaviorTree;
 class USoundBase;
+class AEnemyProjectile;
 UCLASS()
 class COSMOS_API AEnemyBase : public ACharacter, public IDamageable
 {
@@ -45,6 +46,7 @@ public:
 	FORCEINLINE float GetAttackDamage() const { return AttackDamage; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetAttackDelay() const { return AttackDelay; }
+
 	//status getter
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	bool IsAlive() const;
@@ -59,6 +61,8 @@ public:
 	virtual float EnemyAttack();
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
 	virtual void ApplyStagger();
+
+	static void PlaySFXAt(const UObject* WorldContext, const FSFXVolume& SFX, const FVector& Location);
 
 protected:
 	// Called when the game starts or when spawned
@@ -78,7 +82,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	FName StaggerKeyName = TEXT("bIsStagger");
 	//HealthComponent
-	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite, Category = "AI")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI")
 	TObjectPtr<UHealthComponent> HealthComponent;
 	UPROPERTY(EditAnywhere, Category = "AI|Drop")
 	TSubclassOf<AEnchantPickup> EnchantPickupClass;
@@ -134,18 +138,35 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float AttackOffset = 80.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float AttackHeightOffset = 0.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float StaggerDuration = 0.3f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float StaggerDelay = 0.5f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	int32 SoulAmount = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	bool ImmuneRange = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	bool ImmuneMelee = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	float StaggerDamage = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Combat")
 	bool bFaceTargetOnAttack = true;
-	void SetEnemyAtStart();
+	UFUNCTION(BlueprintCallable, Category = "AI|Projectile")
+	virtual void FireProjectile(float InSpeed, float InDamage);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
+	TSubclassOf<AEnemyProjectile> ProjectileClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
+	float MuzzleOffset = 60.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
+	float AimHeightOffset = 50.f;
 
 	UFUNCTION()
 	void HandleDeath();
 
+	void FireProjectile2(float InSpeed, float InDamage, float YawOffset, TSubclassOf<AEnemyProjectile> SelectedProjectile);
+	void SetEnemyAtStart();
 	void FaceTarget(const AActor* Target);
 	void SetStaggerBlackboard(bool bValue);
 	virtual FVector GetDropLocation() const;
@@ -159,5 +180,5 @@ private:
 	FTimerHandle StaggerTimerHandle;
 	bool  bIsStagger = false;
 	float LastStaggerTime = -1.f;
-
+	bool bDeathHandled = false;
 };
