@@ -1,4 +1,4 @@
-#include "Spawn/WaveSpawner.h"
+﻿#include "Spawn/WaveSpawner.h"
 #include "Spawn/EnemySpawnPoint.h"
 #include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
 #include "Data/CosDataTable.h"
@@ -18,7 +18,7 @@
 #include "Engine/Engine.h"
 #if WITH_EDITOR
 #include "UObject/ObjectSaveContext.h"
-#endif
+#endifd
 
 
 AWaveSpawner::AWaveSpawner()
