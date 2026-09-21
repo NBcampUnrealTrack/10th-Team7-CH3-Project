@@ -1,4 +1,4 @@
-﻿#include "Spawn/WaveSpawner.h"
+#include "Spawn/WaveSpawner.h"
 #include "Spawn/EnemySpawnPoint.h"
 #include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
 #include "Data/CosDataTable.h"
@@ -52,6 +52,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	// 이전 스테이지의 타이머가 남아 있을 수 있으므로 먼저 끕니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
+	GetWorldTimerManager().ClearTimer(ProgressTimer);
 
 	// 스테이지 상태 초기화. 누적 스폰이므로 초기화는 스테이지 시작 때 딱 한 번만 합니다.
 	// 웨이브가 바뀔 때는 비우지 않고 순서표 뒤에 이어 붙입니다.
@@ -70,21 +71,12 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	// 웨이브 1은 기다리지 않고 즉시 추가합니다.
 	AddNextWave();
 
-	// AddNextWave 안에서 웨이브 1 행을 못 찾아 스테이지가 중단됐거나, 웨이브가 1개뿐이면 타이머를 걸지 않습니다.
-	if (!bIsStageActive || bAllWavesQueued)
-	{
-		return;
-	}
-
-	// 웨이브 2~5는 WaveInterval(60초)마다 추가합니다.
-	// 마지막 인자를 생략하면 첫 실행도 60초 뒤입니다. 웨이브 1을 위에서 이미 넣었기 때문에 이게 맞습니다.
-	GetWorldTimerManager().SetTimer(
-		WaveTimer, this, &AWaveSpawner::AddNextWave, WaveInterval, true);
 }
 
 void AWaveSpawner::StopWave()
 {
-	// 타이머 두 개를 모두 끕니다. 이미 스폰된 적을 지울지는 게임모드가 판단합니다.
+	GetWorldTimerManager().ClearTimer(ProgressTimer);
+	// 스폰과 웨이브 타이머도 끕니다. 이미 스폰된 적을 지울지는 게임모드가 판단합니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
 	bIsSpawning = false;
@@ -102,6 +94,7 @@ void AWaveSpawner::AddNextWave()
 		return;
 	}
 
+	GetWorldTimerManager().ClearTimer(WaveTimer);
 	++CurrentWave;
 
 	// 스테이지 + 웨이브 번호로 DT 행을 찾습니다. 2) 각주
@@ -165,6 +158,13 @@ void AWaveSpawner::AddNextWave()
 	{
 		bAllWavesQueued = true;
 		GetWorldTimerManager().ClearTimer(WaveTimer);
+	}
+
+	else
+	{
+		// 조기 시작한 웨이브도 시작 시점부터 다시 60초를 셉니다.
+		GetWorldTimerManager().SetTimer(
+			WaveTimer, this, &AWaveSpawner::AddNextWave, WaveInterval, false);
 	}
 
 	// 꺼낼 칸이 남았는데 SpawnTimer가 멈춰 있으면 다시 켭니다.
@@ -252,6 +252,7 @@ void AWaveSpawner::SpawnOne()
 			if (AEnemyBase* SpawnedEnemy = Cast<AEnemyBase>(Enemy))
 			{
 				OnEnemySpawned.Broadcast(SpawnedEnemy);
+				SpawnedEnemy->OnEnemyKilled.AddUObject(this, &AWaveSpawner::HandleEnemyKilled);
 			}
 		}
 	}
@@ -325,23 +326,38 @@ bool AWaveSpawner::FindSpawnLocationNearPlayer(FVector& OutLocation)
 
 void AWaveSpawner::TryBroadcastStageCleared()
 {
-	// 네 조건이 모두 맞아야 클리어입니다.
-	//   bIsStageActive    : 진행 중인 스테이지여야 함 (한 번 방송하면 false가 되어 중복 방송 방지)
-	//   bAllWavesQueued   : 마지막 웨이브까지 들어갔어야 함 (웨이브 사이 공백에서 조기 클리어 방지)
-	//   !bIsSpawning      : 순서표를 다 꺼냈어야 함
-	//   AliveEnemies == 0 : 살아있는 적이 없어야 함
-	if (bIsStageActive && bAllWavesQueued && !bIsSpawning && AliveEnemies.Num() == 0)
+	// 스폰 대기와 생존 적이 모두 없어야 조기 진행합니다.
+	if (bIsStageActive && !bIsSpawning && SpawnedCount >= SpawnQueue.Num() && AliveEnemies.Num() == 0)
 	{
+		GetWorldTimerManager().ClearTimer(WaveTimer);
+		if (!bAllWavesQueued)
+		{
+			// 빈 웨이브가 연속되어도 재귀 호출하지 않습니다.
+			WaveTimer = GetWorldTimerManager().SetTimerForNextTick(this, &AWaveSpawner::AddNextWave);
+			return;
+		}
+		GetWorldTimerManager().ClearTimer(SpawnTimer);
+		GetWorldTimerManager().ClearTimer(ProgressTimer);
 		bIsStageActive = false;
 		UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 클리어"), CurrentStage);
 		OnWaveCleared.Broadcast(CurrentStage);
 	}
 }
 
+void AWaveSpawner::HandleEnemyKilled(AEnemyBase* KilledEnemy)
+{
+	HandleEnemyDestroyed(KilledEnemy);
+}
+
 void AWaveSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
 {
-	AliveEnemies.Remove(DestroyedActor);
-	TryBroadcastStageCleared();
+	// 처치 후 시체가 파괴될 때는 중복 처리하지 않습니다.
+	if (AliveEnemies.Remove(DestroyedActor) > 0 && bIsStageActive)
+	{
+		// 보상 등 모든 사망 콜백이 끝난 다음 진행합니다.
+		GetWorldTimerManager().ClearTimer(ProgressTimer);
+		ProgressTimer = GetWorldTimerManager().SetTimerForNextTick(this, &AWaveSpawner::TryBroadcastStageCleared);
+	}
 }
 
 void AWaveSpawner::CollectSpawnPoints()
