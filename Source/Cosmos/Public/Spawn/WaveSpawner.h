@@ -8,6 +8,29 @@
 class AEnemySpawnPoint; // 플레이어 근처 위치를 못 찾았을 때 대신 쓸 예비 스폰 위치입니다.
 class UDataTable; // 스테이지·웨이브 데이터 테이블 전방선언
 class AEnemyBase; // 스폰된 적을 델리게이트로 넘기기 위해 전방선언합니다. 포인터로만 쓰므로 include 없이 충분합니다.
+class ADirectionalLight;
+class ASkyLight;
+class AExponentialHeightFog;
+class UExponentialHeightFogComponent;
+
+// 맵에 설정된 원래 값에 곱합니다. 1이면 유지, 밝기는 작을수록 어둡고 안개는 클수록 짙습니다.
+USTRUCT(BlueprintType)
+struct FStageEnvironmentSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float MoonlightMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float SkylightMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float FogDensityMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float VolumetricExtinctionMultiplier = 1.0f;
+};
 
 
 // 용어
@@ -42,6 +65,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Wave")
 	void StopWave();
 
+	// 게임 중 환경만 적용합니다. 웨이브/적/타이머는 진행시키지 않습니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
+	void ApplyStageEnvironment(int32 StageIndex);
+
+	// 에디터에서만 안개를 비교합니다. 조명, 전투와 원본 안개 값은 변경하지 않습니다.
+	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Preview Fog"))
+	void PreviewFog();
+
+	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Restore Fog Preview"))
+	void RestoreFogPreview();
+
 	// 살아있는 적 수. AliveEnemies 배열에 지금 몇 마리 들어있는지 알려줍니다.
 	UFUNCTION(BlueprintPure, Category = "Wave") // BlueprintPure은 실행핀 없고 값만 돌려줍니다.
 		int32 GetAliveCount() const // .cpp로 따로 안빼고 인라인 정의함. 
@@ -70,6 +104,12 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Destroyed() override;
+
+#if WITH_EDITOR
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 
 private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 public
@@ -102,6 +142,41 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	FName MakeRowName(int32 StageIndex, int32 WaveIndex) const;
 
 	// -- 에디터 설정값 
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditInstanceOnly, Transient, Category = "Wave|Fog Preview", meta = (ClampMin = "1", UIMin = "1", UIMax = "6"))
+	int32 PreviewStage = 1;
+
+	// 저장/PIE 복제에서 제외되는 비교용 컴포넌트입니다. InstanceComponents에는 넣지 않습니다.
+	UPROPERTY(Transient, DuplicateTransient)
+	TObjectPtr<UExponentialHeightFogComponent> FogPreviewComponent;
+
+	UPROPERTY(Transient, DuplicateTransient)
+	TWeakObjectPtr<AExponentialHeightFog> FogPreviewSource;
+
+	UPROPERTY(Transient, DuplicateTransient)
+	bool bFogPreviewSourceWasHidden = false;
+#endif
+
+	friend class FWaveFogPreviewTest;
+
+	// 레벨에 배치한 스포너에서 대상 액터를 지정하고 켭니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Environment")
+	bool bEnableStageEnvironment = false;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<ADirectionalLight> EnvironmentMoonlight;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<ASkyLight> EnvironmentSkylight;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<AExponentialHeightFog> EnvironmentFog;
+
+	// 키는 스테이지 번호입니다. 1~5는 일반 스테이지, 6은 현재 게임모드의 보스 스테이지입니다.
+	// 설정이 없는 번호는 현재 환경을 유지합니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Environment")
+	TMap<int32, FStageEnvironmentSettings> StageEnvironments;
 
 	// 스테이지·웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 	UPROPERTY(EditAnywhere, Category = "Wave")
@@ -181,4 +256,13 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	bool bAllWavesQueued = false; // 마지막 웨이브까지 순서표에 들어갔는지. 클리어 조기 방송 방지용.
 
 	float StageStartTime = 0.0f; // 스테이지가 시작된 시각. GetGameTimeSinceCreation() 기준으로 저장합니다.
+
+	// 대상이 바뀌면 새 기준을 읽고, 같은 대상에는 항상 최초 값을 사용해 배율 누적을 막습니다.
+	TWeakObjectPtr<ADirectionalLight> CachedEnvironmentMoonlight;
+	TWeakObjectPtr<ASkyLight> CachedEnvironmentSkylight;
+	TWeakObjectPtr<AExponentialHeightFog> CachedEnvironmentFog;
+	float BaseMoonlightIntensity = 0.0f;
+	float BaseSkylightIntensity = 0.0f;
+	float BaseFogDensity = 0.0f;
+	float BaseVolumetricExtinction = 0.0f;
 };
