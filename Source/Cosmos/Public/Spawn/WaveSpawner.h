@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -11,8 +11,8 @@ class AEnemyBase; // 스폰된 적을 델리게이트로 넘기기 위해 전방
 
 
 // 용어
-//   Stage (5분) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
-//   Wave  (1분) : 스테이지 안에서 1분마다 적을 누적 추가하는 내부 박자. UI에 노출하지 않습니다.
+//   Stage (5웨이브) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
+//   Wave (1분 간격) : 전멸하거나 1분이 지나면 다음 적을 추가하는 내부 단위. UI에 노출하지 않습니다.
 
 
 // 델리게이트 선언. 모든 웨이브가 순서표에 들어갔고 + 전부 스폰됐고 + 생존 적 0 -> 스테이지당 한 번 방송됨. 게임 모드가 구독합니다.
@@ -32,9 +32,9 @@ public:
 	AWaveSpawner();
 
 	// 스테이지 하나를 시작합니다. 게임모드가 부르는 유일한 진입점.
-	// 함수 시그니처는 팀 합의대로 StartWave를 유지합니다. 넘기는 번호는 스테이지(5분) 번호입니다.
+	// 함수 시그니처는 팀 합의대로 StartWave를 유지합니다. 넘기는 번호는 스테이지 번호입니다.
 	// 게임모드는 스테이지 단위(1, 2, 3...)로 한 번만 부릅니다. 1분 웨이브 단위로 부르지 않습니다.
-	// 내부에서 웨이브 1을 즉시 추가하고, 이후 WaveInterval(60초)마다 WavesPerStage(5)개까지 누적 추가합니다.
+	// 내부에서 웨이브 1을 즉시 추가하고, 이후 전멸하거나 WaveInterval(60초)이 지나면 WavesPerStage(5)개까지 추가합니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave") // BlueprintCallable은 실행핀을 뽑을 수 있는 뭔가를 바꿀 수 있는 함수입니다.
 		void StartWave(int32 WaveIndex); // WaveIndex = 스테이지 번호
 
@@ -83,9 +83,11 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	// 플레이어 주변 NavMesh 위에서 스폰 위치를 찾습니다. 찾으면 true, 실패하면 false. 6) 각주
 	bool FindSpawnLocationNearPlayer(FVector& OutLocation);
 
-	// 클리어 조건을 한 곳에서 검사하고, 맞으면 한 번만 방송합니다.
+	// 전멸하면 다음 웨이브를 예약하고, 마지막 웨이브면 클리어를 한 번 방송합니다.
 	// 적 사망 / 스폰 종료 / 마지막 웨이브 추가 세 곳에서 부릅니다.
 	void TryBroadcastStageCleared();
+
+	void HandleEnemyKilled(AEnemyBase* KilledEnemy);
 
 	UFUNCTION() // 적이 파괴되었을 때 언리얼이 자동 호출합니다.
 		// cpp에서 Enemy->OnDestroyed.AddDynamic(this, ...)으로 등록해두기 때문입니다.
@@ -166,7 +168,8 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	TArray<TSubclassOf<AActor>> SpawnQueue; // 스테이지 전체 스폰 순서표. 웨이브마다 뒤에 이어 붙습니다.
 
 	FTimerHandle SpawnTimer; // 1초마다 한 마리 꺼내는 타이머의 이름표
-	FTimerHandle WaveTimer;  // 60초마다 웨이브를 추가하는 타이머의 이름표. SpawnTimer와 별개라 서로 안 꺼집니다.
+	FTimerHandle WaveTimer;  // 웨이브 시작부터 60초 후 추가. 전멸하면 다음 틱으로 당깁니다.
+	FTimerHandle ProgressTimer; // 사망 콜백 완료 후 진행 조건을 검사합니다.
 
 	int32 CurrentStage = 0;     // 지금 몇 번째 스테이지인지. 클리어 방송할 때 이 번호를 같이 넘깁니다.
 	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지 (1~5). 0이면 스테이지 시작 전.
