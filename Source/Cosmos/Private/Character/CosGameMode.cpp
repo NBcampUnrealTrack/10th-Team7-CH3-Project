@@ -195,7 +195,7 @@ void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통
 
 void ACosGameMode::StartGame()//타이들에서 게임 시작 누르면 전투(임시) 맵으로 이동하도록함
 {
-	UGameplayStatics::OpenLevel(this, FName("L_BlockoutTriangle"));
+	UGameplayStatics::OpenLevel(this, FName("L_BlockoutAstra"));
 }
 
 void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
