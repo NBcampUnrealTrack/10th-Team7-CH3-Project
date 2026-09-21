@@ -61,6 +61,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Wave") // BlueprintCallable은 실행핀을 뽑을 수 있는 뭔가를 바꿀 수 있는 함수입니다.
 		void StartWave(int32 WaveIndex); // WaveIndex = 스테이지 번호
 
+	// Day 1 전용. DT 없이 구울만 GhoulCount마리 넣고, 전멸하면 Stage 0 클리어를 방송합니다.
+	// 웨이브 추가·환경 변경은 하지 않습니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void StartTutorialStage(int32 GhoulCount);
+
 	// 진행 중인 스폰과 웨이브 추가를 중단합니다. 이미 스폰된 적을 지우지는 않습니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave")
 	void StopWave();
@@ -68,6 +73,11 @@ public:
 	// 게임 중 환경만 적용합니다. 웨이브/적/타이머는 진행시키지 않습니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
 	void ApplyStageEnvironment(int32 StageIndex);
+
+	// 맵의 Height Fog를 전부 숨기거나 다시 보이게 합니다. Day 1(안개 없음)용.
+	// 밀도 값은 건드리지 않으므로 스테이지 환경 배율의 기준값이 바뀌지 않습니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
+	void SetFogVisible(bool bVisible);
 
 	// 에디터에서만 안개를 비교합니다. 조명, 전투와 원본 안개 값은 변경하지 않습니다.
 	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Preview Fog"))
@@ -137,6 +147,9 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	// 레벨의 AEnemySpawnPoint를 전부 찾아 SpawnPoints에 담아줍니다.
 	// 이제는 플레이어 근처 위치를 못 찾았을 때만 쓰는 예비용입니다.
 	void CollectSpawnPoints();
+
+	// 이전 스테이지 타이머를 끄고 스테이지 상태를 처음으로 되돌립니다. StartWave / StartTutorialStage 공용.
+	void ResetStageState(int32 StageIndex);
 
 	// [DT] 스테이지 번호 + 웨이브 번호를 DT의 Row Name("Stage2_Wave3" 형식)으로 바꿔줍니다.
 	FName MakeRowName(int32 StageIndex, int32 WaveIndex) const;
