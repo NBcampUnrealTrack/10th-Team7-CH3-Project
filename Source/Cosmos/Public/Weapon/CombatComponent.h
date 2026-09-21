@@ -58,9 +58,7 @@ protected:
 
 	//포션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	int32 PotionCount = 3;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Potion")
-	int32 MaxPotionCount = 3;
+	int32 PotionCount = 0;
 
 	//TryAttack() 호출을 위한 포인터
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
