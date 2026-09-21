@@ -1,4 +1,5 @@
 ﻿#include "Enemy/EnemyBase.h"
+#include "Enemy/EnemyProjectile.h"
 #include "Character/HealthComponent.h"
 #include "Enemy/EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
@@ -178,11 +179,19 @@ float AEnemyBase::EnemyAttack() {
 
 void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
+	if (ImmuneMelee && Weapon == EWeaponType::Nail)
+	{
+		return;
+	}
+	if (ImmuneRange && Weapon == EWeaponType::Shotgun)
+	{
+		return;
+	}
 	if (Damage <= 0.f || !IsAlive())
 	{
 		return;
 	}
-	HealthComponent->ApplyDamage(Damage, EWeaponType::None);
+	HealthComponent->ApplyDamage(Damage, Weapon);
 	if (!IsAlive())
 	{
 		return;
@@ -193,12 +202,17 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	case EWeaponType::Shotgun: PlaySFX(HitbyRangeSound); break;
 	default: break;
 	}
-	ApplyStagger();
-
+	if (Damage > StaggerDamage) 
+	{
+		ApplyStagger();
+	}
 }
 
 void AEnemyBase::HandleDeath()
 {
+	if (bDeathHandled) { return; }
+	bDeathHandled = true;
+
 	PlaySFX(DeathHitSound);
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{ 
@@ -220,18 +234,21 @@ void AEnemyBase::HandleDeath()
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
 
-
+	PlaySFX(DeathSound);
 	if (DeathMontage)
 	{
 		 PlayAnimMontage(DeathMontage);
-		 PlaySFX(DeathSound);
+	
 	}
-	UWorld* World = GetWorld();
-	if (World)
+	if (EnchantPickupClass)
 	{
-		World->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
+		if (FMath::FRand() <= 0.02f)
+		{
+			GetWorld()->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
+		}
 	}
-	GetWorldTimerManager().SetTimer(DeathTimerHandle, [this]() { Destroy(); }, DeathDelay, false);
+	GetWorldTimerManager().SetTimer(DeathTimerHandle, FTimerDelegate::CreateWeakLambda(this, [this]() { Destroy(); }),
+		DeathDelay, false);
 }
 
 void AEnemyBase::AttackHitCheck()
@@ -242,13 +259,15 @@ void AEnemyBase::AttackHitCheck()
 	}
 	PlaySFX(AttackSound);
 	//set radius
-	const FVector Start = GetActorLocation() + GetActorForwardVector() * AttackOffset;
+	const FVector Start = GetActorLocation() + GetActorForwardVector() * AttackOffset + FVector(0.f, 0.f, AttackHeightOffset);
 	// const FVector End = Start + GetActorForwardVector() * AttackRange;
 	TArray<FOverlapResult> AttackHits;
 	//ignore self
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(DetectPlayer), false, this);
+	FCollisionObjectQueryParams ObjParams;
+	ObjParams.AddObjectTypesToQuery(ECC_Pawn);
 
-	const bool bHit = GetWorld()->OverlapMultiByChannel(AttackHits, Start, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(AttackRadius), Params);
+	const bool bHit = GetWorld()->OverlapMultiByObjectType(AttackHits, Start, FQuat::Identity, ObjParams,FCollisionShape::MakeSphere(AttackRadius), Params);
 	// for DEBUUYG
 #if ENABLE_DRAW_DEBUG
 	DrawDebugSphere(GetWorld(), Start, AttackRadius, 12,
@@ -295,11 +314,8 @@ void AEnemyBase::ApplyStagger()
 	if (AAIController* AI = Cast<AAIController>(GetController()))
 	{
 		AI->StopMovement();
-		if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
-		{
-			BB->SetValueAsBool(StaggerKeyName, true);
-		}
 	}
+	SetStaggerBlackboard(true);
 	GetCharacterMovement()->StopMovementImmediately();
 	//play hit React
 	if (HitReactMontage)
@@ -336,14 +352,22 @@ FVector AEnemyBase::GetDropLocation() const
 {
 	return GetActorLocation();
 }
-void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
+void AEnemyBase::PlaySFXAt(const UObject* WorldContext, const FSFXVolume& SFX, const FVector& Location)
 {
-	if (!SFX.Sound)
+	if (!SFX.Sound || !WorldContext)
 	{
 		return;
 	}
-	const float FinalResult = SFX.Pitch * (1.f + FMath::FRandRange(-SFX.RandomPitch, SFX.RandomPitch));
-	UGameplayStatics::PlaySoundAtLocation(this, SFX.Sound, GetActorLocation(), SFX.Volume, FinalResult);
+
+	const float FinalPitch = SFX.Pitch * (1.f + FMath::FRandRange(-SFX.RandomPitch, SFX.RandomPitch));
+
+
+	UGameplayStatics::PlaySoundAtLocation(WorldContext,SFX.Sound,Location,FRotator::ZeroRotator,SFX.Volume,	FinalPitch,	0.f,nullptr,SFX.Concurrency,Cast<AActor>(WorldContext));  
+}
+
+void AEnemyBase::PlaySFX(const FSFXVolume& SFX)
+{
+	PlaySFXAt(this, SFX, GetActorLocation());
 }
 void AEnemyBase::SetStaggerBlackboard(bool bValue)
 {
@@ -353,5 +377,40 @@ void AEnemyBase::SetStaggerBlackboard(bool bValue)
 		{
 			BB->SetValueAsBool(StaggerKeyName, bValue);
 		}
+	}
+}
+
+void AEnemyBase::FireProjectile(float InSpeed, float InDamage)
+{
+	FireProjectile2(InSpeed, InDamage, 0.f, ProjectileClass);
+}
+void AEnemyBase::FireProjectile2(float InSpeed, float InDamage, float YawOffset, TSubclassOf<AEnemyProjectile> SelectedProjectile) {
+	const TSubclassOf<AEnemyProjectile> ProjectilType = SelectedProjectile ? SelectedProjectile : ProjectileClass;
+	if (!ProjectilType)
+	{
+		return;
+	}
+
+	const AActor* Target = GetAttackTarget();
+	UWorld* World = GetWorld();
+	if (!Target || !World)
+	{
+		return;
+	}
+
+	const FVector Muzzle = GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
+	const FVector AimPoint = Target->GetActorLocation() + FVector(0.f, 0.f, AimHeightOffset);
+	FRotator FireRot = (AimPoint - Muzzle).Rotation();
+
+	FireRot.Yaw += YawOffset;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if (AEnemyProjectile* Projectile =
+		World->SpawnActor<AEnemyProjectile>(ProjectilType, Muzzle, FireRot, SpawnParams))
+	{
+		Projectile->InitProjectile(InDamage, InSpeed);
 	}
 }

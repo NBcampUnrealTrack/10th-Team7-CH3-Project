@@ -6,7 +6,7 @@ AShotgunWeapon::AShotgunWeapon()
 {
 	BaseDamage = 30.f;
 	AttackInterval = 1.f;
-	AttackRange = 1000.f;
+	AttackRange = 2500.f;
 	MaxAmmo = 4;
 	ReloadTime = 2.f;
 }
@@ -24,7 +24,7 @@ void AShotgunWeapon::BeginPlay()
 	}
 
 	CurrentAmmo = GetCurrentMaxAmmo(); // 생성자 시점에는 인챈트를 알 수 없기에 여기서 초기화
-	OnAmmoChanged.Broadcast(CurrentAmmo); // 방송
+	BroadcastAmmo(); // 방송
 }
 
 bool AShotgunWeapon::PerformAttack()
@@ -42,7 +42,7 @@ bool AShotgunWeapon::PerformAttack()
 	}
 
 	CurrentAmmo--;
-	OnAmmoChanged.Broadcast(CurrentAmmo); // 총알 줄어든것 방송
+	BroadcastAmmo(); // 총알 줄어든것 방송
 
 	const FVector EndLocation = StartLocation + (Direction * AttackRange); //끝점
 
@@ -51,24 +51,27 @@ bool AShotgunWeapon::PerformAttack()
 	QueryParams.AddIgnoredActor(this); // 무기 자체는 맞지 않도록
 	QueryParams.AddIgnoredActor(GetAttachParentActor()); // 플레이어가 맞지 않도록
 
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(// 라인 트레이스
+	const bool bHit = GetWorld()->SweepSingleByChannel(// 구체 트레이스
 		HitResult, // 결과 담는 곳
 		StartLocation, // 시작 
 		EndLocation, // 끝
+		FQuat::Identity, // 구체라 회전 의미 없음
 		ECC_Weapon, // 무기 판정 전용 채널
+		FCollisionShape::MakeSphere(ShotRadius), // 선 굵기
 		QueryParams // 트레이스 설정
 	); 
 
-	DrawDebugLine( // 라인트레이스 시각화
-		GetWorld(), //현재 월드
-		StartLocation, //시작
-		EndLocation, //끝
-		bHit ? FColor::Green : FColor::Red, // 라인 색 (맞으면 초록, 안맞으면 빨강)
-		false, // 계속 남아있는지
-		2.f, // 몇 초간 남아있나
-		0, // 그리기 우선순위, 0이면 벽은 뚫지 못함
-		2.f // 선 두께
-	);
+
+	//DrawDebugLine( // 라인트레이스 시각화
+	//	GetWorld(), //현재 월드
+	//	StartLocation, //시작
+	//	EndLocation, //끝
+	//	bHit ? FColor::Green : FColor::Red, // 라인 색 (맞으면 초록, 안맞으면 빨강)
+	//	false, // 계속 남아있는지
+	//	2.f, // 몇 초간 남아있나
+	//	0, // 그리기 우선순위, 0이면 벽은 뚫지 못함
+	//	ShotRadius * 2.f // 선 두께
+	//);
 
 	if (bHit) // 무언가에 맞았는가
 	{
@@ -105,7 +108,7 @@ void AShotgunWeapon::FinishReload()
 	}
 	CurrentAmmo = GetCurrentMaxAmmo();
 	bIsReloading = false;
-	OnAmmoChanged.Broadcast(CurrentAmmo); //총알 장전된것 방송
+	BroadcastAmmo(); //총알 장전된것 방송
 	OnReloadFinished();
 }
 
@@ -144,5 +147,10 @@ float AShotgunWeapon::GetUpgradeBonus(EEnchantStat Stat) const
 void AShotgunWeapon::OnLoadoutChanged() // 인챈트 끼거나 뺄때 호출돼서 현재 탄약수 설정
 {
 	CurrentAmmo = FMath::Min(CurrentAmmo, GetCurrentMaxAmmo());
-	OnAmmoChanged.Broadcast(CurrentAmmo);
+	BroadcastAmmo();
+}
+
+void AShotgunWeapon::BroadcastAmmo()
+{
+	OnAmmoChanged.Broadcast(CurrentAmmo, GetCurrentMaxAmmo());
 }

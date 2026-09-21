@@ -53,11 +53,6 @@ bool AFlyingBase::CanAttack() const
 	}
 	return (World->GetTimeSeconds() - LastAttackTime) >= GetAttackDelay();
 }
-FVector AFlyingBase::GetMuzzleLocation() const
-{
-	return GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
-}
-
 void AFlyingBase::AttackHitCheck()
 {
 	if (!IsAlive())
@@ -69,27 +64,7 @@ void AFlyingBase::AttackHitCheck()
 		LastAttackTime = World->GetTimeSeconds();
 	}
 	PlaySFX(AttackSound);
-	if (!ProjectileClass)
-	{
-		return;
-	}
-	//only target main player
-	const APawn* TargetPlayer = UGameplayStatics::GetPlayerPawn(this, 0);
-	if (!TargetPlayer)
-	{
-		return;
-	}
-	//for shoot to body not foot
-	const FVector AimOffset = TargetPlayer->GetActorLocation() + FVector(0.f, 0.f, AimHeightOffset);
-	const FVector MuzzleLocation = GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
-	const FRotator FirePoint = (AimOffset - MuzzleLocation).Rotation();
-	//spawn setting
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; //always shoot.
-
-	GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, FirePoint, SpawnParams);
+	FireProjectile(AttackSpeed, AttackDamage);
 }
 
 FVector AFlyingBase::GetFlyLocation(const FVector& Ground) const

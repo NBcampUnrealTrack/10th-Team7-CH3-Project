@@ -3,6 +3,7 @@
 #include "Character/CosGameMode.h"
 #include "Character/CosGameState.h"
 #include "Character/HealthComponent.h"
+#include "Weapon/WeaponBase.h"
 #include "Weapon/ShotgunWeapon.h"
 #include "Weapon/CombatComponent.h"   
 #include "Data/CosGameInstance.h" 
@@ -154,29 +155,35 @@ void ACosPlayerController::SetupCharacterBindings()
 	// 2. ShotgunWeapon 델리게이트 바인딩
 	if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
 	{
-		if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
+		if (!CombatComp->IsCombatReady()) // 컴포넌트 BeginPlay 전이면 준비 완료 시 다시 호출
 		{
-			UE_LOG(LogTemp, Warning, TEXT("무기 바인딩 성공"));
-
-			Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
-			Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
-			CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
-			UpdateAmmoUI(Weapon->GetCurrentAmmo());
+			CombatComp->OnCombatReady.RemoveDynamic(this, &ACosPlayerController::SetupCharacterBindings);
+			CombatComp->OnCombatReady.AddDynamic(this, &ACosPlayerController::SetupCharacterBindings);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("ShotgunWeapon이 아직 CombatComponent에 없음 - 0.1초 후 재시도"));
-			GetWorld()->GetTimerManager().SetTimer(
-				WeaponBindRetryTimer,
-				this,
-				&ACosPlayerController::SetupCharacterBindings,
-				0.1f,
-				false
-			);
+			if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
+			{
+				Weapon->OnAmmoChanged.RemoveDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+				Weapon->OnAmmoChanged.AddDynamic(this, &ACosPlayerController::UpdateAmmoUI);
+				UpdateAmmoUI(Weapon->GetCurrentAmmo(), Weapon->GetCurrentMaxAmmo());
+			}
+
+			CombatComp->OnPotionCountChanged.RemoveDynamic(this, &ACosPlayerController::UpdatePotionUI);
+			CombatComp->OnPotionCountChanged.AddDynamic(this, &ACosPlayerController::UpdatePotionUI);
+			UpdatePotionUI(CombatComp->GetPotionCount());
+
+			TArray<AActor*> AttachedActors;
+			ControlledPawn->GetAttachedActors(AttachedActors, true, true); // 하위 부착까지 포함
+			for (AActor* Attached : AttachedActors)
+			{
+				if (AWeaponBase* Weapon = Cast<AWeaponBase>(Attached))
+				{
+					Weapon->OnKillConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleKillConfirmed);
+					Weapon->OnKillConfirmed.AddDynamic(this, &ACosPlayerController::HandleKillConfirmed);
+				}
+			}
 		}
-		CombatComp->OnPotionCountChanged.RemoveDynamic(this, &ACosPlayerController::UpdatePotionUI);
-		CombatComp->OnPotionCountChanged.AddDynamic(this, &ACosPlayerController::UpdatePotionUI);
-		UpdatePotionUI(CombatComp->GetPotionCount());
 	}
 
 	// 3. GameInstance의 소울(재화) 변경 이벤트 바인딩
@@ -246,13 +253,13 @@ void ACosPlayerController::UpdateHP(float CurrentHealth, float MaxHealth)
 }
 
 
-void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo)
+void ACosPlayerController::UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo)
 {
-	UE_LOG(LogTemp, Warning, TEXT("UpdateAmmoUI 호출됨: %d"), CurrentAmmo);
+	UE_LOG(LogTemp, Warning, TEXT("UpdateAmmoUI 호출됨: %d / %d"), CurrentAmmo, MaxAmmo);
 
 	if (IsValid(CombatHUDInstance.Get()))
 	{
-		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, CachedMaxAmmo);
+		FString Cmd = FString::Printf(TEXT("SetAmmoText %d %d"), CurrentAmmo, MaxAmmo);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
 }
@@ -364,8 +371,7 @@ void ACosPlayerController::RefreshCombatHUD()
 		{
 			if (AShotgunWeapon* Weapon = CombatComp->GetShotgunWeapon())
 			{
-				CachedMaxAmmo = Weapon->GetCurrentMaxAmmo();
-				UpdateAmmoUI(Weapon->GetCurrentAmmo());
+				UpdateAmmoUI(Weapon->GetCurrentAmmo(), Weapon->GetCurrentMaxAmmo()); 
 			}
 
 			UpdatePotionUI(CombatComp->GetPotionCount());
@@ -493,6 +499,15 @@ void ACosPlayerController::CloseForgeWidget()
 	{
 		ForgeWidgetInstance->RemoveFromParent();
 		ForgeWidgetInstance = nullptr;
+	}
+
+	//포션 충전
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
+		{
+			CombatComp->RefillPotions();
+		}
 	}
 
 	SetUIInputMode(false);
@@ -705,6 +720,14 @@ void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
 	{
 		FString Cmd = FString::Printf(TEXT("SetPotionText %d"), CurrentPotion);
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
+	}
+}
+
+void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayKillMarker"), *GLog, nullptr, true);
 	}
 }
 

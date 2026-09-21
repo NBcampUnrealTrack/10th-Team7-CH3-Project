@@ -78,17 +78,13 @@ void AEnemyProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, U
 		{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] TakeHit → %s / Damage = %.1f"),
 					*GetName(), *OtherActor->GetName(), Damage);
-			Target->TakeHit(20, EWeaponType::None);
-			PlaySFXProjectile(HitPlayerSound);   // 플레이어 피격음
+			Target->TakeHit(Damage, EWeaponType::None);
+			AEnemyBase::PlaySFXAt(this, HitPlayerSound, Hit.ImpactPoint);
 		}
 		else
 		{
-			PlaySFXProjectile(ImpactSound);
+				AEnemyBase::PlaySFXAt(this, ImpactSound, Hit.ImpactPoint);
 		}
-	}
-	else
-	{
-		PlaySFXProjectile(ImpactSound);
 	}
 	if (ImpactFX) {
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(	this, ImpactFX, Hit.ImpactPoint, Hit.ImpactNormal.Rotation(),FVector(1.f), true, true, ENCPoolMethod::AutoRelease);

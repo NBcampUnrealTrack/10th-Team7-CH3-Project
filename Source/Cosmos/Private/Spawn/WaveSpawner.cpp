@@ -9,6 +9,16 @@
 #include "TimerManager.h"
 #include "NavigationSystem.h" // Build.cs에 "NavigationSystem" 모듈이 있어야 합니다.
 #include "NavigationPath.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/SkyLight.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Engine/Engine.h"
+#if WITH_EDITOR
+#include "UObject/ObjectSaveContext.h"
+#endif
 
 
 AWaveSpawner::AWaveSpawner()
@@ -16,6 +26,18 @@ AWaveSpawner::AWaveSpawner()
 	// 스폰은 전부 타이머로 처리하므로 Tick이 필요 없습니다.
 	// AActor 기본값이 true이므로 명시적으로 꺼줘야 합니다.
 	PrimaryActorTick.bCanEverTick = false;
+
+	// 시각 검증 전의 시작용 프리셋입니다. 실제 맵에서 조정한 뒤 기능을 켭니다.
+	for (int32 Stage = 1; Stage <= 6; ++Stage)
+	{
+		FStageEnvironmentSettings Settings;
+		const float Progress = static_cast<float>(FMath::Min(Stage, 5) - 1);
+		Settings.MoonlightMultiplier = 1.0f - 0.1f * Progress;
+		Settings.SkylightMultiplier = 1.0f - 0.1f * Progress;
+		Settings.FogDensityMultiplier = 1.0f + 0.15f * Progress;
+		// 볼류메트릭 안개도 FogDensity의 영향을 받으므로 소멸 배율은 기본 1을 유지합니다.
+		StageEnvironments.Add(Stage, Settings);
+	}
 }
 
 void AWaveSpawner::BeginPlay()
@@ -24,6 +46,167 @@ void AWaveSpawner::BeginPlay()
 
 	CollectSpawnPoints();
 }
+
+void AWaveSpawner::Destroyed()
+{
+	RestoreFogPreview();
+	Super::Destroyed();
+}
+
+void AWaveSpawner::PreviewFog()
+{
+#if WITH_EDITOR
+	UWorld* World = GetWorld();
+	if (IsTemplate() || !World || World->WorldType != EWorldType::Editor)
+	{
+		return;
+	}
+	// Simulate/PIE 중에도 원본 에디터 액터에 버튼을 누를 수 있으므로 전체 컨텍스트를 확인합니다.
+	if (GEngine)
+	{
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			if (Context.WorldType == EWorldType::PIE)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 플레이를 종료한 뒤 안개를 미리 보세요"));
+				return;
+			}
+		}
+	}
+	const FStageEnvironmentSettings* Settings = StageEnvironments.Find(PreviewStage);
+	if (!Settings || !IsValid(EnvironmentFog) || EnvironmentFog->GetWorld() != World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Preview Stage 설정과 Environment Fog 연결을 확인하세요"));
+		return;
+	}
+	UExponentialHeightFogComponent* Source = EnvironmentFog->GetComponent();
+	if (!IsValid(Source))
+	{
+		return;
+	}
+
+	RestoreFogPreview();
+	FogPreviewSource = EnvironmentFog;
+	bFogPreviewSourceWasHidden = EnvironmentFog->IsTemporarilyHiddenInEditor();
+	// 원본을 템플릿으로 색/높이/볼류메트릭 설정을 그대로 복사합니다.
+	FogPreviewComponent = NewObject<UExponentialHeightFogComponent>(
+		this, NAME_None, RF_Transient | RF_DuplicateTransient, Source);
+	FogPreviewComponent->SetIsVisualizationComponent(true);
+	FogPreviewComponent->SetWorldTransform(Source->GetComponentTransform());
+	FogPreviewComponent->SetFogDensity(Source->FogDensity * FMath::Max(0.0f, Settings->FogDensityMultiplier));
+	FogPreviewComponent->SetVolumetricFogExtinctionScale(
+		Source->VolumetricFogExtinctionScale * FMath::Max(0.0f, Settings->VolumetricExtinctionMultiplier));
+	// 에디터 임시 숨김은 맵에 저장되지 않으며 원본의 게임 내 표시 상태도 바꾸지 않습니다.
+	EnvironmentFog->SetIsTemporarilyHiddenInEditor(true);
+	FogPreviewComponent->RegisterComponentWithWorld(World);
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] 안개 미리보기 Stage %d / 배율 %.2f / 밀도 %.3f (원본 %.3f)"),
+		PreviewStage, Settings->FogDensityMultiplier, FogPreviewComponent->FogDensity, Source->FogDensity);
+#endif
+}
+
+void AWaveSpawner::RestoreFogPreview()
+{
+#if WITH_EDITOR
+	if (IsValid(FogPreviewComponent))
+	{
+		FogPreviewComponent->DestroyComponent();
+	}
+	FogPreviewComponent = nullptr;
+	if (FogPreviewSource.IsValid())
+	{
+		FogPreviewSource->SetIsTemporarilyHiddenInEditor(bFogPreviewSourceWasHidden);
+	}
+	FogPreviewSource.Reset();
+	bFogPreviewSourceWasHidden = false;
+#endif
+}
+
+#if WITH_EDITOR
+void AWaveSpawner::PreSave(FObjectPreSaveContext SaveContext)
+{
+	RestoreFogPreview();
+	Super::PreSave(SaveContext);
+}
+
+void AWaveSpawner::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	// 단계 선택/대상 교체/설정 변경 시 이전 미리보기를 정리합니다.
+	RestoreFogPreview();
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+#endif
+
+#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#include "Misc/AutomationTest.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWaveFogPreviewTest, "Cosmos.Wave.FogPreview",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FWaveFogPreviewTest::RunTest(const FString& Parameters)
+{
+	UWorld* TestWorld = UWorld::CreateWorld(EWorldType::Editor, false);
+	if (!TestNotNull(TEXT("Test world"), TestWorld))
+	{
+		return false;
+	}
+	AWaveSpawner* Spawner = TestWorld->SpawnActor<AWaveSpawner>();
+	AExponentialHeightFog* FogActor = TestWorld->SpawnActor<AExponentialHeightFog>();
+	if (!Spawner || !FogActor)
+	{
+		AddError(TEXT("Could not create preview test actors"));
+		TestWorld->DestroyWorld(false);
+		return false;
+	}
+	UExponentialHeightFogComponent* Source = FogActor->GetComponent();
+	Source->SetFogDensity(2.3f);
+	Source->SetVolumetricFogExtinctionScale(0.35f);
+	FogActor->SetActorLocation(FVector(10.0f, 20.0f, 150.0f));
+	Spawner->EnvironmentFog = FogActor;
+	Spawner->StageEnvironments[1].FogDensityMultiplier = 0.6f;
+	Spawner->StageEnvironments[3].FogDensityMultiplier = 1.0f;
+	Spawner->StageEnvironments[5].FogDensityMultiplier = 1.3f;
+	for (int32 Stage : {1, 5, 3, 1})
+	{
+		Spawner->PreviewStage = Stage;
+		Spawner->PreviewFog();
+		if (TestNotNull(TEXT("Preview component"), Spawner->FogPreviewComponent.Get()))
+		{
+			TestTrue(TEXT("Always uses original density"), FMath::IsNearlyEqual(
+				Spawner->FogPreviewComponent->FogDensity, 2.3f * Spawner->StageEnvironments[Stage].FogDensityMultiplier));
+			TestTrue(TEXT("Preserves source transform"), Spawner->FogPreviewComponent->GetComponentTransform().Equals(Source->GetComponentTransform()));
+			TestTrue(TEXT("Preview cannot be serialized or duplicated"), Spawner->FogPreviewComponent->HasAllFlags(RF_Transient | RF_DuplicateTransient));
+			TestTrue(TEXT("Preview is editor-only"), Spawner->FogPreviewComponent->IsEditorOnly());
+		}
+		TestEqual(TEXT("Source density untouched"), Source->FogDensity, 2.3f);
+		TestEqual(TEXT("Source extinction untouched"), Source->VolumetricFogExtinctionScale, 0.35f);
+		TestTrue(TEXT("Source temporarily hidden"), FogActor->IsTemporarilyHiddenInEditor());
+		TestEqual(TEXT("No wave started"), Spawner->CurrentStage, 0);
+	}
+	// PIE duplication must not carry the preview reference or dynamically registered fog.
+	FObjectDuplicationParameters DuplicateParams(Spawner, TestWorld->PersistentLevel);
+	DuplicateParams.DuplicateMode = EDuplicateMode::PIE;
+	AWaveSpawner* Duplicate = CastChecked<AWaveSpawner>(StaticDuplicateObjectEx(DuplicateParams));
+	TestNull(TEXT("PIE has no preview reference"), Duplicate->FogPreviewComponent.Get());
+	TArray<UExponentialHeightFogComponent*> DuplicateFogs;
+	Duplicate->GetComponents(DuplicateFogs);
+	TestEqual(TEXT("PIE has no preview fog components"), DuplicateFogs.Num(), 0);
+	Duplicate->Destroy();
+	Spawner->RestoreFogPreview();
+	Spawner->RestoreFogPreview();
+	TestFalse(TEXT("Restore shows original"), FogActor->IsTemporarilyHiddenInEditor());
+	TestNull(TEXT("Restore removes preview"), Spawner->FogPreviewComponent.Get());
+	FogActor->SetIsTemporarilyHiddenInEditor(true);
+	Spawner->PreviewFog();
+	Spawner->RestoreFogPreview();
+	TestTrue(TEXT("Preserves initially hidden source"), FogActor->IsTemporarilyHiddenInEditor());
+	FogActor->SetIsTemporarilyHiddenInEditor(false);
+	Spawner->PreviewFog();
+	Spawner->Destroy();
+	TestFalse(TEXT("Deleting spawner restores original"), FogActor->IsTemporarilyHiddenInEditor());
+	TestWorld->DestroyWorld(false);
+	return true;
+}
+#endif
 
 
 void AWaveSpawner::StartWave(int32 WaveIndex)
@@ -52,6 +235,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	// 이전 스테이지의 타이머가 남아 있을 수 있으므로 먼저 끕니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
+	GetWorldTimerManager().ClearTimer(ProgressTimer);
 
 	// 스테이지 상태 초기화. 누적 스폰이므로 초기화는 스테이지 시작 때 딱 한 번만 합니다.
 	// 웨이브가 바뀔 때는 비우지 않고 순서표 뒤에 이어 붙입니다.
@@ -66,31 +250,96 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	StageStartTime = GetGameTimeSinceCreation(); // UI 5분 카운트다운의 기준 시각
 
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 시작"), WaveIndex);
+	ApplyStageEnvironment(CurrentStage);
 
 	// 웨이브 1은 기다리지 않고 즉시 추가합니다.
 	AddNextWave();
 
-	// AddNextWave 안에서 웨이브 1 행을 못 찾아 스테이지가 중단됐거나, 웨이브가 1개뿐이면 타이머를 걸지 않습니다.
-	if (!bIsStageActive || bAllWavesQueued)
-	{
-		return;
-	}
-
-	// 웨이브 2~5는 WaveInterval(60초)마다 추가합니다.
-	// 마지막 인자를 생략하면 첫 실행도 60초 뒤입니다. 웨이브 1을 위에서 이미 넣었기 때문에 이게 맞습니다.
-	GetWorldTimerManager().SetTimer(
-		WaveTimer, this, &AWaveSpawner::AddNextWave, WaveInterval, true);
 }
 
 void AWaveSpawner::StopWave()
 {
-	// 타이머 두 개를 모두 끕니다. 이미 스폰된 적을 지울지는 게임모드가 판단합니다.
+	GetWorldTimerManager().ClearTimer(ProgressTimer);
+	// 스폰과 웨이브 타이머도 끕니다. 이미 스폰된 적을 지울지는 게임모드가 판단합니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
 	bIsSpawning = false;
 	bIsStageActive = false; // 중단된 스테이지는 클리어 방송을 하지 않습니다.
 
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 종료"), CurrentStage);
+}
+
+void AWaveSpawner::ApplyStageEnvironment(int32 StageIndex)
+{
+	if (!bEnableStageEnvironment || !GetWorld() || !GetWorld()->IsGameWorld())
+	{
+		return;
+	}
+
+	const FStageEnvironmentSettings* Settings = StageEnvironments.Find(StageIndex);
+	if (!Settings)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Stage %d 환경 설정 없음. 현재 환경 유지"), StageIndex);
+		return;
+	}
+
+	if (IsValid(EnvironmentMoonlight))
+	{
+		ULightComponent* Light = EnvironmentMoonlight->GetLightComponent();
+		if (Light && Light->Mobility != EComponentMobility::Static)
+		{
+			if (CachedEnvironmentMoonlight.Get() != EnvironmentMoonlight.Get())
+			{
+				CachedEnvironmentMoonlight = EnvironmentMoonlight.Get();
+				BaseMoonlightIntensity = Light->Intensity;
+			}
+			Light->SetIntensity(BaseMoonlightIntensity * FMath::Max(0.0f, Settings->MoonlightMultiplier));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 환경 달빛은 Stationary 또는 Movable이어야 합니다"));
+		}
+	}
+
+	if (IsValid(EnvironmentSkylight))
+	{
+		USkyLightComponent* Light = EnvironmentSkylight->GetLightComponent();
+		if (Light && Light->Mobility != EComponentMobility::Static)
+		{
+			if (CachedEnvironmentSkylight.Get() != EnvironmentSkylight.Get())
+			{
+				CachedEnvironmentSkylight = EnvironmentSkylight.Get();
+				BaseSkylightIntensity = Light->Intensity;
+			}
+			Light->SetIntensity(BaseSkylightIntensity * FMath::Max(0.0f, Settings->SkylightMultiplier));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 환경 Sky Light는 Stationary 또는 Movable이어야 합니다"));
+		}
+	}
+
+	if (IsValid(EnvironmentFog))
+	{
+		UExponentialHeightFogComponent* Fog = EnvironmentFog->GetComponent();
+		if (Fog)
+		{
+			if (CachedEnvironmentFog.Get() != EnvironmentFog.Get())
+			{
+				CachedEnvironmentFog = EnvironmentFog.Get();
+				BaseFogDensity = Fog->FogDensity;
+				BaseVolumetricExtinction = Fog->VolumetricFogExtinctionScale;
+			}
+			Fog->SetFogDensity(BaseFogDensity * FMath::Max(0.0f, Settings->FogDensityMultiplier));
+			Fog->SetVolumetricFogExtinctionScale(
+				BaseVolumetricExtinction * FMath::Max(0.0f, Settings->VolumetricExtinctionMultiplier));
+		}
+	}
+
+	if (!IsValid(EnvironmentMoonlight) && !IsValid(EnvironmentSkylight) && !IsValid(EnvironmentFog))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 환경 기능은 켜졌지만 대상 액터가 지정되지 않았습니다"));
+	}
 }
 
 void AWaveSpawner::AddNextWave()
@@ -102,6 +351,7 @@ void AWaveSpawner::AddNextWave()
 		return;
 	}
 
+	GetWorldTimerManager().ClearTimer(WaveTimer);
 	++CurrentWave;
 
 	// 스테이지 + 웨이브 번호로 DT 행을 찾습니다. 2) 각주
@@ -165,6 +415,13 @@ void AWaveSpawner::AddNextWave()
 	{
 		bAllWavesQueued = true;
 		GetWorldTimerManager().ClearTimer(WaveTimer);
+	}
+
+	else
+	{
+		// 조기 시작한 웨이브도 시작 시점부터 다시 60초를 셉니다.
+		GetWorldTimerManager().SetTimer(
+			WaveTimer, this, &AWaveSpawner::AddNextWave, WaveInterval, false);
 	}
 
 	// 꺼낼 칸이 남았는데 SpawnTimer가 멈춰 있으면 다시 켭니다.
@@ -252,6 +509,7 @@ void AWaveSpawner::SpawnOne()
 			if (AEnemyBase* SpawnedEnemy = Cast<AEnemyBase>(Enemy))
 			{
 				OnEnemySpawned.Broadcast(SpawnedEnemy);
+				SpawnedEnemy->OnEnemyKilled.AddUObject(this, &AWaveSpawner::HandleEnemyKilled);
 			}
 		}
 	}
@@ -325,23 +583,38 @@ bool AWaveSpawner::FindSpawnLocationNearPlayer(FVector& OutLocation)
 
 void AWaveSpawner::TryBroadcastStageCleared()
 {
-	// 네 조건이 모두 맞아야 클리어입니다.
-	//   bIsStageActive    : 진행 중인 스테이지여야 함 (한 번 방송하면 false가 되어 중복 방송 방지)
-	//   bAllWavesQueued   : 마지막 웨이브까지 들어갔어야 함 (웨이브 사이 공백에서 조기 클리어 방지)
-	//   !bIsSpawning      : 순서표를 다 꺼냈어야 함
-	//   AliveEnemies == 0 : 살아있는 적이 없어야 함
-	if (bIsStageActive && bAllWavesQueued && !bIsSpawning && AliveEnemies.Num() == 0)
+	// 스폰 대기와 생존 적이 모두 없어야 조기 진행합니다.
+	if (bIsStageActive && !bIsSpawning && SpawnedCount >= SpawnQueue.Num() && AliveEnemies.Num() == 0)
 	{
+		GetWorldTimerManager().ClearTimer(WaveTimer);
+		if (!bAllWavesQueued)
+		{
+			// 빈 웨이브가 연속되어도 재귀 호출하지 않습니다.
+			WaveTimer = GetWorldTimerManager().SetTimerForNextTick(this, &AWaveSpawner::AddNextWave);
+			return;
+		}
+		GetWorldTimerManager().ClearTimer(SpawnTimer);
+		GetWorldTimerManager().ClearTimer(ProgressTimer);
 		bIsStageActive = false;
 		UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 클리어"), CurrentStage);
 		OnWaveCleared.Broadcast(CurrentStage);
 	}
 }
 
+void AWaveSpawner::HandleEnemyKilled(AEnemyBase* KilledEnemy)
+{
+	HandleEnemyDestroyed(KilledEnemy);
+}
+
 void AWaveSpawner::HandleEnemyDestroyed(AActor* DestroyedActor)
 {
-	AliveEnemies.Remove(DestroyedActor);
-	TryBroadcastStageCleared();
+	// 처치 후 시체가 파괴될 때는 중복 처리하지 않습니다.
+	if (AliveEnemies.Remove(DestroyedActor) > 0 && bIsStageActive)
+	{
+		// 보상 등 모든 사망 콜백이 끝난 다음 진행합니다.
+		GetWorldTimerManager().ClearTimer(ProgressTimer);
+		ProgressTimer = GetWorldTimerManager().SetTimerForNextTick(this, &AWaveSpawner::TryBroadcastStageCleared);
+	}
 }
 
 void AWaveSpawner::CollectSpawnPoints()

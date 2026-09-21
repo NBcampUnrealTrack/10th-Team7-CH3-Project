@@ -37,9 +37,6 @@ class COSMOS_API ACosPlayerController : public APlayerController
 
 	GENERATED_BODY()
 
-private:
-	int32 CachedMaxAmmo = 0;
-
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -64,7 +61,6 @@ public:
 	void HandleGameOverRequested();
 
 	ACosPlayerController();
-	FTimerHandle WeaponBindRetryTimer;
 
 	UFUNCTION()
 	void UpdateSoulUI(int32 CurrentSoul);
@@ -176,7 +172,7 @@ public:
 	void UpdateHP(float CurrentHealth, float MaxHealth);
 
 	UFUNCTION()
-	void UpdateAmmoUI(int32 CurrentAmmo);
+	void UpdateAmmoUI(int32 CurrentAmmo, int32 MaxAmmo);
 
 	UFUNCTION(BlueprintCallable)
 	void ShowGameOver(int32 Score);
@@ -202,6 +198,9 @@ public:
 
 	UFUNCTION()
 	void UpdatePotionUI(int32 CurrentPotion);
+
+	UFUNCTION()
+	void HandleKillConfirmed(AActor* Victim); // 킬 마커 표시하기 위한 함수
 
 protected:
 	virtual void BeginPlay() override;

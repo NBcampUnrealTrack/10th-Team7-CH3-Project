@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -8,11 +8,34 @@
 class AEnemySpawnPoint; // 플레이어 근처 위치를 못 찾았을 때 대신 쓸 예비 스폰 위치입니다.
 class UDataTable; // 스테이지·웨이브 데이터 테이블 전방선언
 class AEnemyBase; // 스폰된 적을 델리게이트로 넘기기 위해 전방선언합니다. 포인터로만 쓰므로 include 없이 충분합니다.
+class ADirectionalLight;
+class ASkyLight;
+class AExponentialHeightFog;
+class UExponentialHeightFogComponent;
+
+// 맵에 설정된 원래 값에 곱합니다. 1이면 유지, 밝기는 작을수록 어둡고 안개는 클수록 짙습니다.
+USTRUCT(BlueprintType)
+struct FStageEnvironmentSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float MoonlightMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float SkylightMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float FogDensityMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment", meta = (ClampMin = "0.0"))
+	float VolumetricExtinctionMultiplier = 1.0f;
+};
 
 
 // 용어
-//   Stage (5분) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
-//   Wave  (1분) : 스테이지 안에서 1분마다 적을 누적 추가하는 내부 박자. UI에 노출하지 않습니다.
+//   Stage (5웨이브) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
+//   Wave (1분 간격) : 전멸하거나 1분이 지나면 다음 적을 추가하는 내부 단위. UI에 노출하지 않습니다.
 
 
 // 델리게이트 선언. 모든 웨이브가 순서표에 들어갔고 + 전부 스폰됐고 + 생존 적 0 -> 스테이지당 한 번 방송됨. 게임 모드가 구독합니다.
@@ -32,15 +55,26 @@ public:
 	AWaveSpawner();
 
 	// 스테이지 하나를 시작합니다. 게임모드가 부르는 유일한 진입점.
-	// 함수 시그니처는 팀 합의대로 StartWave를 유지합니다. 넘기는 번호는 스테이지(5분) 번호입니다.
+	// 함수 시그니처는 팀 합의대로 StartWave를 유지합니다. 넘기는 번호는 스테이지 번호입니다.
 	// 게임모드는 스테이지 단위(1, 2, 3...)로 한 번만 부릅니다. 1분 웨이브 단위로 부르지 않습니다.
-	// 내부에서 웨이브 1을 즉시 추가하고, 이후 WaveInterval(60초)마다 WavesPerStage(5)개까지 누적 추가합니다.
+	// 내부에서 웨이브 1을 즉시 추가하고, 이후 전멸하거나 WaveInterval(60초)이 지나면 WavesPerStage(5)개까지 추가합니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave") // BlueprintCallable은 실행핀을 뽑을 수 있는 뭔가를 바꿀 수 있는 함수입니다.
 		void StartWave(int32 WaveIndex); // WaveIndex = 스테이지 번호
 
 	// 진행 중인 스폰과 웨이브 추가를 중단합니다. 이미 스폰된 적을 지우지는 않습니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave")
 	void StopWave();
+
+	// 게임 중 환경만 적용합니다. 웨이브/적/타이머는 진행시키지 않습니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
+	void ApplyStageEnvironment(int32 StageIndex);
+
+	// 에디터에서만 안개를 비교합니다. 조명, 전투와 원본 안개 값은 변경하지 않습니다.
+	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Preview Fog"))
+	void PreviewFog();
+
+	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Restore Fog Preview"))
+	void RestoreFogPreview();
 
 	// 살아있는 적 수. AliveEnemies 배열에 지금 몇 마리 들어있는지 알려줍니다.
 	UFUNCTION(BlueprintPure, Category = "Wave") // BlueprintPure은 실행핀 없고 값만 돌려줍니다.
@@ -70,6 +104,12 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Destroyed() override;
+
+#if WITH_EDITOR
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 
 private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 public
@@ -83,9 +123,11 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	// 플레이어 주변 NavMesh 위에서 스폰 위치를 찾습니다. 찾으면 true, 실패하면 false. 6) 각주
 	bool FindSpawnLocationNearPlayer(FVector& OutLocation);
 
-	// 클리어 조건을 한 곳에서 검사하고, 맞으면 한 번만 방송합니다.
+	// 전멸하면 다음 웨이브를 예약하고, 마지막 웨이브면 클리어를 한 번 방송합니다.
 	// 적 사망 / 스폰 종료 / 마지막 웨이브 추가 세 곳에서 부릅니다.
 	void TryBroadcastStageCleared();
+
+	void HandleEnemyKilled(AEnemyBase* KilledEnemy);
 
 	UFUNCTION() // 적이 파괴되었을 때 언리얼이 자동 호출합니다.
 		// cpp에서 Enemy->OnDestroyed.AddDynamic(this, ...)으로 등록해두기 때문입니다.
@@ -100,6 +142,41 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	FName MakeRowName(int32 StageIndex, int32 WaveIndex) const;
 
 	// -- 에디터 설정값 
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditInstanceOnly, Transient, Category = "Wave|Fog Preview", meta = (ClampMin = "1", UIMin = "1", UIMax = "6"))
+	int32 PreviewStage = 1;
+
+	// 저장/PIE 복제에서 제외되는 비교용 컴포넌트입니다. InstanceComponents에는 넣지 않습니다.
+	UPROPERTY(Transient, DuplicateTransient)
+	TObjectPtr<UExponentialHeightFogComponent> FogPreviewComponent;
+
+	UPROPERTY(Transient, DuplicateTransient)
+	TWeakObjectPtr<AExponentialHeightFog> FogPreviewSource;
+
+	UPROPERTY(Transient, DuplicateTransient)
+	bool bFogPreviewSourceWasHidden = false;
+#endif
+
+	friend class FWaveFogPreviewTest;
+
+	// 레벨에 배치한 스포너에서 대상 액터를 지정하고 켭니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Environment")
+	bool bEnableStageEnvironment = false;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<ADirectionalLight> EnvironmentMoonlight;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<ASkyLight> EnvironmentSkylight;
+
+	UPROPERTY(EditInstanceOnly, Category = "Wave|Environment")
+	TObjectPtr<AExponentialHeightFog> EnvironmentFog;
+
+	// 키는 스테이지 번호입니다. 1~5는 일반 스테이지, 6은 현재 게임모드의 보스 스테이지입니다.
+	// 설정이 없는 번호는 현재 환경을 유지합니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Environment")
+	TMap<int32, FStageEnvironmentSettings> StageEnvironments;
 
 	// 스테이지·웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 	UPROPERTY(EditAnywhere, Category = "Wave")
@@ -166,7 +243,8 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	TArray<TSubclassOf<AActor>> SpawnQueue; // 스테이지 전체 스폰 순서표. 웨이브마다 뒤에 이어 붙습니다.
 
 	FTimerHandle SpawnTimer; // 1초마다 한 마리 꺼내는 타이머의 이름표
-	FTimerHandle WaveTimer;  // 60초마다 웨이브를 추가하는 타이머의 이름표. SpawnTimer와 별개라 서로 안 꺼집니다.
+	FTimerHandle WaveTimer;  // 웨이브 시작부터 60초 후 추가. 전멸하면 다음 틱으로 당깁니다.
+	FTimerHandle ProgressTimer; // 사망 콜백 완료 후 진행 조건을 검사합니다.
 
 	int32 CurrentStage = 0;     // 지금 몇 번째 스테이지인지. 클리어 방송할 때 이 번호를 같이 넘깁니다.
 	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지 (1~5). 0이면 스테이지 시작 전.
@@ -178,4 +256,13 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	bool bAllWavesQueued = false; // 마지막 웨이브까지 순서표에 들어갔는지. 클리어 조기 방송 방지용.
 
 	float StageStartTime = 0.0f; // 스테이지가 시작된 시각. GetGameTimeSinceCreation() 기준으로 저장합니다.
+
+	// 대상이 바뀌면 새 기준을 읽고, 같은 대상에는 항상 최초 값을 사용해 배율 누적을 막습니다.
+	TWeakObjectPtr<ADirectionalLight> CachedEnvironmentMoonlight;
+	TWeakObjectPtr<ASkyLight> CachedEnvironmentSkylight;
+	TWeakObjectPtr<AExponentialHeightFog> CachedEnvironmentFog;
+	float BaseMoonlightIntensity = 0.0f;
+	float BaseSkylightIntensity = 0.0f;
+	float BaseFogDensity = 0.0f;
+	float BaseVolumetricExtinction = 0.0f;
 };
