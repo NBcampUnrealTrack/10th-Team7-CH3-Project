@@ -199,6 +199,9 @@ public:
 	UFUNCTION()
 	void UpdatePotionUI(int32 CurrentPotion);
 
+	UFUNCTION()
+	void HandleKillConfirmed(AActor* Victim); // 킬 마커 표시하기 위한 함수
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override; 

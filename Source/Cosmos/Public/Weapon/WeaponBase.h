@@ -7,6 +7,7 @@
 #include "WeaponBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHitConfirmed, AActor*, Target); //FOnHitConfirmed 델리게이트 타입 생성
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnKillConfirmed, AActor*, Victim);
 
 class USkillComponent;
 
@@ -20,6 +21,8 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Weapon") // Bind Event to OnHitConfirmed 설정
 	FOnHitConfirmed OnHitConfirmed; //델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Weapon") // 공격으로 적이 죽었을 때 방송
+	FOnKillConfirmed OnKillConfirmed;
 
 	void TryAttack(); // 공격 속도 판단
 	bool TryApplyDamage(AActor* HitActor); // 데미저블 판단을 위해 bool형
