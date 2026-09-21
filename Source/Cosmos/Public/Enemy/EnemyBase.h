@@ -100,7 +100,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume FootStepSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	FSFXVolume AttackSound;
+	TArray<FSFXVolume> AttackSounds;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume HitbyMeleeSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
@@ -111,9 +111,12 @@ protected:
 	FSFXVolume DeathSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume ProjectileHitSound;
+
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
 
+	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
+	void PlayRandomSFX(const TArray<FSFXVolume>& Sounds);
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
 	float DeathDelay = 2.0f;

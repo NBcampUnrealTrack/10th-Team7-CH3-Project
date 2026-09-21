@@ -257,7 +257,7 @@ void AEnemyBase::AttackHitCheck()
 	{
 		return;
 	}
-	PlaySFX(AttackSound);
+	PlayRandomSFX(AttackSounds);
 	//set radius
 	const FVector Start = GetActorLocation() + GetActorForwardVector() * AttackOffset + FVector(0.f, 0.f, AttackHeightOffset);
 	// const FVector End = Start + GetActorForwardVector() * AttackRange;
@@ -412,5 +412,23 @@ void AEnemyBase::FireProjectile2(float InSpeed, float InDamage, float YawOffset,
 		World->SpawnActor<AEnemyProjectile>(ProjectilType, Muzzle, FireRot, SpawnParams))
 	{
 		Projectile->InitProjectile(InDamage, InSpeed);
+	}
+}
+void AEnemyBase::PlayRandomSFX(const TArray<FSFXVolume>& Sounds)
+{
+	const int32 Num = Sounds.Num();
+	if (Num == 0)
+	{
+		return;
+	}
+	const int32 Start = FMath::RandRange(0, Num - 1);
+	for (int32 i = 0; i < Num; ++i)
+	{
+		const FSFXVolume& SFX = Sounds[(Start + i) % Num];
+		if (SFX.Sound)
+		{
+			PlaySFX(SFX);   
+			return;
+		}
 	}
 }
