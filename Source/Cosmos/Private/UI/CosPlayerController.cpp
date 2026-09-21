@@ -489,6 +489,15 @@ void ACosPlayerController::CloseForgeWidget()
 		ForgeWidgetInstance = nullptr;
 	}
 
+	//포션 충전
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
+		{
+			CombatComp->RefillPotions();
+		}
+	}
+
 	SetUIInputMode(false);
 	ShowCombatHUD();
 
