@@ -41,7 +41,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enchant")
 	USceneComponent* Scene;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enchant")
-	UStaticMeshComponent* StaticMesh;
+	USkeletalMeshComponent* SkeletalMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enchant")
 	USphereComponent* Collision;
 
@@ -51,6 +51,11 @@ protected:
 	UDataTable* StatPool;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enchant")
 	UDataTable* SkillPool;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* DropSound;
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* PickupSound;
 
 	virtual void BeginPlay() override;
 };

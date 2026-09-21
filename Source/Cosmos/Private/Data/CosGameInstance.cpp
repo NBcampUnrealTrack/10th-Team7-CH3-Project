@@ -60,13 +60,10 @@ bool UCosGameInstance::CollectEnchant(UEnchantData* Enchant)
 {
 	if (!Enchant) return false;
 
-	if (CollectedEnchant.Num() >= EnchantMaxCollectedCount)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("인첸트를 더 이상 획득할 수 없습니다."));
-		return false;
-	}
 	CollectedEnchant.Add(Enchant);
 	OnLoadoutChange.Broadcast();
+
+	OnEnchantCollected.Broadcast(Enchant);
 
 	return true;
 }

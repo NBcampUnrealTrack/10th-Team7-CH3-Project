@@ -2,6 +2,7 @@
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Data/EnchantGenerator.h"
+#include "Components/SkeletalMeshComponent.h"
 
 
 AEnchantPickup::AEnchantPickup()
@@ -15,8 +16,8 @@ AEnchantPickup::AEnchantPickup()
 	Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 	Collision->SetupAttachment(Scene);
 
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	StaticMesh->SetupAttachment(Collision);
+	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMesh->SetupAttachment(Collision);
 
 	// 이벤트 바인딩
 	Collision->OnComponentBeginOverlap.AddDynamic(this, &AEnchantPickup::OnEnchantOverlap);
@@ -34,6 +35,11 @@ void AEnchantPickup::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Enchant Make Fail"));
 	}
+
+	if (DropSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DropSound, GetActorLocation());
+	}
 	
 }
 
@@ -49,7 +55,6 @@ void AEnchantPickup::OnEnchantOverlap(
 	// 중요. 캐릭터 태그가 Player라 되어 있어야 인챈트를 획득할 수 있음
 	if (OtherActor && OtherActor->ActorHasTag("Player"))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("Overlap!!!")));
 		ActivateEnchant(OtherActor);
 	}
 }
@@ -91,5 +96,9 @@ void AEnchantPickup::ActivateEnchant(AActor* Activator)
 
 void AEnchantPickup::DestroyEnchant()
 {
+	if (PickupSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, PickupSound, GetActorLocation());
+	}
 	Destroy();
 }
