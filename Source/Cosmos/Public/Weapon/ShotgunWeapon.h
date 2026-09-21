@@ -4,7 +4,7 @@
 #include "WeaponBase.h"
 #include "ShotgunWeapon.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int32, NewAmmo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, NewAmmo, int32, MaxAmmo);
 
 UCLASS()
 class COSMOS_API AShotgunWeapon : public AWeaponBase
@@ -46,6 +46,7 @@ protected:
 	virtual float GetUpgradeBonus(EEnchantStat Stat) const override;
 	UFUNCTION()
 	void OnLoadoutChanged(); // 탄약 최대치 줄어들었을때 현재탄약수도 그에 맞게 줄어들도록
+	void BroadcastAmmo(); // 현재/최대 탄약을 함께 방송
 
 	//샷건 스탯
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -54,6 +55,8 @@ protected:
 	int32 CurrentAmmo;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float ReloadTime;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	float ShotRadius = 10.f;
 	bool bIsReloading = false;
 	FTimerHandle ReloadTimerHandle;
 };

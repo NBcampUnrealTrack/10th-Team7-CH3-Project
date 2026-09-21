@@ -52,6 +52,9 @@ void UCombatComponent::BeginPlay()
 		}
 	}
 
+	bCombatReady = true;       // 포션, 무기 초기화 완료
+	OnCombatReady.Broadcast(); // 기다리던 쪽(컨트롤러)에 준비 완료 알림
+
 	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController()); // Pawn 조종하는 컨트롤러 가져오기
 	if (!IsValid(PC))
 	{
