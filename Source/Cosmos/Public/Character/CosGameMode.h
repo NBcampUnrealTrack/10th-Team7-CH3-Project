@@ -6,10 +6,14 @@
 
 class AWaveSpawner;
 class AEnemyBase;
+class ATutorialDeer;
+class APlayerStart;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForgeRequested);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOver);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameClear);
+// Day가 시작될 때 방송합니다. 대사 등 연출은 BP/UI가 구독해서 붙입니다.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDayStarted, int32, Day);
 
 UENUM()
 enum class EPostResultAction : uint8
@@ -47,6 +51,13 @@ public:
 
 	void HandleEnemyKilled(AEnemyBase* DeadEnemy);	// 적 사망 신호를 받으면 GameState의 킬 수를 증가시킴
 
+	// Day 번호. Day 1 = 사슴(스테이지 0), Day 2~6 = 스테이지 1~5, Day 7 = 보스(스테이지 6)
+	UFUNCTION(BlueprintPure, Category = "Day")
+	int32 GetCurrentDay() const { return CurrentWaveIndex + 1; }
+
+	UFUNCTION(BlueprintPure, Category = "Day")
+	bool IsInDay1() const { return bInDay1; }
+
 	UPROPERTY(BlueprintAssignable)
 	FOnForgeRequested OnForgeRequested;
 
@@ -57,9 +68,25 @@ public:
 
 	FOnGameClear OnGameClear;
 
+	UPROPERTY(BlueprintAssignable, Category = "Day")
+	FOnDayStarted OnDayStarted;
+
 
 protected:
 	virtual void BeginPlay() override;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+
+	// 사슴이 죽은 뒤 나타나는 구울 수
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0"))
+	int32 Day1GhoulCount = 3;
+
+	// 사슴 사망 후 구울 스폰을 시작하기까지의 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0.0"))
+	float Day1GhoulDelay = 2.0f;
+
+	// Day 1 종료 시 지급하는 기본 재화. 첫 대장간에서 강화를 한 번 돌릴 수 있는 양으로 맞춥니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0"))
+	int32 Day1SoulReward = 300;
 
 private:
 	UPROPERTY()
@@ -84,6 +111,24 @@ private:
 	void TriggerGameOver();//타임오버/ 사망하는 경우 모아두려고 넣음
 
 	void PushEnemyCountUI();
+
+	// Player Start Tag 또는 Actor Tags에 "Day{N}"이 있는 PlayerStart를 찾습니다.
+	APlayerStart* FindDayStart(int32 Day) const;
+
+	// Day 시작 시 플레이어를 시작 지점으로 옮깁니다. 지점이 N개면 Day1부터 1..N을 반복합니다.
+	void MovePlayerToDayStart(int32 Day);
+
+	// 레벨에 사슴이 있으면 Day 1로 시작합니다. 없으면 기존처럼 바로 Stage 1 전투입니다.
+	void StartDay1(ATutorialDeer* Deer);
+
+	UFUNCTION()
+	void HandleDeerKilled(ATutorialDeer* Deer);
+
+	void SpawnDay1Ghouls();
+
+	bool bInDay1 = false;
+
+	FTimerHandle Day1GhoulTimer;
 
 	// 같은 순간에 사망 + 시간 초과가 같이 발생했을 때 GameOver가 두 번 실행되는 것을 막기 위함
 	bool bGameOver = false;

@@ -4,6 +4,10 @@
 #include "UI/CosPlayerController.h"
 #include "Spawn/WaveSpawner.h"
 #include "Enemy/EnemyBase.h"
+#include "Tutorial/TutorialDeer.h"
+#include "GameFramework/PlayerStart.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "EngineUtils.h"
 #include "Data/CosGameInstance.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
@@ -46,8 +50,145 @@ void ACosGameMode::BeginPlay()
 		&ACosGameMode::HandleEnemySpawned
 	);
 
-	// 첫 웨이브 시작
-	StartNextWave();
+	// 레벨에 사슴이 있으면 Day 1부터, 없으면 기존처럼 첫 전투부터 시작
+	ATutorialDeer* Deer = Cast<ATutorialDeer>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialDeer::StaticClass()));
+	if (Deer && !Deer->IsDead())
+	{
+		StartDay1(Deer);
+	}
+	else
+	{
+		StartNextWave();
+	}
+}
+
+AActor* ACosGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	// 처음 태어나는 곳은 Day 1 지점. 태그가 없는 맵(타이틀 등)은 엔진 기본 선택을 따릅니다.
+	if (APlayerStart* Day1Start = FindDayStart(1))
+	{
+		return Day1Start;
+	}
+	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+APlayerStart* ACosGameMode::FindDayStart(int32 Day) const
+{
+	const FName Tag(*FString::Printf(TEXT("Day%d"), Day));
+	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+	{
+		// Player Start Tag 칸과 Actor > Tags 배열 어느 쪽에 적어도 인식합니다.
+		if (It->PlayerStartTag == Tag || It->ActorHasTag(Tag))
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+void ACosGameMode::MovePlayerToDayStart(int32 Day)
+{
+	// Day1, Day2 ... 로 이어진 시작 지점 개수를 셉니다. 중간 번호가 빠지면 거기까지만 씁니다.
+	int32 NumStarts = 0;
+	while (FindDayStart(NumStarts + 1))
+	{
+		++NumStarts;
+	}
+	if (NumStarts == 0)
+	{
+		return; // Day 태그를 하나도 안 쓰는 맵이면 제자리에서 진행
+	}
+
+	// 지점을 순서대로 돌려 씁니다. 3개면 Day1~7 -> 1,2,3,1,2,3,1
+	const int32 Slot = (Day - 1) % NumStarts + 1;
+	APlayerStart* Start = FindDayStart(Slot);
+
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+	APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+	if (!Pawn)
+	{
+		return;
+	}
+
+	const FRotator StartRotation(0.0f, Start->GetActorRotation().Yaw, 0.0f);
+	if (ACharacter* Character = Cast<ACharacter>(Pawn))
+	{
+		Character->GetCharacterMovement()->StopMovementImmediately();
+	}
+	Pawn->SetActorLocationAndRotation(
+		Start->GetActorLocation(), StartRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	PC->SetControlRotation(StartRotation); // 카메라가 컨트롤 회전을 따르므로 같이 돌려줍니다.
+
+	UE_LOG(LogTemp, Log, TEXT("[GameMode] Day%d -> 시작 지점 Day%d(%s)로 이동"), Day, Slot, *Start->GetName());
+}
+
+void ACosGameMode::StartDay1(ATutorialDeer* Deer)
+{
+	bInDay1 = true;
+	CurrentWaveIndex = 0;
+	TotalEnemiesThisWave = 0;
+	RemainingEnemiesThisWave = 0;
+
+	// Day 1은 제한시간이 없습니다. 결과창 경과 시간 계산용으로 시작 시각만 기록합니다.
+	CurrentStageStartTime = GetWorld()->GetTimeSeconds();
+
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		CycleStartSoul = GI->GetSoul();
+	}
+
+	if (ACosGameState* GS = GetGameState<ACosGameState>())
+	{
+		GS->SetWaveIndex(GetCurrentDay());
+	}
+
+	// Day 1은 안개 없이 진행합니다. Day 2의 StartWave에서 다시 켜집니다.
+	WaveSpawner->SetFogVisible(false);
+
+	Deer->OnDeerKilled.AddDynamic(this, &ACosGameMode::HandleDeerKilled);
+
+	UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 시작 - 사슴 대기"));
+	OnDayStarted.Broadcast(GetCurrentDay());
+}
+
+void ACosGameMode::HandleDeerKilled(ATutorialDeer* Deer)
+{
+	if (!bInDay1 || bGameOver)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 사슴 사망 -> %.1f초 후 구울 %d마리"),
+		Day1GhoulDelay, Day1GhoulCount);
+
+	if (Day1GhoulDelay > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(
+			Day1GhoulTimer, this, &ACosGameMode::SpawnDay1Ghouls, Day1GhoulDelay, false);
+	}
+	else
+	{
+		SpawnDay1Ghouls();
+	}
+}
+
+void ACosGameMode::SpawnDay1Ghouls()
+{
+	if (!bInDay1 || bGameOver || !WaveSpawner)
+	{
+		return;
+	}
+
+	if (ACosPlayerController* CosPC =
+		Cast<ACosPlayerController>(
+			UGameplayStatics::GetPlayerController(this, 0)))
+	{
+		CosPC->OnCombatBGMRequested();
+	}
+
+	// 구울이 전멸하면 스포너가 Stage 0 클리어를 방송하고 HandleWaveCleared로 이어집니다.
+	WaveSpawner->StartTutorialStage(Day1GhoulCount);
 }
 
 
@@ -58,6 +199,9 @@ void ACosGameMode::StartNextWave()
 	UE_LOG(LogTemp, Warning,
 		TEXT("[GameMode] StartNextWave -> %d"),
 		CurrentWaveIndex);
+
+	// 스포너가 플레이어 위치 기준으로 스폰하므로 StartWave 전에 옮깁니다.
+	MovePlayerToDayStart(GetCurrentDay());
 
 	TotalEnemiesThisWave = 0;
 	RemainingEnemiesThisWave = 0;
@@ -82,11 +226,13 @@ void ACosGameMode::StartNextWave()
 		WaveSpawner->StartWave(CurrentWaveIndex);
 	}
 
-	//게임스테이트에서도 웨이브 번호 전달
+	//게임스테이트에는 UI 표시용 Day 번호 전달 (Stage n = Day n+1)
 	if (ACosGameState* GS = GetGameState<ACosGameState>())
 	{
-		GS->SetWaveIndex(CurrentWaveIndex);
+		GS->SetWaveIndex(GetCurrentDay());
 	}
+
+	OnDayStarted.Broadcast(GetCurrentDay());
 }
 
 void ACosGameMode::StartStageTimer()//새로운 스테이지 시작될 때 5분 타이머 시작
@@ -173,6 +319,7 @@ void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통
 	bGameOver = true;
 
 	StopStageTimer();
+	GetWorldTimerManager().ClearTimer(Day1GhoulTimer);
 
 	if (WaveSpawner)
 	{
@@ -214,7 +361,18 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		CosPC->OnStopBGMRequested();
 	}
 
-	if (WaveIndex == 6) // 보스 스테이지
+	if (bInDay1 && WaveIndex == 0) // Day 1 종료: 기본 재화 지급 후 첫 대장간
+	{
+		bInDay1 = false;
+
+		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+		{
+			GI->AddSoul(Day1SoulReward);
+		}
+
+		PendingAction = EPostResultAction::Forge;
+	}
+	else if (WaveIndex == 6) // 보스 스테이지
 	{
 		PendingAction = EPostResultAction::GameClear;
 	}
@@ -235,7 +393,7 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 	// [추가] 결과창에 넘길 데이터 구성
 	FWaveResultData ResultData;
 
-	ResultData.WaveNumber = WaveIndex;
+	ResultData.WaveNumber = GetCurrentDay();
 
 	ResultData.ElapsedSeconds =
 		GetWorld()->GetTimeSeconds() - CurrentStageStartTime;
