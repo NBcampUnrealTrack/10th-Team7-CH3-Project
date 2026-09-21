@@ -18,7 +18,7 @@
 #include "Engine/Engine.h"
 #if WITH_EDITOR
 #include "UObject/ObjectSaveContext.h"
-#endifd
+#endif
 
 
 AWaveSpawner::AWaveSpawner()
