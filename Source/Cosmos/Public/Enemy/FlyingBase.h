@@ -33,9 +33,6 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "AI|Combat")
 	bool CanAttack() const;
-
-	UFUNCTION(BlueprintPure, Category = "AI|Combat")
-	FVector GetMuzzleLocation() const;
 protected:
 	virtual void BeginPlay()override;
 	virtual void AttackHitCheck()override;
@@ -52,13 +49,6 @@ protected:
 	float DistanceCheck = 800.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Fly")
 	float RetreatMulti = 1.25f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Attack")
-	TSubclassOf<AActor> ProjectileClass;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Attack")
-	float MuzzleOffset = 60.f;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Attack")
-	float AimHeightOffset = 50.f;
 private:
 	float LastAttackTime = -1.f;
 };

@@ -71,6 +71,8 @@ struct FSFXVolume
     float Pitch = 1.0f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SFX",  meta = (ClampMin = "0.0", ClampMax = "0.5"))
     float RandomPitch = 0.f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TObjectPtr<USoundConcurrency> Concurrency;
 };
 constexpr ECollisionChannel ECC_Enemies = ECollisionChannel::ECC_GameTraceChannel1;
 constexpr ECollisionChannel ECC_Weapon = ECollisionChannel::ECC_GameTraceChannel2;
