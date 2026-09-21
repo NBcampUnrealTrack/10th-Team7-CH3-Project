@@ -6,7 +6,7 @@ AShotgunWeapon::AShotgunWeapon()
 {
 	BaseDamage = 30.f;
 	AttackInterval = 1.f;
-	AttackRange = 1000.f;
+	AttackRange = 2500.f;
 	MaxAmmo = 4;
 	ReloadTime = 2.f;
 }
@@ -59,16 +59,17 @@ bool AShotgunWeapon::PerformAttack()
 		QueryParams // 트레이스 설정
 	); 
 
-	DrawDebugLine( // 라인트레이스 시각화
-		GetWorld(), //현재 월드
-		StartLocation, //시작
-		EndLocation, //끝
-		bHit ? FColor::Green : FColor::Red, // 라인 색 (맞으면 초록, 안맞으면 빨강)
-		false, // 계속 남아있는지
-		2.f, // 몇 초간 남아있나
-		0, // 그리기 우선순위, 0이면 벽은 뚫지 못함
-		2.f // 선 두께
-	);
+	//시각화 꺼둠
+	//DrawDebugLine( // 라인트레이스 시각화
+	//	GetWorld(), //현재 월드
+	//	StartLocation, //시작
+	//	EndLocation, //끝
+	//	bHit ? FColor::Green : FColor::Red, // 라인 색 (맞으면 초록, 안맞으면 빨강)
+	//	false, // 계속 남아있는지
+	//	2.f, // 몇 초간 남아있나
+	//	0, // 그리기 우선순위, 0이면 벽은 뚫지 못함
+	//	2.f // 선 두께
+	//);
 
 	if (bHit) // 무언가에 맞았는가
 	{

@@ -5,9 +5,9 @@ ANailWeapon::ANailWeapon()
 {
 	BaseDamage = 50.f;
 	AttackInterval = 0.6f;
-	AttackRange = 200.f;
+	AttackRange = 250.f;
 	MaxTargetPerSwing = 2;
-	SwingRadius = 75.f;
+	SwingRadius = 100.f;
 
 	ComboWindowBonus = 0.3f;
 	bSwingLeftToRight = false;
@@ -30,47 +30,53 @@ bool ANailWeapon::PerformAttack()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 	QueryParams.AddIgnoredActor(GetAttachParentActor()); // 샷건 코드와 동일 (무기,캐릭터 제외)
+	QueryParams.AddIgnoredActor(GetOwner()); // 혹시 몰라서 제외
 
-	const bool bHit = GetWorld()->SweepMultiByChannel( //구체를 보내서 여러명이 맞도록 하는 트레이스
+	FCollisionObjectQueryParams ObjectParams; // 어떤 종류의 오브젝트를 찾을지 지정
+	ObjectParams.AddObjectTypesToQuery(ECC_Enemies); // 적 지정
+
+	const bool bHit = GetWorld()->SweepMultiByObjectType( //구체를 보내서 여러명이 맞도록 하는 트레이스
 		HitResults,
 		StartLocation,
 		EndLocation,
 		FQuat::Identity,// FQuat: 회전을 표현하는 방식 , Identity : 회전이 없는 상태. 구체는 회전이 의미 없기 때문에
-		ECC_Weapon,
+		ObjectParams,
 		FCollisionShape::MakeSphere(SwingRadius), // 구체 반지름
 		QueryParams // 나머진 샷건과 동일
 	);
+	
+	// 구체 시각화 일단 꺼둠
+	//DrawDebugLine( // 구체 트레이스 이동경로
+	//	GetWorld(), // 샷건과 동일
+	//	StartLocation,
+	//	EndLocation,
+	//	FColor::Blue,
+	//	false,
+	//	2.f,
+	//	0,
+	//	2.f
+	//);
 
-	DrawDebugLine( // 구체 트레이스 이동경로
-		GetWorld(), // 샷건과 동일
-		StartLocation,
-		EndLocation,
-		FColor::Blue,
-		false,
-		2.f,
-		0,
-		2.f
-	);
+	//DrawDebugSphere( // 근접 광역 공격
+	//	GetWorld(),
+	//	StartLocation, // 구체 중심좌표 (플레이어 위치)
+	//	SwingRadius, // 반지름
+	//	12, // 구체를 몇각형으로 근사해서 나타낼지
+	//	FColor::Cyan, // 색
+	//	false, // 영구적이지 않음
+	//	2.f // 2초간 표시
+	//);
 
-	DrawDebugSphere( // 근접 광역 공격
-		GetWorld(),
-		StartLocation, // 구체 중심좌표 (플레이어 위치)
-		SwingRadius, // 반지름
-		12, // 구체를 몇각형으로 근사해서 나타낼지
-		FColor::Cyan, // 색
-		false, // 영구적이지 않음
-		2.f // 2초간 표시
-	);
+	//DrawDebugSphere( // 위와 동일
+	//	GetWorld(),
+	//	EndLocation, // 구체 중심좌표 , 이번에는 구체가 이동한 끝지점
+	//	SwingRadius,
+	//	12,
+	//	FColor::Cyan,
+	//	false,
+	//	2.f
+	//);
 
-	DrawDebugSphere( // 위와 동일
-		GetWorld(),
-		EndLocation, // 구체 중심좌표 , 이번에는 구체가 이동한 끝지점
-		SwingRadius,
-		12,
-		FColor::Cyan,
-		false,
-		2.f
-	);
 
 	if (!bHit) // 안맞은 경우
 	{
