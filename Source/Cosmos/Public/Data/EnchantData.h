@@ -30,5 +30,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillValue = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillDuration = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float SkillCooldown = 0.f;
+
+	UFUNCTION(BlueprintPure, Category = "Enchant")
+	static FText GetStatLabel(EEnchantStat stat);
 	
 };
