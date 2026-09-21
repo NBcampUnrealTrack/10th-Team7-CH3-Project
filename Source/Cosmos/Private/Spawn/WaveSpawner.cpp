@@ -16,6 +16,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 #if WITH_EDITOR
 #include "UObject/ObjectSaveContext.h"
 #endif
@@ -232,6 +233,53 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 예비 SpawnPoint 없음. 플레이어 근처 위치를 못 찾으면 스폰이 밀립니다"));
 	}
 
+	ResetStageState(WaveIndex); // 시그니처는 WaveIndex지만 의미는 스테이지 번호입니다.
+	SetFogVisible(true); // Day 1에서 숨긴 안개를 전투 스테이지부터 되돌립니다.
+	ApplyStageEnvironment(CurrentStage);
+
+	// 웨이브 1은 기다리지 않고 즉시 추가합니다.
+	AddNextWave();
+
+}
+
+void AWaveSpawner::StartTutorialStage(int32 GhoulCount)
+{
+	if (SpawnPoints.Num() == 0)
+	{
+		CollectSpawnPoints();
+	}
+
+	ResetStageState(0);
+
+	if (GhoulCount > 0 && !GhoulClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Day 1: Ghoul Class 미설정, %d마리 건너뜀"), GhoulCount);
+	}
+	else
+	{
+		for (int32 i = 0; i < GhoulCount; ++i)
+		{
+			SpawnQueue.Add(GhoulClass);
+		}
+	}
+
+	// 웨이브는 하나뿐이라 바로 "마지막 웨이브까지 넣음" 상태가 됩니다.
+	CurrentWave = 1;
+	bAllWavesQueued = true;
+
+	if (SpawnQueue.Num() > 0)
+	{
+		bIsSpawning = true;
+		GetWorldTimerManager().SetTimer(
+			SpawnTimer, this, &AWaveSpawner::SpawnOne, SpawnInterval, true, 0.f);
+	}
+
+	// 스폰할 게 없으면 여기서 바로 클리어를 방송합니다.
+	TryBroadcastStageCleared();
+}
+
+void AWaveSpawner::ResetStageState(int32 StageIndex)
+{
 	// 이전 스테이지의 타이머가 남아 있을 수 있으므로 먼저 끕니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
@@ -239,7 +287,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 
 	// 스테이지 상태 초기화. 누적 스폰이므로 초기화는 스테이지 시작 때 딱 한 번만 합니다.
 	// 웨이브가 바뀔 때는 비우지 않고 순서표 뒤에 이어 붙입니다.
-	CurrentStage = WaveIndex; // 시그니처는 WaveIndex지만 의미는 스테이지 번호입니다.
+	CurrentStage = StageIndex;
 	CurrentWave = 0;
 	SpawnQueue.Empty();
 	SpawnedCount = 0;
@@ -249,12 +297,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	bAllWavesQueued = false;
 	StageStartTime = GetGameTimeSinceCreation(); // UI 5분 카운트다운의 기준 시각
 
-	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 시작"), WaveIndex);
-	ApplyStageEnvironment(CurrentStage);
-
-	// 웨이브 1은 기다리지 않고 즉시 추가합니다.
-	AddNextWave();
-
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 시작"), StageIndex);
 }
 
 void AWaveSpawner::StopWave()
@@ -339,6 +382,23 @@ void AWaveSpawner::ApplyStageEnvironment(int32 StageIndex)
 	if (!IsValid(EnvironmentMoonlight) && !IsValid(EnvironmentSkylight) && !IsValid(EnvironmentFog))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 환경 기능은 켜졌지만 대상 액터가 지정되지 않았습니다"));
+	}
+}
+
+void AWaveSpawner::SetFogVisible(bool bVisible)
+{
+	UWorld* World = GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
+
+	for (TActorIterator<AExponentialHeightFog> It(World); It; ++It)
+	{
+		if (UExponentialHeightFogComponent* Fog = It->GetComponent())
+		{
+			Fog->SetVisibility(bVisible);
+		}
 	}
 }
 
