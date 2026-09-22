@@ -154,3 +154,15 @@ void AShotgunWeapon::BroadcastAmmo()
 {
 	OnAmmoChanged.Broadcast(CurrentAmmo, GetCurrentMaxAmmo());
 }
+
+void AShotgunWeapon::RefillAmmo() // 대장간 종료 시 탄약 최대로
+{
+	if (bIsReloading) // 재장전 중에 대장간에 들어갔던 경우 재장전 취소
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ReloadTimerHandle);
+		bIsReloading = false;
+	}
+
+	CurrentAmmo = GetCurrentMaxAmmo();
+	BroadcastAmmo();
+}

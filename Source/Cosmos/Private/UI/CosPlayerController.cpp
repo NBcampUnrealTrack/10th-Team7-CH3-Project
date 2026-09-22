@@ -507,6 +507,14 @@ void ACosPlayerController::CloseForgeWidget()
 		if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
 		{
 			CombatComp->RefillPotions();
+			if (AShotgunWeapon* Shotgun = CombatComp->GetShotgunWeapon()) // 탄약 최대로
+			{
+				Shotgun->RefillAmmo();
+			}
+		}
+		if (UHealthComponent* HealthComp = ControlledPawn->FindComponentByClass<UHealthComponent>()) // 체력 최대로
+		{
+			HealthComp->Heal(HealthComp->GetMaxHealth()); 
 		}
 	}
 
