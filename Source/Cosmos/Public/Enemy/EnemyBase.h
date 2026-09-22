@@ -9,7 +9,7 @@
 #include "Data/CosDataTable.h"
 #include "EnemyBase.generated.h"
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEnemyKilled, AEnemyBase*);
-
+class UNiagaraSystem;
 class UHealthComponent;
 class UAnimMontage;
 class UBehaviorTree;
@@ -61,7 +61,8 @@ public:
 	virtual float EnemyAttack();
 	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
 	virtual void ApplyStagger();
-
+	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
+	void PlayFootstep();
 	static void PlaySFXAt(const UObject* WorldContext, const FSFXVolume& SFX, const FVector& Location);
 
 protected:
@@ -71,6 +72,14 @@ protected:
 	virtual void PostInitializeComponents() override;
 	// Called when Destroy, or moved level / 엑터가 파괴되거나 레벨 이동으로 제거 될 때 실행 -> Cleanup
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	// for new hitbox collision
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Hitbox")
+	FName HitboxProfileName = TEXT("EnemyHitbox");
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UPrimitiveComponent>> Hitboxes;
+	void CollectHitboxes();
+	void SetHitboxesEnabled(bool bEnabled);
+
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Data")
 	TObjectPtr<UDataTable> EnemyDataTable;
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Data")
@@ -98,7 +107,9 @@ protected:
 	TObjectPtr<UAnimMontage> DeathMontage;
 	//Sounds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
-	FSFXVolume FootStepSound;
+	TArray<FSFXVolume> FootStepSounds;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|SFX", meta = (ClampMin = "0.0"))
+	float FootstepAudibleDistance = 1400.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	TArray<FSFXVolume> AttackSounds;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
@@ -111,16 +122,24 @@ protected:
 	FSFXVolume DeathSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume ProjectileHitSound;
+	//Effect
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	TObjectPtr<UNiagaraSystem> HitVFX;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	FVector HitVFXScale = FVector(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	float HitVFXHeightOffset = 0.f;
 
+	void PlayHitVFX();
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
-
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlayRandomSFX(const TArray<FSFXVolume>& Sounds);
+	void PlaySequentialSFX(const TArray<FSFXVolume>& Sounds, int32& InOutIndex);
+
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
 	float DeathDelay = 2.0f;
-
 	//stats
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
 	float MaxHP = 130.f;
@@ -167,7 +186,7 @@ protected:
 
 	UFUNCTION()
 	void HandleDeath();
-
+	virtual void ApplyDeathMovement();
 	void FireProjectile2(float InSpeed, float InDamage, float YawOffset, TSubclassOf<AEnemyProjectile> SelectedProjectile);
 	void SetEnemyAtStart();
 	void FaceTarget(const AActor* Target);
@@ -184,4 +203,5 @@ private:
 	bool  bIsStagger = false;
 	float LastStaggerTime = -1.f;
 	bool bDeathHandled = false;
+	int32 FootstepIndex = 0;
 };

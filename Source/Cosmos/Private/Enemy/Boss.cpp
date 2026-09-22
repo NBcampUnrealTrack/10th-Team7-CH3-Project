@@ -24,6 +24,11 @@ ABoss::ABoss()
 	Movement->bOrientRotationToMovement = false;
 	Movement->bEnablePhysicsInteraction = false;
 	Movement->MaxDepenetrationWithPawn = 0.f;
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	MeshComp->SetCollisionProfileName(TEXT("EnemyHitbox"));
+	MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	MeshComp->bEnableUpdateRateOptimizations = false;
 }
 
 
