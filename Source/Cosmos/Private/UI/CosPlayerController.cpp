@@ -507,6 +507,14 @@ void ACosPlayerController::CloseForgeWidget()
 		if (UCombatComponent* CombatComp = ControlledPawn->FindComponentByClass<UCombatComponent>())
 		{
 			CombatComp->RefillPotions();
+			if (AShotgunWeapon* Shotgun = CombatComp->GetShotgunWeapon()) // 탄약 최대로
+			{
+				Shotgun->RefillAmmo();
+			}
+		}
+		if (UHealthComponent* HealthComp = ControlledPawn->FindComponentByClass<UHealthComponent>()) // 체력 최대로
+		{
+			HealthComp->Heal(HealthComp->GetMaxHealth()); 
 		}
 	}
 
@@ -729,6 +737,12 @@ void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
 	{
 		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayKillMarker"), *GLog, nullptr, true);
 	}
+}
+
+void ACosPlayerController::OnBossBGMRequested_Implementation()
+{
+	// BP가 보스 BGM(BGM_Combat_Boss)을 연결하기 전까지는 일반 전투 BGM으로 대신합니다.
+	OnCombatBGMRequested();
 }
 
 void ACosPlayerController::HandleGameOverRequested()

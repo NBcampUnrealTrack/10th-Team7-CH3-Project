@@ -36,6 +36,7 @@ void AEnchantPickup::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("Enchant Make Fail"));
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("DropSound is %s"), DropSound ? TEXT("Valid") : TEXT("NULL"));
 	if (DropSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DropSound, GetActorLocation());
