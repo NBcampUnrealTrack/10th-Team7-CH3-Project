@@ -76,3 +76,5 @@ struct FSFXVolume
 };
 constexpr ECollisionChannel ECC_Enemies = ECollisionChannel::ECC_GameTraceChannel1;
 constexpr ECollisionChannel ECC_Weapon = ECollisionChannel::ECC_GameTraceChannel2;
+constexpr ECollisionChannel ECC_Projectile = ECollisionChannel::ECC_GameTraceChannel3;
+constexpr ECollisionChannel ECC_EnemyHitbox = ECollisionChannel::ECC_GameTraceChannel4;
