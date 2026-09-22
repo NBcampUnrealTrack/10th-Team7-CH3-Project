@@ -184,13 +184,14 @@ bool UCosGameInstance::UpgradeShotgun(EShotgunModuleType Type)
 	{
 		ModuleLevels.Add(Type, UpgradeModule->Level);
 		OnLoadoutChange.Broadcast();
-		return true;
 	}
 	else
 	{
 		// 돈이 부족하다는 알림
 		return false;
 	}
+	
+	return true;
 }
 
 // GameMode에서
