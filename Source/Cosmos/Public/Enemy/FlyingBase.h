@@ -49,6 +49,11 @@ protected:
 	float DistanceCheck = 800.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Fly")
 	float RetreatMulti = 1.25f;
+
+	virtual void ApplyDeathMovement() override;
+	virtual void Landed(const FHitResult& Hit) override;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Fly")
+	float DeathGravityScale = 2.0f;
 private:
 	float LastAttackTime = -1.f;
 };

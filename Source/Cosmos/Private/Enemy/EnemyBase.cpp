@@ -17,6 +17,8 @@
 #include "DrawDebugHelpers.h" 
 #include "Engine/OverlapResult.h" //  FOverlapResult 
 #include "BehaviorTree/BlackboardComponent.h" 
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 // Sets default values
 AEnemyBase::AEnemyBase()
@@ -80,6 +82,7 @@ void AEnemyBase::BeginPlay()
 void AEnemyBase::SetEnemyAtStart()
 {
 	SetMovementSpeed(RunSpeed);
+
 	if (HealthComponent)
 	{
 		HealthComponent->SetHPAtStart(MaxHP);
@@ -99,6 +102,8 @@ void AEnemyBase::SetEnemyAtStart()
 	}
 	bIsStagger = false;
 	LastStaggerTime = -1.f;
+	FootstepIndex = (FootStepSounds.Num() > 0)	? FMath::RandRange(0, FootStepSounds.Num() - 1)	: 0;
+	SetHitboxesEnabled(true);
 }
 bool AEnemyBase::IsAlive() const
 {
@@ -115,16 +120,54 @@ void AEnemyBase::SetMovementSpeed(float NewSpeed)
 void AEnemyBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	CollectHitboxes();
 	if (HealthComponent)
 	{
 		HealthComponent->OnDeath.AddDynamic(this, &AEnemyBase::HandleDeath);
 	}
 }
-
 void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearAllTimersForObject(this);
 	Super::EndPlay(EndPlayReason);
+}
+//hitbox collision section
+////
+void AEnemyBase::CollectHitboxes()
+{
+	Hitboxes.Reset();
+	TInlineComponentArray<UPrimitiveComponent*> Prims(this);
+
+	for (UPrimitiveComponent* Prim : Prims)
+	{
+		if (!Prim || Prim->GetCollisionProfileName() != HitboxProfileName)
+		{
+			continue;
+		}
+		Prim->SetGenerateOverlapEvents(false);
+		Prim->SetCanEverAffectNavigation(false);
+		Prim->CanCharacterStepUpOn = ECB_No;
+
+		Hitboxes.Add(Prim);
+	}
+	if (Hitboxes.Num() > 0)
+	{
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Weapon, ECR_Ignore);
+	}
+}
+
+void AEnemyBase::SetHitboxesEnabled(bool bEnabled)
+{
+	const ECollisionEnabled::Type Mode =
+		bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision;
+
+	for (UPrimitiveComponent* Box : Hitboxes)
+	{
+		if (Box)
+		{
+			Box->SetCollisionEnabled(Mode);
+		}
+	}
 }
 AActor* AEnemyBase::GetAttackTarget() const
 {
@@ -147,6 +190,7 @@ float AEnemyBase::EnemyAttack() {
 	{
 		FaceTarget(GetAttackTarget());
 	}
+	PlayRandomSFX(AttackSounds);
 	if (!AttackMontage1 && !AttackMontage2) {
 		GetWorldTimerManager().SetTimer(AttackHitTimerHandle, this, &AEnemyBase::AttackHitCheck, AttackPreDelay, false);
 		return AttackPreDelay + 0.5f;
@@ -181,17 +225,21 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
 	if (ImmuneMelee && Weapon == EWeaponType::Nail)
 	{
+		PlaySFX(HitbyMeleeSound);
 		return;
 	}
 	if (ImmuneRange && Weapon == EWeaponType::Shotgun)
 	{
+		PlaySFX(HitbyRangeSound);
 		return;
 	}
 	if (Damage <= 0.f || !IsAlive())
 	{
 		return;
 	}
+
 	HealthComponent->ApplyDamage(Damage, Weapon);
+	PlayHitVFX();
 	if (!IsAlive())
 	{
 		return;
@@ -212,7 +260,8 @@ void AEnemyBase::HandleDeath()
 {
 	if (bDeathHandled) { return; }
 	bDeathHandled = true;
-
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SetHitboxesEnabled(false);
 	PlaySFX(DeathHitSound);
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{ 
@@ -227,9 +276,7 @@ void AEnemyBase::HandleDeath()
 			AI->BrainComponent->StopLogic(TEXT("Death"));
 		}
 	}
-	GetCharacterMovement()->DisableMovement();
-	GetCharacterMovement()->SetComponentTickEnabled(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision); 
+	ApplyDeathMovement();
 	//Reset all timers
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
@@ -244,20 +291,25 @@ void AEnemyBase::HandleDeath()
 	{
 		if (FMath::FRand() <= 0.02f)
 		{
-			GetWorld()->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetActorLocation(), FRotator::ZeroRotator);
+			GetWorld()->SpawnActor<AEnchantPickup>(EnchantPickupClass, GetDropLocation(), FRotator::ZeroRotator);
 		}
 	}
 	GetWorldTimerManager().SetTimer(DeathTimerHandle, FTimerDelegate::CreateWeakLambda(this, [this]() { Destroy(); }),
 		DeathDelay, false);
 }
-
+void AEnemyBase::ApplyDeathMovement()
+{
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
 void AEnemyBase::AttackHitCheck()
 {
 	if (!IsAlive())
 	{
 		return;
 	}
-	PlayRandomSFX(AttackSounds);
+
 	//set radius
 	const FVector Start = GetActorLocation() + GetActorForwardVector() * AttackOffset + FVector(0.f, 0.f, AttackHeightOffset);
 	// const FVector End = Start + GetActorForwardVector() * AttackRange;
@@ -431,4 +483,65 @@ void AEnemyBase::PlayRandomSFX(const TArray<FSFXVolume>& Sounds)
 			return;
 		}
 	}
+}
+void AEnemyBase::PlayFootstep()
+{
+	if (FootStepSounds.Num() == 0)
+	{
+		return;
+	}
+	const AActor* Target = GetAttackTarget();
+	if (!Target ||
+		FVector::DistSquared(Target->GetActorLocation(), GetActorLocation())
+	> FMath::Square(FootstepAudibleDistance))
+	{
+		return;
+	}
+
+	PlaySequentialSFX(FootStepSounds, FootstepIndex);
+}
+void AEnemyBase::PlaySequentialSFX(const TArray<FSFXVolume>& Sounds, int32& InOutIndex)
+{
+	const int32 Num = Sounds.Num();
+	if (Num == 0)
+	{
+		return;
+	}
+	for (int32 i = 0; i < Num; i++)
+	{
+		const int32 Index = InOutIndex % Num;
+		InOutIndex = (Index + 1) % Num;
+
+		if (Sounds[Index].Sound)
+		{
+			PlaySFX(Sounds[Index]);
+			return;
+		}
+	}
+}
+void AEnemyBase::PlayHitVFX()
+{
+	if (!HitVFX)
+	{
+		return;
+	}
+	FVector Loc = GetActorLocation();
+	FVector ToAttacker = GetActorForwardVector();
+
+	if (const AActor* Attacker = GetAttackTarget())
+	{
+		const FVector Dir = (Attacker->GetActorLocation() - Loc).GetSafeNormal2D();
+		if (!Dir.IsNearlyZero())
+		{
+			ToAttacker = Dir;
+		}
+	}
+
+	if (const UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Loc += ToAttacker * Capsule->GetScaledCapsuleRadius();
+	}
+	Loc.Z += HitVFXHeightOffset;
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this,HitVFX,Loc,ToAttacker.Rotation(),HitVFXScale,true,true,	ENCPoolMethod::AutoRelease,true);                        
 }

@@ -32,7 +32,6 @@ AFlyingBase::AFlyingBase()
 void AFlyingBase::BeginPlay() 
 {
 	Super::BeginPlay();
-	//set MaxFlySpeed
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 	{
 		Movement->MaxFlySpeed = GetRunSpeed();
@@ -94,4 +93,31 @@ FVector AFlyingBase::GetDropLocation() const
 		return Hit.ImpactPoint + FVector(0.f, 0.f, 20.f);
 	}
 		return Self;
+}
+void AFlyingBase::ApplyDeathMovement()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	Capsule->SetCollisionObjectType(ECC_WorldDynamic);
+	Capsule->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Capsule->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	Capsule->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Movement->SetAvoidanceEnabled(false);
+	Movement->StopMovementImmediately();
+	Movement->GravityScale = DeathGravityScale;
+	Movement->SetMovementMode(MOVE_Falling);
+}
+void AFlyingBase::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	if (IsAlive())
+	{
+		return;
+	}
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	Movement->DisableMovement();
+	Movement->SetComponentTickEnabled(false);  
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
