@@ -33,5 +33,11 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Enchant")
 	static FText GetStatLabel(EEnchantStat stat);
+
+	UFUNCTION(BlueprintPure, Category = "Enchant")
+	static FText GetSkillLabel(EEnchantSkillType Type);
+
+	UFUNCTION(BlueprintPure, Category = "Enchant")
+	static EEnchantValueType GetSkillValueType(EEnchantSkillType Type);
 	
 };
