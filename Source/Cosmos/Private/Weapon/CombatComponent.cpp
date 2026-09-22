@@ -156,6 +156,7 @@ void UCombatComponent::OnUsePotion()
 	PotionCount--;
 	HealthComponent->Heal(static_cast<float>(GI->GetPotionHealAmount()));
 	OnPotionCountChanged.Broadcast(PotionCount);
+	OnPotionUsed.Broadcast();
 }
 
 int32 UCombatComponent::GetMaxPotionCount() const

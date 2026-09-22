@@ -8,6 +8,7 @@
 class UInputAction;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSkillStateChanged); // 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSkillActivated);
 
 USTRUCT() // UPROPERTY()로 선언된 배열에 담기려면 리플렉션 등록돼 있어야 함
 struct FActiveSkill // 지금 켜져 있는 스킬
@@ -34,6 +35,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Skill")
 	FOnSkillStateChanged OnSkillStateChanged; // 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Skill") // 스킬이 실제로 발동됐을 때만 방송
+	FOnSkillActivated OnSkillActivated;
 
 	UFUNCTION(BlueprintCallable, Category = "Skill")
 	void ActivateSkills();
