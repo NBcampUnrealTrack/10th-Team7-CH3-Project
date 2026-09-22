@@ -33,7 +33,7 @@ bool ANailWeapon::PerformAttack()
 	QueryParams.AddIgnoredActor(GetOwner()); // 혹시 몰라서 제외
 
 	FCollisionObjectQueryParams ObjectParams; // 어떤 종류의 오브젝트를 찾을지 지정
-	ObjectParams.AddObjectTypesToQuery(ECC_Enemies); // 적 지정
+	ObjectParams.AddObjectTypesToQuery(ECC_EnemyHitbox);  // 적 지정
 
 	const bool bHit = GetWorld()->SweepMultiByObjectType( //구체를 보내서 여러명이 맞도록 하는 트레이스
 		HitResults,
