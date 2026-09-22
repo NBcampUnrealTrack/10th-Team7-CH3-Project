@@ -1,6 +1,8 @@
 ﻿#include "Spawn/WaveSpawner.h"
 #include "Spawn/EnemySpawnPoint.h"
 #include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
+#include "Enemy/Boss.h"
+#include "Components/CapsuleComponent.h"
 #include "Data/CosDataTable.h"
 #include "Engine/DataTable.h"
 #include "Kismet/GameplayStatics.h"
@@ -464,7 +466,21 @@ void AWaveSpawner::AddNextWave()
 	AddToQueue(EnhancedGhoulClass, Row->EnhancedGhoulCount, TEXT("EnhancedGhoul"));
 	AddToQueue(GargoyleClass, Row->GargoyleCount, TEXT("Gargoyle"));
 	AddToQueue(CrowClass, Row->CrowCount, TEXT("Crow"));
-	AddToQueue(BossClass, Row->BossCount, TEXT("Boss"));
+
+	// 보스 스테이지 첫 웨이브는 DT 값과 관계없이 보스가 최소 1마리 나오게 합니다.
+	int32 BossCount = Row->BossCount;
+	if (CurrentStage == BossStageIndex && CurrentWave == 1 && BossCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] %s의 BossCount가 0이라 보스 1마리를 추가합니다"), *RowName.ToString());
+		BossCount = 1;
+	}
+	if (BossCount > 0 && !BossClass)
+	{
+		// 보스가 빠지면 보스 스테이지가 바로 클리어되어 게임 클리어로 넘어가므로 에러로 남깁니다.
+		UE_LOG(LogTemp, Error, TEXT("[WaveSpawner] %s: Boss Class 미설정. 레벨의 WaveSpawner Details에서 BP_Boss를 지정하세요"),
+			*RowName.ToString());
+	}
+	AddToQueue(BossClass, BossCount, TEXT("Boss"));
 
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 웨이브 %d 추가: +%d마리 / 스폰 대기 %d / 생존 %d"),
 		CurrentStage, CurrentWave, SpawnQueue.Num() - QueueSizeBefore,
@@ -515,7 +531,12 @@ void AWaveSpawner::SpawnOne()
 	FVector SpawnLocation = FVector::ZeroVector;
 	FRotator SpawnRotation = FRotator::ZeroRotator;
 
-	if (FindSpawnLocationNearPlayer(SpawnLocation))
+	if (ClassToSpawn && ClassToSpawn->IsChildOf(ABoss::StaticClass())
+		&& FindBossSpawnLocation(ClassToSpawn, SpawnLocation, SpawnRotation))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] 보스 등장 위치 %s"), *SpawnLocation.ToString());
+	}
+	else if (FindSpawnLocationNearPlayer(SpawnLocation))
 	{
 		// NavMesh 점은 바닥 표면이라 캡슐 중심 높이만큼 올립니다.
 		SpawnLocation.Z += SpawnHeightOffset;
@@ -639,6 +660,57 @@ bool AWaveSpawner::FindSpawnLocationNearPlayer(FVector& OutLocation)
 	}
 
 	return false; // 전부 실패하면 SpawnOne이 예비 SpawnPoint로 대체합니다.
+}
+
+bool AWaveSpawner::FindBossSpawnLocation(TSubclassOf<AActor> BossToSpawn, FVector& OutLocation, FRotator& OutRotation) const
+{
+	TArray<AActor*> Points;
+	UGameplayStatics::GetAllActorsWithTag(this, BossSpawnPointTag, Points);
+	if (Points.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] '%s' 태그 BossPoint 없음. 보스를 플레이어 근처에 스폰합니다 (텔레포트 불가)"),
+			*BossSpawnPointTag.ToString());
+		return false;
+	}
+
+	const APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+	const FVector PlayerLocation = IsValid(Player) ? Player->GetActorLocation() : GetActorLocation();
+
+	// 플레이어와 가장 가까운 지점에서 등장시켜 바로 전투가 시작되게 합니다.
+	const AActor* BestPoint = nullptr;
+	float BestDistSq = TNumericLimits<float>::Max();
+	for (const AActor* Point : Points)
+	{
+		if (!IsValid(Point))
+		{
+			continue;
+		}
+		const float DistSq = FVector::DistSquared(PlayerLocation, Point->GetActorLocation());
+		if (DistSq < BestDistSq)
+		{
+			BestDistSq = DistSq;
+			BestPoint = Point;
+		}
+	}
+	if (!BestPoint)
+	{
+		return false;
+	}
+
+	// ABoss::PickBossPointLocation과 같이 캡슐 절반 높이만큼 올려 바닥에 박히지 않게 합니다.
+	OutLocation = BestPoint->GetActorLocation();
+	if (const ACharacter* BossCDO = Cast<ACharacter>(BossToSpawn->GetDefaultObject()))
+	{
+		if (const UCapsuleComponent* Capsule = BossCDO->GetCapsuleComponent())
+		{
+			OutLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
+		}
+	}
+
+	FVector ToPlayer = PlayerLocation - OutLocation;
+	ToPlayer.Z = 0.0f;
+	OutRotation = ToPlayer.IsNearlyZero() ? BestPoint->GetActorRotation() : ToPlayer.Rotation();
+	return true;
 }
 
 void AWaveSpawner::TryBroadcastStageCleared()

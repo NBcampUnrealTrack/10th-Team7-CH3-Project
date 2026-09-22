@@ -731,6 +731,12 @@ void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
 	}
 }
 
+void ACosPlayerController::OnBossBGMRequested_Implementation()
+{
+	// BP가 보스 BGM(BGM_Combat_Boss)을 연결하기 전까지는 일반 전투 BGM으로 대신합니다.
+	OnCombatBGMRequested();
+}
+
 void ACosPlayerController::HandleGameOverRequested()
 {
 	int32 CurrentSoul = 0;
