@@ -106,6 +106,7 @@ void USkillComponent::ActivateSkills() // 지금 쓸 수 있는 스킬 찾아서 종료시간 �
 	if (bActivatedAny) // 하나라도 발동됐으면 방송
 	{
 		OnSkillStateChanged.Broadcast();
+		OnSkillActivated.Broadcast();
 	}
 }
 

@@ -12,6 +12,7 @@ class UCosGameInstance;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPotionCountChanged, int32, NewCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatReady);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPotionUsed);
 UCLASS(meta = (BlueprintSpawnableComponent)) //BP_CosCharacter 에서 CombatComponent 표시
 class COSMOS_API UCombatComponent : public UActorComponent
 {
@@ -24,6 +25,8 @@ public:
 	FOnPotionCountChanged OnPotionCountChanged;
 	UPROPERTY(BlueprintAssignable)
 	FOnCombatReady OnCombatReady; // 초기화 완료 알림
+	UPROPERTY(BlueprintAssignable) // 추가: 포션을 실제로 마셨을 때만 방송
+	FOnPotionUsed OnPotionUsed;
 
 	bool IsCombatReady() const { return bCombatReady; }
 
