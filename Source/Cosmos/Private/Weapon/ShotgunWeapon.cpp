@@ -6,7 +6,7 @@ AShotgunWeapon::AShotgunWeapon()
 {
 	BaseDamage = 30.f;
 	AttackInterval = 1.f;
-	AttackRange = 2500.f;
+	AttackRange = 3000.f;
 	MaxAmmo = 4;
 	ReloadTime = 2.f;
 }
