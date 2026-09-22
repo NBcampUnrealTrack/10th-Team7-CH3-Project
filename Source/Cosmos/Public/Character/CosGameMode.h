@@ -14,6 +14,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOver);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameClear);
 // Day가 시작될 때 방송합니다. 대사 등 연출은 BP/UI가 구독해서 붙입니다.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDayStarted, int32, Day);
+// 보스 스테이지가 시작될 때 OnDayStarted 다음에 방송합니다. 보스 등장 연출·UI는 BP가 구독해서 붙입니다.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossStageStarted);
 
 UENUM()
 enum class EPostResultAction : uint8
@@ -58,6 +60,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Day")
 	bool IsInDay1() const { return bInDay1; }
 
+	// 지금 스테이지가 보스 스테이지(기본 6)인지. 보스 스테이지 번호는 WaveSpawner가 가지고 있습니다.
+	UFUNCTION(BlueprintPure, Category = "Day")
+	bool IsBossStage() const { return IsBossStageIndex(CurrentWaveIndex); }
+
 	UPROPERTY(BlueprintAssignable)
 	FOnForgeRequested OnForgeRequested;
 
@@ -70,6 +76,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Day")
 	FOnDayStarted OnDayStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Day")
+	FOnBossStageStarted OnBossStageStarted;
 
 
 protected:
@@ -111,6 +120,8 @@ private:
 	void TriggerGameOver();//타임오버/ 사망하는 경우 모아두려고 넣음
 
 	void PushEnemyCountUI();
+
+	bool IsBossStageIndex(int32 StageIndex) const;
 
 	// Player Start Tag 또는 Actor Tags에 "Day{N}"이 있는 PlayerStart를 찾습니다.
 	APlayerStart* FindDayStart(int32 Day) const;

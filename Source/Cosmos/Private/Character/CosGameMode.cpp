@@ -194,7 +194,15 @@ void ACosGameMode::SpawnDay1Ghouls()
 
 void ACosGameMode::StartNextWave()
 {//CurrentWaveIndex+1->  웨이브 스포너에 현재 웨이브 번호 전달(적 스폰)-> GameState에서도 번호 저장
+	// 보스 스테이지가 마지막이므로 그 다음 스테이지는 시작하지 않습니다.
+	if (bGameOver || IsBossStageIndex(CurrentWaveIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GameMode] Stage %d 이후 스테이지 없음. StartNextWave 무시"), CurrentWaveIndex);
+		return;
+	}
+
 	++CurrentWaveIndex; // 의미가 스테이지 번호(1~6)로 바뀜
+	const bool bBossStage = IsBossStageIndex(CurrentWaveIndex);
 
 	UE_LOG(LogTemp, Warning,
 		TEXT("[GameMode] StartNextWave -> %d"),
@@ -208,12 +216,19 @@ void ACosGameMode::StartNextWave()
 
 	StartStageTimer(); // 이제 호출될 때마다 새 스테이지이므로 조건문 삭제
 
-	//전투 BGM 추가
+	//전투 BGM 추가. 보스 스테이지는 보스 BGM
 	if (ACosPlayerController* CosPC =
 		Cast<ACosPlayerController>(
 			UGameplayStatics::GetPlayerController(this, 0)))
 	{
-		CosPC->OnCombatBGMRequested();
+		if (bBossStage)
+		{
+			CosPC->OnBossBGMRequested();
+		}
+		else
+		{
+			CosPC->OnCombatBGMRequested();
+		}
 	}
 
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
@@ -233,6 +248,18 @@ void ACosGameMode::StartNextWave()
 	}
 
 	OnDayStarted.Broadcast(GetCurrentDay());
+
+	if (bBossStage)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GameMode] Stage %d 보스 등장"), CurrentWaveIndex);
+		OnBossStageStarted.Broadcast();
+	}
+}
+
+bool ACosGameMode::IsBossStageIndex(int32 StageIndex) const
+{
+	const int32 BossStageIndex = WaveSpawner ? WaveSpawner->GetBossStageIndex() : 6;
+	return StageIndex == BossStageIndex;
 }
 
 void ACosGameMode::StartStageTimer()//새로운 스테이지 시작될 때 5분 타이머 시작
@@ -372,7 +399,7 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 
 		PendingAction = EPostResultAction::Forge;
 	}
-	else if (WaveIndex == 6) // 보스 스테이지
+	else if (IsBossStageIndex(WaveIndex)) // 보스 스테이지
 	{
 		PendingAction = EPostResultAction::GameClear;
 	}

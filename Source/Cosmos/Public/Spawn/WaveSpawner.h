@@ -108,6 +108,13 @@ public:
 		return FMath::Max(0.0f, TotalTime - Elapsed); // 음수로 안 내려가게
 	}
 
+	// 보스 스테이지 번호. 게임모드도 이 값을 읽어 보스 BGM·게임 클리어를 판단합니다.
+	UFUNCTION(BlueprintPure, Category = "Wave|Boss")
+	int32 GetBossStageIndex() const
+	{
+		return BossStageIndex;
+	}
+
 	FOnWaveCleared OnWaveCleared; // 스테이지(5분) 클리어 시 방송. 게임모드가 AddUObject로 구독합니다.
 
 	FOnEnemySpawned OnEnemySpawned; // 게임모드가 AddUObject로 구독합니다.
@@ -143,6 +150,10 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 		// cpp에서 Enemy->OnDestroyed.AddDynamic(this, ...)으로 등록해두기 때문입니다.
 		// AddDynamic은 UFUNCTION() 매크로가 붙은 함수만 받습니다.
 		void HandleEnemyDestroyed(AActor* DestroyedActor);
+
+	// 보스는 제자리에서 BossPoint 사이를 텔레포트하므로, 플레이어와 가장 가까운 BossPoint에 스폰합니다.
+	// BossPoint가 하나도 없으면 false를 돌려주고, SpawnOne이 일반 적과 같은 방식으로 위치를 찾습니다.
+	bool FindBossSpawnLocation(TSubclassOf<AActor> BossToSpawn, FVector& OutLocation, FRotator& OutRotation) const;
 
 	// 레벨의 AEnemySpawnPoint를 전부 찾아 SpawnPoints에 담아줍니다.
 	// 이제는 플레이어 근처 위치를 못 찾았을 때만 쓰는 예비용입니다.
@@ -209,6 +220,14 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 
 	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
 	TSubclassOf<AActor> BossClass;
+
+	// 스테이지 5 다음 스테이지. 이 스테이지의 웨이브 1에 보스가 없으면 1마리를 넣어 보스 등장을 보장합니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Boss", meta = (ClampMin = "1"))
+	int32 BossStageIndex = 6;
+
+	// 보스가 스폰·텔레포트할 지점의 액터 태그. ABoss::BossPointTag와 같은 값이어야 합니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Boss")
+	FName BossSpawnPointTag = TEXT("BossPoint");
 
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (ClampMin = "0.1"))  // 0을 넣으면 무한생성됩니다. 0.1로 막아놓은 것.
 		float SpawnInterval = 1.0f; // 한 마리씩 꺼내는 간격(초)
