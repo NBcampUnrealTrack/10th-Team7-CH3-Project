@@ -48,6 +48,10 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
 	void OnCombatBGMRequested();
 
+	// 보스 스테이지 시작 시 호출. BP에서 구현하지 않으면 기본 전투 BGM을 재생합니다.
+	UFUNCTION(BlueprintNativeEvent, Category = "Audio")
+	void OnBossBGMRequested();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Audio")
 	void OnGameOverBGMRequested();
 
