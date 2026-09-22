@@ -15,6 +15,7 @@ public:
 	AShotgunWeapon();
 	void Reload();
 	void FinishReload();
+	void RefillAmmo();
 	
 	UPROPERTY(BlueprintAssignable, Category = "Weapon") //µ®∏Æ∞‘¿Ã∆Æ
 	FOnAmmoChanged OnAmmoChanged;
