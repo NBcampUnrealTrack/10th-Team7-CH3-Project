@@ -63,7 +63,7 @@ void AFlyingBase::AttackHitCheck()
 	{
 		LastAttackTime = World->GetTimeSeconds();
 	}
-	PlaySFX(AttackSound);
+	PlayRandomSFX(AttackSounds);
 	FireProjectile(AttackSpeed, AttackDamage);
 }
 
