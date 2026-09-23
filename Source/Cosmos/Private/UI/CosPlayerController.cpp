@@ -5,7 +5,8 @@
 #include "Character/HealthComponent.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ShotgunWeapon.h"
-#include "Weapon/CombatComponent.h"   
+#include "Weapon/CombatComponent.h"
+#include "Weapon/CosLegacyCameraShake.h"
 #include "Data/CosGameInstance.h" 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -37,6 +38,7 @@ ACosPlayerController::ACosPlayerController()
 	ESCWidgetClass(nullptr),
 	ESCWidgetInstance(nullptr)
 {
+	CosLegacyCameraShakeClass = UCosLegacyCameraShake::StaticClass();
 }
 	
 
@@ -145,6 +147,10 @@ void ACosPlayerController::SetupCharacterBindings()
 			// 사망 이벤트
 			HealthComp->OnDeath.RemoveDynamic(this, &ACosPlayerController::OnCharacterDeath);
 			HealthComp->OnDeath.AddDynamic(this, &ACosPlayerController::OnCharacterDeath);
+
+			// 피격 이벤트. 카메라 흔들림
+			HealthComp->OnDamaged.RemoveDynamic(this, &ACosPlayerController::HandlePlayerDamaged);
+			HealthComp->OnDamaged.AddDynamic(this, &ACosPlayerController::HandlePlayerDamaged);
 
 			// 초기 체력값 UI 즉시 반영 함수
 			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
@@ -755,4 +761,12 @@ void ACosPlayerController::HandleGameOverRequested()
 	}
 
 	ShowGameOver(CurrentSoul);
+}
+
+void ACosPlayerController::HandlePlayerDamaged(float Damage)
+{
+	if (IsValid(CosLegacyCameraShakeClass))
+	{
+		ClientStartCameraShake(CosLegacyCameraShakeClass);
+	}
 }

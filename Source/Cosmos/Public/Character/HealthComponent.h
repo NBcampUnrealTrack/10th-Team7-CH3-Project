@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	float, MaxHealth
 );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamaged, float, Damage);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class COSMOS_API UHealthComponent : public UActorComponent
@@ -51,6 +52,8 @@ public:
 	//나중에 게임 오버, 적 사망, 킬카운트? 등에 연결
 	UPROPERTY(BlueprintAssignable, Category = "Health")
 	FOnDeath OnDeath;
+	UPROPERTY(BlueprintAssignable, Category = "Health")
+	FOnDamaged OnDamaged;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Health")
 	float BaseMaxHealth = 100.0f;
