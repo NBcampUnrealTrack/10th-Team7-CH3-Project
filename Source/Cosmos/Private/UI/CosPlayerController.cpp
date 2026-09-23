@@ -59,33 +59,11 @@ void ACosPlayerController::BeginPlay()
 		}
 	}
 
-	// 현재 레벨 이름에 따라 분기b
+	// 현재 레벨 이름
 	const FString CurrentLevelName = GetWorld()->GetMapName();
 
-	if (CurrentLevelName.Contains(TEXT("MenuLevel")))
-	{
-		// 메뉴 레벨이면 타이틀 화면만 표시
-		ShowTitleWidget();
-	}
-	else
-	{
-		// 그 외(전투) 레벨이면 전투 HUD + 델리게이트 바인딩
-		ShowCombatHUD();
-		SetupCharacterBindings();
-
-		if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
-		{
-			UpdateKillUI(GS->GetKillCount());
-			UpdateStageTimeUI(GS->GetStageRemainingTime());
-
-			GS->OnStateChanged.RemoveDynamic(this, &ACosPlayerController::HandleGameStateChanged);
-			GS->OnStageTimeChanged.AddDynamic(this, &ACosPlayerController::HandleStageTimeChanged);
-			GS->OnStateChanged.AddDynamic(this, &ACosPlayerController::HandleGameStateChanged);
-
-			// 처음 HUD가 켜졌을 때 초기 웨이브 UI 즉시 갱신
-			UpdateWaveUI(GS->GetWaveIndex());
-		}
-	}
+	// 어떤 레벨이든 처음에는 타이틀 표시
+	ShowTitleWidget();
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
 
@@ -727,10 +705,36 @@ void ACosPlayerController::SetUIInputMode(bool bUIMode)
 	}
 }
 
-void ACosPlayerController::ShowGameHUD() 
+void ACosPlayerController::ShowGameHUD()
 {
+	// 타이틀에서 걸어둔 일시정지 해제
+	SetPause(false);
+
+	// 타이틀 닫고 전투 HUD 표시
 	HideTitleWidget();
 	ShowCombatHUD();
+
+	// 캐릭터 관련 UI 연결
+	SetupCharacterBindings();
+
+	// GameState 관련 UI 연결
+	if (ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+	{
+		UpdateKillUI(GS->GetKillCount());
+		UpdateStageTimeUI(GS->GetStageRemainingTime());
+
+		GS->OnStateChanged.RemoveDynamic(
+			this, &ACosPlayerController::HandleGameStateChanged);
+		GS->OnStateChanged.AddDynamic(
+			this, &ACosPlayerController::HandleGameStateChanged);
+
+		GS->OnStageTimeChanged.RemoveDynamic(
+			this, &ACosPlayerController::HandleStageTimeChanged);
+		GS->OnStageTimeChanged.AddDynamic(
+			this, &ACosPlayerController::HandleStageTimeChanged);
+
+		UpdateWaveUI(GS->GetWaveIndex());
+	}
 }
 
 void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)
