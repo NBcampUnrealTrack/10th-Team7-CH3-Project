@@ -43,7 +43,7 @@ AEnemyBase::AEnemyBase()
 	Movement->SetMovementMode(MOVE_NavWalking);
 	// no clip each enemy, / 적들이 알아서 비켜가게
 	Movement->bUseRVOAvoidance = true;
-	Movement->AvoidanceConsiderationRadius = 150.0f; //No Clip Range
+	Movement->AvoidanceConsiderationRadius = 200.0f; //No Clip Range
 	//DIsable unnecessary Functions / 이동 방향으로 알아서 회전
 	Movement->bUseControllerDesiredRotation = false;
 	//disable unused function in cmc / 안쓰는 기능 꺼서 계산 줄이기
@@ -58,12 +58,16 @@ AEnemyBase::AEnemyBase()
 	Capsule->SetCollisionResponseToChannel(ECC_Enemies, ECR_Ignore);
 	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	Capsule->SetGenerateOverlapEvents(false);
+	Capsule->CanCharacterStepUpOn = ECB_No;
+
 
 	Movement->bUseFlatBaseForFloorChecks = true;
 	Movement->MaxStepHeight = 25.f;
 	//avoid monster pop upto the sky
-	Movement->MaxDepenetrationWithPawn = 30.f;
 	Movement->MaxDepenetrationWithGeometry = 100.f;
+	Movement->MaxDepenetrationWithPawn = 3.f;
+	Movement->MaxDepenetrationWithPawnAsProxy = 3.f;
+	Movement->bEnablePhysicsInteraction = false; 
 	//for Reduce Animations costs / 시야 밖 적들 애니메이션 줄이기
 	MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	MeshComp->bEnableUpdateRateOptimizations = true; // Skip Frames of distant enemies / 거리 멀면 애니메이션 줄이기
@@ -121,6 +125,9 @@ void AEnemyBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	CollectHitboxes();
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(
+		ECC_Pawn, bBlockPlayer ? ECR_Block : ECR_Ignore);
 	if (HealthComponent)
 	{
 		HealthComponent->OnDeath.AddDynamic(this, &AEnemyBase::HandleDeath);
@@ -255,14 +262,30 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 		ApplyStagger();
 	}
 }
-
+void AEnemyBase::DisableAllCollision()
+{
+	TInlineComponentArray<UPrimitiveComponent*> Prims(this);
+	for (UPrimitiveComponent* Prim : Prims)
+	{
+		if (Prim)
+		{
+			Prim->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Prim->SetGenerateOverlapEvents(false);
+		}
+	}
+}
 void AEnemyBase::HandleDeath()
 {
+
 	if (bDeathHandled) { return; }
+
 	bDeathHandled = true;
+	SetCanBeDamaged(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DisableAllCollision();
 	SetHitboxesEnabled(false);
 	PlaySFX(DeathHitSound);
+	ApplyDeathMovement();
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{ 
 		GameInstance->AddSoul(SoulAmount); 
@@ -276,7 +299,7 @@ void AEnemyBase::HandleDeath()
 			AI->BrainComponent->StopLogic(TEXT("Death"));
 		}
 	}
-	ApplyDeathMovement();
+
 	//Reset all timers
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
@@ -299,8 +322,16 @@ void AEnemyBase::HandleDeath()
 }
 void AEnemyBase::ApplyDeathMovement()
 {
-	GetCharacterMovement()->DisableMovement();
-	GetCharacterMovement()->SetComponentTickEnabled(false);
+//GetCharacterMovement()->DisableMovement();
+//GetCharacterMovement()->SetComponentTickEnabled(false);
+//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+
+	Movement->SetAvoidanceEnabled(false);
+	Movement->StopMovementImmediately();
+	Movement->DisableMovement();
+	Movement->SetComponentTickEnabled(false);
+
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 void AEnemyBase::AttackHitCheck()
@@ -321,10 +352,10 @@ void AEnemyBase::AttackHitCheck()
 
 	const bool bHit = GetWorld()->OverlapMultiByObjectType(AttackHits, Start, FQuat::Identity, ObjParams,FCollisionShape::MakeSphere(AttackRadius), Params);
 	// for DEBUUYG
-#if ENABLE_DRAW_DEBUG
-	DrawDebugSphere(GetWorld(), Start, AttackRadius, 12,
-		bHit ? FColor::Red : FColor::Green, false, 1.0f);
-#endif
+//#if ENABLE_DRAW_DEBUG
+//	DrawDebugSphere(GetWorld(), Start, AttackRadius, 12,
+//		bHit ? FColor::Red : FColor::Green, false, 1.0f);
+//#endif
 	//no hit -> return
 	if (!bHit)
 	{
@@ -404,6 +435,20 @@ FVector AEnemyBase::GetDropLocation() const
 {
 	return GetActorLocation();
 }
+FVector AEnemyBase::GetMuzzleLocation() const
+{
+	const FVector Forward = GetActorForwardVector();
+
+	return GetActorLocation()+ Forward * MuzzleForwardOffset + FVector(0.f, 0.f, MuzzleHeightOffset);
+}
+FVector AEnemyBase::GetAimLocation() const
+{
+	if (const AActor* Target = GetAttackTarget())
+	{
+		return Target->GetActorLocation() + FVector(0.f, 0.f, AimHeightOffset);
+	}
+	return GetMuzzleLocation() + GetActorForwardVector() * 1000.f;
+}
 void AEnemyBase::PlaySFXAt(const UObject* WorldContext, const FSFXVolume& SFX, const FVector& Location)
 {
 	if (!SFX.Sound || !WorldContext)
@@ -443,18 +488,18 @@ void AEnemyBase::FireProjectile2(float InSpeed, float InDamage, float YawOffset,
 		return;
 	}
 
-	const AActor* Target = GetAttackTarget();
 	UWorld* World = GetWorld();
-	if (!Target || !World)
+	if (!World || !GetAttackTarget())
 	{
 		return;
 	}
 
-	const FVector Muzzle = GetActorLocation() + GetActorForwardVector() * MuzzleOffset;
-	const FVector AimPoint = Target->GetActorLocation() + FVector(0.f, 0.f, AimHeightOffset);
-	FRotator FireRot = (AimPoint - Muzzle).Rotation();
+	const FVector Muzzle = GetMuzzleLocation();  
+	const FVector AimPoint = GetAimLocation();   
 
+	FRotator FireRot = (AimPoint - Muzzle).Rotation();
 	FireRot.Yaw += YawOffset;
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;

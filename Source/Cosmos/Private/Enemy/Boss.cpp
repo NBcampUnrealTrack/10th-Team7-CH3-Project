@@ -113,6 +113,7 @@ float ABoss::StartBurst()
 	{
 		PlayAnimMontage(BurstMontage);
 	}
+	PlaySFX(BurstSound);
 	GetWorldTimerManager().SetTimer(MechTimerHandle, this, &ABoss::FireBurst, BurstInterval, true,	BurstStartDelay);
 	return BurstStartDelay + BurstInterval * BurstRemaining + PatternEndDelay;
 }
@@ -123,6 +124,7 @@ void ABoss::FireBurst()
 		GetWorldTimerManager().ClearTimer(MechTimerHandle);
 		return;
 	}
+	PlaySFX(BurstProjectileSound);
 	FaceTarget(GetAttackTarget());
 	FireProjectile2(BurstSpeed, BurstDamage, 0.f, BurstProjectileClass);
 	if (--BurstRemaining <= 0)
@@ -138,6 +140,8 @@ float ABoss::StartSpread()
 		PlayAnimMontage(SpreadMontage);
 	}
 
+	PlaySFX(SpreadSound);
+	PlaySFX(SpreadProjectileSound);
 	GetWorldTimerManager().SetTimer(MechTimerHandle, this, &ABoss::FireSpread,SpreadDelay, false);
 	return SpreadDelay + PatternEndDelay;
 }

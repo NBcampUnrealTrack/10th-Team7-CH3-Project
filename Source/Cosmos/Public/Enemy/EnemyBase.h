@@ -46,6 +46,10 @@ public:
 	FORCEINLINE float GetAttackDamage() const { return AttackDamage; }
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
 	FORCEINLINE float GetAttackDelay() const { return AttackDelay; }
+	UFUNCTION(BlueprintPure, Category = "AI|Projectile")
+	FVector GetMuzzleLocation() const;
+	UFUNCTION(BlueprintPure, Category = "Enemy|Projectile")
+	FVector GetAimLocation() const;
 
 	//status getter
 	UFUNCTION(BlueprintPure, Category = "AI|Getters")
@@ -179,10 +183,14 @@ protected:
 	virtual void FireProjectile(float InSpeed, float InDamage);
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
 	TSubclassOf<AEnemyProjectile> ProjectileClass;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
-	float MuzzleOffset = 60.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Projectile")
+	float MuzzleForwardOffset = 60.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Projectile")
+	float MuzzleHeightOffset = 40.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
 	float AimHeightOffset = 50.f;
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Hitbox")
+	bool bBlockPlayer = true;
 
 	UFUNCTION()
 	void HandleDeath();
@@ -195,7 +203,7 @@ protected:
 
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 private:
-	
+	void DisableAllCollision();
 
 	FTimerHandle DeathTimerHandle;
 	FTimerHandle AttackHitTimerHandle;
