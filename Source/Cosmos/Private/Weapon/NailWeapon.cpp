@@ -81,6 +81,7 @@ bool ANailWeapon::PerformAttack()
 
 	if (!bHit) // 안맞은 경우
 	{
+		OnAttackPerformed.Broadcast(bSwingLeftToRight);
 		return true; // 안맞아도 모션은 나가야하니 트루
 	}
 
@@ -109,6 +110,9 @@ bool ANailWeapon::PerformAttack()
 			HitCount++;
 		}
 	}
+
+	OnAttackPerformed.Broadcast(bSwingLeftToRight);
+
 
 	return true;
 }

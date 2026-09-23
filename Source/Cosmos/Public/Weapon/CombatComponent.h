@@ -28,6 +28,7 @@ public:
 	UPROPERTY(BlueprintAssignable) // 추가: 포션을 실제로 마셨을 때만 방송
 	FOnPotionUsed OnPotionUsed;
 
+	UFUNCTION(BlueprintPure, Category = "Combat")
 	bool IsCombatReady() const { return bCombatReady; }
 
 	//UI쪽에서 써야돼서 public
@@ -68,7 +69,7 @@ protected:
 	ANailWeapon* NailWeapon;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	AShotgunWeapon* ShotgunWeapon;
-
+	
 	bool bCombatReady = false; // 초기화 완료 여부
 
 	//입력 연결 함수
