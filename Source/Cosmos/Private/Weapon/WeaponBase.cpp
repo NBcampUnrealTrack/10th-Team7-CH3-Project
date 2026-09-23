@@ -58,16 +58,16 @@ bool AWeaponBase::TryApplyDamage(AActor* HitActor) // 데미지를 준 경우에
 
 	UHealthComponent* TargetHealth = HitActor->FindComponentByClass<UHealthComponent>(); // 킬 판정용
 	const bool bWasAlive = TargetHealth && !TargetHealth->IsDead(); // 때리기 전 생존 여부
-
 	Damageable->TakeHit(GetCurrentDamage(), GetWeaponType());
-	UE_LOG(LogTemp, Warning, TEXT("Current Damage : %f"), GetCurrentDamage());
-	OnHitConfirmed.Broadcast(HitActor); // 적이 맞았을때 방송
-
+	
 	if (bWasAlive && TargetHealth->IsDead()) // 이번 공격으로 죽었으면 킬
 	{
 		OnKillConfirmed.Broadcast(HitActor);
 	}
-
+	else
+	{
+		OnHitConfirmed.Broadcast(HitActor);  // 안 죽었으면 히트마커만
+	}
 	return true; // 데미지를 준 경우
 }
 

@@ -211,6 +211,9 @@ public:
 	void HandleKillConfirmed(AActor* Victim); // 킬 마커 표시하기 위한 함수
 
 	UFUNCTION()
+	void HandleHitConfirmed(AActor* Target); // 추가
+
+	UFUNCTION()
 	void HandlePlayerDamaged(float Damage);
 
 protected:

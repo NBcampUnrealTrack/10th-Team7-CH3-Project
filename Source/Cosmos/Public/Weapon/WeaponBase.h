@@ -35,6 +35,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetAnimationPlayRate() const;
 
+	UFUNCTION(BlueprintPure, Category = "Weapon") // 공격속도에 따라 모션 속도를 설정해야하니
+	float GetCurrentAttackInterval() const;
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	float GetCurrentDamage() const;
 protected:
 	virtual void BeginPlay() override;
 	virtual bool PerformAttack() PURE_VIRTUAL(AWeaponBase::PerformAttack, return false; ); // 탄 없을때 공격모션 나가지 않도록 bool
@@ -48,10 +52,6 @@ protected:
 	virtual EEnchantStat GetSpeedStatType() const { return EEnchantStat::None; }
 	virtual EEnchantStat GetDamageAddStatType() const { return EEnchantStat::None; }
 	virtual EEnchantStat GetDamageMultiStatType() const { return EEnchantStat::None; }
-	UFUNCTION(BlueprintPure, Category = "Weapon") // 공격속도에 따라 모션 속도를 설정해야하니
-	float GetCurrentAttackInterval() const; 
-	UFUNCTION(BlueprintPure, Category = "Weapon")
-	float GetCurrentDamage() const;
 	float GetEnchantStat(EEnchantStat Stat) const; // 인챈트로 얼마나 스탯이 늘어나는지.
 	virtual float GetUpgradeBonus(EEnchantStat Stat) const { return 0.f; }
 

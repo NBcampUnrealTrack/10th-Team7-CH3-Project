@@ -188,6 +188,11 @@ void ACosPlayerController::SetupCharacterBindings()
 					Weapon->OnKillConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleKillConfirmed);
 					Weapon->OnKillConfirmed.AddDynamic(this, &ACosPlayerController::HandleKillConfirmed);
 				}
+				if (AShotgunWeapon* Shotgun = Cast<AShotgunWeapon>(Attached))
+				{
+					Shotgun->OnHitConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleHitConfirmed);
+					Shotgun->OnHitConfirmed.AddDynamic(this, &ACosPlayerController::HandleHitConfirmed);
+				}
 			}
 		}
 	}
@@ -742,6 +747,14 @@ void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
 	if (IsValid(CombatHUDInstance.Get()))
 	{
 		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayKillMarker"), *GLog, nullptr, true);
+	}
+}
+
+void ACosPlayerController::HandleHitConfirmed(AActor* Target)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayHitMarker"), *GLog, nullptr, true);
 	}
 }
 
