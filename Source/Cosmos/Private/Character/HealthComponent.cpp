@@ -24,6 +24,7 @@ void UHealthComponent::ApplyDamage(float Damage, EWeaponType Weapon)
 	);
 
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	OnDamaged.Broadcast(Damage);
 
 	if (IsDead())
 	{

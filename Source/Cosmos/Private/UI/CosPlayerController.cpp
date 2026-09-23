@@ -5,7 +5,8 @@
 #include "Character/HealthComponent.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ShotgunWeapon.h"
-#include "Weapon/CombatComponent.h"   
+#include "Weapon/CombatComponent.h"
+#include "Weapon/CosLegacyCameraShake.h"
 #include "Data/CosGameInstance.h" 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -37,6 +38,7 @@ ACosPlayerController::ACosPlayerController()
 	ESCWidgetClass(nullptr),
 	ESCWidgetInstance(nullptr)
 {
+	CosLegacyCameraShakeClass = UCosLegacyCameraShake::StaticClass();
 }
 	
 
@@ -146,6 +148,10 @@ void ACosPlayerController::SetupCharacterBindings()
 			HealthComp->OnDeath.RemoveDynamic(this, &ACosPlayerController::OnCharacterDeath);
 			HealthComp->OnDeath.AddDynamic(this, &ACosPlayerController::OnCharacterDeath);
 
+			// 피격 이벤트. 카메라 흔들림
+			HealthComp->OnDamaged.RemoveDynamic(this, &ACosPlayerController::HandlePlayerDamaged);
+			HealthComp->OnDamaged.AddDynamic(this, &ACosPlayerController::HandlePlayerDamaged);
+
 			// 초기 체력값 UI 즉시 반영 함수
 			UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
 		}
@@ -181,6 +187,11 @@ void ACosPlayerController::SetupCharacterBindings()
 				{
 					Weapon->OnKillConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleKillConfirmed);
 					Weapon->OnKillConfirmed.AddDynamic(this, &ACosPlayerController::HandleKillConfirmed);
+				}
+				if (AShotgunWeapon* Shotgun = Cast<AShotgunWeapon>(Attached))
+				{
+					Shotgun->OnHitConfirmed.RemoveDynamic(this, &ACosPlayerController::HandleHitConfirmed);
+					Shotgun->OnHitConfirmed.AddDynamic(this, &ACosPlayerController::HandleHitConfirmed);
 				}
 			}
 		}
@@ -739,6 +750,14 @@ void ACosPlayerController::HandleKillConfirmed(AActor* Victim)
 	}
 }
 
+void ACosPlayerController::HandleHitConfirmed(AActor* Target)
+{
+	if (IsValid(CombatHUDInstance.Get()))
+	{
+		CombatHUDInstance->CallFunctionByNameWithArguments(TEXT("PlayHitMarker"), *GLog, nullptr, true);
+	}
+}
+
 void ACosPlayerController::OnBossBGMRequested_Implementation()
 {
 	// BP가 보스 BGM(BGM_Combat_Boss)을 연결하기 전까지는 일반 전투 BGM으로 대신합니다.
@@ -755,4 +774,12 @@ void ACosPlayerController::HandleGameOverRequested()
 	}
 
 	ShowGameOver(CurrentSoul);
+}
+
+void ACosPlayerController::HandlePlayerDamaged(float Damage)
+{
+	if (IsValid(CosLegacyCameraShakeClass))
+	{
+		ClientStartCameraShake(CosLegacyCameraShakeClass);
+	}
 }

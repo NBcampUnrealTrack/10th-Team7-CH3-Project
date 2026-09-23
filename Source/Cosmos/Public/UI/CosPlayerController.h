@@ -12,6 +12,7 @@ class UUserWidget;
 class UInputMappingContext;
 class UHealthComponent;
 class AShotgunWeapon;
+class UCameraShakeBase;
 
 USTRUCT(BlueprintType)
 struct FWaveResultData
@@ -117,6 +118,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	TObjectPtr<UInputAction> LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TSubclassOf<UCameraShakeBase> CosLegacyCameraShakeClass; // 피격 시 재생할 카메라 흔들림
+
 	void UpdateKillUI(int32 KillCount);
 
 	UFUNCTION()
@@ -205,6 +209,12 @@ public:
 
 	UFUNCTION()
 	void HandleKillConfirmed(AActor* Victim); // 킬 마커 표시하기 위한 함수
+
+	UFUNCTION()
+	void HandleHitConfirmed(AActor* Target); // 추가
+
+	UFUNCTION()
+	void HandlePlayerDamaged(float Damage);
 
 protected:
 	virtual void BeginPlay() override;
