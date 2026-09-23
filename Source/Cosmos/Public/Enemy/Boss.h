@@ -60,7 +60,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Attack")
 	int32 SpreadCount = 10;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Attack")
-	float SpreadAngle = 45.f;
+	float SpreadAngle = 60.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Attack")
 	float SpreadDelay = 0.5f;
 
@@ -87,12 +87,20 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
 	TSubclassOf<AEnemyProjectile> BurstProjectileClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile")
+	FSFXVolume BurstSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile")
+	FSFXVolume BurstProjectileSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
 	float BurstSpeed;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
 	float BurstDamage;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
 	TSubclassOf<AEnemyProjectile> SpreadProjectileClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile")
+	FSFXVolume SpreadSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile")
+	FSFXVolume SpreadProjectileSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
 	float SpreadSpeed;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Projectile")
@@ -105,7 +113,7 @@ protected:
 	TObjectPtr<UAnimMontage> TeleportStartMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Anim")
 	TObjectPtr<UAnimMontage> TeleportEndMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BossTelport")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Telport")
 	FSFXVolume SinkSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Telport")
 	FSFXVolume RiseSound;
