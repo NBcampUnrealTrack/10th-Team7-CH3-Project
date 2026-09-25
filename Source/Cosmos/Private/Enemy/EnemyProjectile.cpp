@@ -76,9 +76,7 @@ void AEnemyProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, U
 	{
 			if (IDamageable* Target = Cast<IDamageable>(OtherActor))
 		{
-				UE_LOG(LogTemp, Warning, TEXT("[%s] TakeHit ¡æ %s / Damage = %.1f"),
-					*GetName(), *OtherActor->GetName(), Damage);
-			Target->TakeHit(Damage, EWeaponType::None);
+			Target->TakeHitAlt(Damage, EWeaponType::None, Hit);
 			AEnemyBase::PlaySFXAt(this, HitPlayerSound, Hit.ImpactPoint);
 		}
 		else

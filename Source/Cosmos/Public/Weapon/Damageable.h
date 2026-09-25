@@ -17,4 +17,8 @@ class COSMOS_API IDamageable
 
 public:
 	virtual void TakeHit(float Damage, EWeaponType Weapon) = 0;
+	virtual void TakeHitAlt(float Damage, EWeaponType Weapon, const FHitResult& Hit)
+	{
+		TakeHit(Damage, Weapon);
+	}
 };

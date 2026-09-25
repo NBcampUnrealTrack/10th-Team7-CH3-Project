@@ -26,6 +26,7 @@ public:
 	// Damageable functions 
 	////
 	virtual void TakeHit(float Damage, EWeaponType Weapon) override;
+	virtual void TakeHitAlt(float Damage, EWeaponType Weapon, const FHitResult& Hit) override;
 	////
 	//UFUNCTION(BlueprintPure, Category = "Enemy|Stats")
 	//FORCEINLINE float GetAttackRange() const { return RuntimeStats.AttackRange; }
@@ -128,18 +129,27 @@ protected:
 	FSFXVolume ProjectileHitSound;
 	//Effect
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
-	TObjectPtr<UNiagaraSystem> HitVFX;
+	TObjectPtr<UNiagaraSystem> BloodHitVFX;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
-	FVector HitVFXScale = FVector(1.f);
+	FVector BloodHitVFXScale = FVector(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	TObjectPtr<UNiagaraSystem> MeleeHitVFX;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	FVector MeleeHitVFXScale = FVector(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	TObjectPtr<UNiagaraSystem> RangeHitVFX;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	FVector RangeHitVFXScale = FVector(1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
 	float HitVFXHeightOffset = 0.f;
 
-	void PlayHitVFX();
+	void PlayHitVFX(EWeaponType weapon);
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlayRandomSFX(const TArray<FSFXVolume>& Sounds);
 	void PlaySequentialSFX(const TArray<FSFXVolume>& Sounds, int32& InOutIndex);
+	bool ResolveImpactPoint(const FHitResult& Hit, FVector& OutPoint, FVector& OutNormal) const;
 
 	//Delay for Dead Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim", meta = (ClampMin = "0.0"))
@@ -182,7 +192,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "AI|Projectile")
 	virtual void FireProjectile(float InSpeed, float InDamage);
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Projectile")
-	TSubclassOf<AEnemyProjectile> ProjectileClass;
+	TSubclassOf<AEnemyProjectile> ProjectileClass; 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Projectile")
 	float MuzzleForwardOffset = 60.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Projectile")
@@ -191,7 +201,8 @@ protected:
 	float AimHeightOffset = 50.f;
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Hitbox")
 	bool bBlockPlayer = true;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
+	float HitVFXInterval = 0.05f;
 	UFUNCTION()
 	void HandleDeath();
 	virtual void ApplyDeathMovement();
@@ -204,7 +215,10 @@ protected:
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 private:
 	void DisableAllCollision();
-
+	FVector LastHitPoint = FVector::ZeroVector;
+	FVector LastHitNormal = FVector::ZeroVector;
+	bool bHasLastHit = false;
+	float LastHitVFXTime = -1.f;
 	FTimerHandle DeathTimerHandle;
 	FTimerHandle AttackHitTimerHandle;
 	FTimerHandle StaggerTimerHandle;
