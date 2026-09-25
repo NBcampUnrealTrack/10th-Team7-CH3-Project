@@ -227,17 +227,61 @@ float AEnemyBase::EnemyAttack() {
 	}
 	return Duration > 0.0f ? Duration : 1.0f;
 }
+bool AEnemyBase::ResolveImpactPoint(const FHitResult& Hit, FVector& OutPoint, FVector& OutNormal) const
+{
+	if (!Hit.bBlockingHit && !Hit.bStartPenetrating)
+	{
+		return false;  
+	}
+	if (Hit.bStartPenetrating)
+	{
+		UPrimitiveComponent* Comp = Hit.GetComponent();
+		if (!Comp)
+		{
+			return false;
+		}
+
+		FVector Closest;
+		if (Comp->GetClosestPointOnCollision(Hit.TraceStart, Closest) >= 0.f)
+		{
+			OutPoint = Closest;
+		}
+		else
+		{
+			OutPoint = Comp->GetComponentLocation();
+		}
+
+		OutNormal = (Hit.TraceStart - OutPoint).GetSafeNormal();
+		if (OutNormal.IsNearlyZero())
+		{
+			OutNormal = -GetActorForwardVector();
+		}
+		return true;
+	}
+
+	OutPoint = Hit.ImpactPoint;
+	OutNormal = Hit.ImpactNormal;
+	return true;
+}
+void AEnemyBase::TakeHitAlt(float Damage, EWeaponType Weapon, const FHitResult& Hit)
+{
+	bHasLastHit = ResolveImpactPoint(Hit, LastHitPoint, LastHitNormal);
+	TakeHit(Damage, Weapon);
+	bHasLastHit = false; 
+}
 
 void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 {
 	if (ImmuneMelee && Weapon == EWeaponType::Nail)
 	{
 		PlaySFX(HitbyMeleeSound);
+		PlayHitVFX(Weapon);
 		return;
 	}
 	if (ImmuneRange && Weapon == EWeaponType::Shotgun)
 	{
 		PlaySFX(HitbyRangeSound);
+		PlayHitVFX(Weapon);
 		return;
 	}
 	if (Damage <= 0.f || !IsAlive())
@@ -246,7 +290,7 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 	}
 
 	HealthComponent->ApplyDamage(Damage, Weapon);
-	PlayHitVFX();
+	PlayHitVFX(Weapon);
 	if (!IsAlive())
 	{
 		return;
@@ -262,6 +306,43 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 		ApplyStagger();
 	}
 }
+void AEnemyBase::PlayHitVFX(EWeaponType Weapon)
+{
+	if (!MeleeHitVFX && !RangeHitVFX) { return; }
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (LastHitVFXTime >= 0.f && (Now - LastHitVFXTime) < HitVFXInterval)
+	{
+		return;
+	}
+	LastHitVFXTime = Now;
+
+	FVector Location;
+	FRotator Rotation;
+
+	if (bHasLastHit)
+	{
+		Location = LastHitPoint;
+		Rotation = FRotationMatrix::MakeFromZ(LastHitNormal).Rotator();
+	}
+	else 
+	{
+		return;
+	}
+	if (BloodHitVFX) 
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodHitVFX, Location, Rotation, BloodHitVFXScale, true, true, ENCPoolMethod::AutoRelease, true);
+	}
+	if (Weapon == EWeaponType::Nail)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, MeleeHitVFX, Location, Rotation, MeleeHitVFXScale, true, true, ENCPoolMethod::AutoRelease, true);
+	}
+	if (Weapon == EWeaponType::Shotgun)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, RangeHitVFX, Location, Rotation, RangeHitVFXScale, true, true, ENCPoolMethod::AutoRelease, true);
+	}
+	
+}
+
 void AEnemyBase::DisableAllCollision()
 {
 	TInlineComponentArray<UPrimitiveComponent*> Prims(this);
@@ -563,30 +644,4 @@ void AEnemyBase::PlaySequentialSFX(const TArray<FSFXVolume>& Sounds, int32& InOu
 			return;
 		}
 	}
-}
-void AEnemyBase::PlayHitVFX()
-{
-	if (!HitVFX)
-	{
-		return;
-	}
-	FVector Loc = GetActorLocation();
-	FVector ToAttacker = GetActorForwardVector();
-
-	if (const AActor* Attacker = GetAttackTarget())
-	{
-		const FVector Dir = (Attacker->GetActorLocation() - Loc).GetSafeNormal2D();
-		if (!Dir.IsNearlyZero())
-		{
-			ToAttacker = Dir;
-		}
-	}
-
-	if (const UCapsuleComponent* Capsule = GetCapsuleComponent())
-	{
-		Loc += ToAttacker * Capsule->GetScaledCapsuleRadius();
-	}
-	Loc.Z += HitVFXHeightOffset;
-
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this,HitVFX,Loc,ToAttacker.Rotation(),HitVFXScale,true,true,	ENCPoolMethod::AutoRelease,true);                        
 }

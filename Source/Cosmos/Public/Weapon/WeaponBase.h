@@ -29,7 +29,7 @@ public:
 
 	void TryAttack(); // 공격 속도 판단
 	bool TryApplyDamage(AActor* HitActor); // 데미저블 판단을 위해 bool형
-
+	bool TryApplyDamageAlt(AActor* HitActor, const FHitResult& Hit);
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon") // 애니메이션 구현 위해 이벤트로 호출
 	void OnAttackPlayed();
 	UFUNCTION(BlueprintPure, Category = "Weapon")

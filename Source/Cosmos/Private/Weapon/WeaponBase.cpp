@@ -41,25 +41,31 @@ void AWeaponBase::TryAttack() //공격 쿨타임이 지났으면 공격
 	LastAttackTime = CurrentTime;
 	OnAttackPlayed(); // 공격 모션 재생하기 위해
 }
-
+bool AWeaponBase::TryApplyDamage(AActor* HitActor)
+{
+	const FHitResult EmptyHit;
+	return TryApplyDamageAlt(HitActor, EmptyHit);
+}
 //HitResult안에 HitActor도 포함
-bool AWeaponBase::TryApplyDamage(AActor* HitActor) // 데미지를 준 경우에만 true를 리턴해서 대못의 적 공격 수를 카운트함 , 데미저블인지 판단함
+bool AWeaponBase::TryApplyDamageAlt(AActor* HitActor, const FHitResult& Hit)
 {
 	if (!IsValid(HitActor)) //맞은 대상이 없다면
 	{
 		return false;
 	}
 
-	IDamageable* Damageable = Cast<IDamageable>(HitActor); // HitActor가 IDamageable을 포함한다면 데미저블 포인터를 반환
+	IDamageable* Damageable = Cast<IDamageable>(HitActor);
 	if (!Damageable) // 데미지를 받을 수 없다면
 	{
 		return false;
 	}
 
 	UHealthComponent* TargetHealth = HitActor->FindComponentByClass<UHealthComponent>(); // 킬 판정용
-	const bool bWasAlive = TargetHealth && !TargetHealth->IsDead(); // 때리기 전 생존 여부
-	Damageable->TakeHit(GetCurrentDamage(), GetWeaponType());
-	
+	const bool bWasAlive = TargetHealth && !TargetHealth->IsDead();
+
+	// 맞은 지점을 함께 넘긴다. 구현하지 않은 클래스는 기본 구현이 TakeHit 으로 넘겨준다
+	Damageable->TakeHitAlt(GetCurrentDamage(), GetWeaponType(), Hit);
+
 	if (bWasAlive && TargetHealth->IsDead()) // 이번 공격으로 죽었으면 킬
 	{
 		OnKillConfirmed.Broadcast(HitActor);
@@ -68,7 +74,7 @@ bool AWeaponBase::TryApplyDamage(AActor* HitActor) // 데미지를 준 경우에
 	{
 		OnHitConfirmed.Broadcast(HitActor);  // 안 죽었으면 히트마커만
 	}
-	return true; // 데미지를 준 경우
+	return true;
 }
 
 bool AWeaponBase::GetTraceStartAndDirection(FVector& OutStart, FVector& OutDirection) const // 트레이스 방향 정해주는 함수. out 파라미터 형식. 시점 바꾸는 용도
