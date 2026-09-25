@@ -15,7 +15,15 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
-#include "GameFramework/CharacterMovementComponent.h" 
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
+#include "UI/CosLoadingWidget.h"
+#include "UI/CosDialogueWidget.h"
+#include "MediaPlayer.h"
+#include "UObject/ConstructorHelpers.h"
 
 /*
 // 테스트용 임시 체력 변수
@@ -39,6 +47,15 @@ ACosPlayerController::ACosPlayerController()
 	ESCWidgetInstance(nullptr)
 {
 	CosLegacyCameraShakeClass = UCosLegacyCameraShake::StaticClass();
+	LoadingWidgetClass = UCosLoadingWidget::StaticClass();
+	DialogueWidgetClass = UCosDialogueWidget::StaticClass();
+
+	// WBP_Forge가 배경 영상을 재생하는 미디어 플레이어입니다.
+	static ConstructorHelpers::FObjectFinder<UMediaPlayer> ForgeMediaPlayerAsset(TEXT("/Game/Movies/NewMediaPlayer"));
+	if (ForgeMediaPlayerAsset.Succeeded())
+	{
+		ForgeMediaPlayer = ForgeMediaPlayerAsset.Object;
+	}
 }
 	
 
@@ -463,7 +480,68 @@ void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
 
 void ACosPlayerController::HandleForgeRequested()
 {
+	// Day 1에서 쓰러졌다면 대장간에서 깨어나고, 로딩이 걷힌 뒤 첫 대사를 띄웁니다.
+	bPendingFirstForgeDialogue = bIsCollapsed;
+	RecoverFromCollapse();
+
+	// 대장간 배경 영상은 비동기로 열려 처음 몇 프레임이 비어 보일 수 있으므로,
+	// 로딩 화면을 대장간 위에 덮어 두고 영상이 재생되기 시작하면 걷습니다.
+	if (IsValid(LoadingWidgetClass) && !IsValid(LoadingWidgetInstance))
+	{
+		LoadingWidgetInstance = CreateWidget<UUserWidget>(this, LoadingWidgetClass);
+	}
+	if (IsValid(LoadingWidgetInstance.Get()) && !LoadingWidgetInstance->IsInViewport())
+	{
+		LoadingWidgetInstance->AddToViewport(100); // 대장간 위젯보다 위에 그립니다.
+	}
+
 	OpenForgeWidget();
+
+	if (IsValid(LoadingWidgetInstance.Get()))
+	{
+		ForgeLoadingStartTime = GetWorld()->GetRealTimeSeconds();
+		GetWorldTimerManager().SetTimer(ForgeLoadingTimer, this, &ACosPlayerController::CheckForgeLoading, 0.1f, true);
+	}
+	else
+	{
+		ShowFirstForgeDialogue(); // 로딩 화면이 없으면 바로 띄웁니다.
+	}
+}
+
+void ACosPlayerController::ShowFirstForgeDialogue()
+{
+	if (!bPendingFirstForgeDialogue || FirstForgeLine.IsEmpty() || !IsValid(DialogueWidgetClass))
+	{
+		return;
+	}
+	bPendingFirstForgeDialogue = false;
+
+	if (UCosDialogueWidget* Dialogue = CreateWidget<UCosDialogueWidget>(this, DialogueWidgetClass))
+	{
+		Dialogue->AddToViewport(50); // 대장간 위, 로딩 화면 아래
+		Dialogue->ShowLine(FirstForgeSpeaker, FirstForgeLine);
+	}
+}
+
+void ACosPlayerController::CheckForgeLoading()
+{
+	const float Elapsed = GetWorld()->GetRealTimeSeconds() - ForgeLoadingStartTime;
+	const bool bVideoReady = !ForgeMediaPlayer || ForgeMediaPlayer->IsPlaying();
+
+	if ((Elapsed >= ForgeLoadingMinSeconds && bVideoReady) || Elapsed >= ForgeLoadingMaxSeconds)
+	{
+		HideLoadingWidget();
+	}
+}
+
+void ACosPlayerController::HideLoadingWidget()
+{
+	GetWorldTimerManager().ClearTimer(ForgeLoadingTimer);
+	if (IsValid(LoadingWidgetInstance.Get()))
+	{
+		LoadingWidgetInstance->RemoveFromParent();
+	}
+	ShowFirstForgeDialogue();
 }
 
 void ACosPlayerController::OpenForgeWidget()
@@ -553,6 +631,12 @@ void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
 
 bool ACosPlayerController::InputKey(const FInputKeyEventArgs& EventArgs)
 {
+	// 쓰러지는 동안은 ESC 메뉴를 포함한 모든 입력을 무시합니다.
+	if (bIsCollapsing)
+	{
+		return true;
+	}
+
 	if (IsValid(ResultWidgetInstance.Get()) && EventArgs.Event == IE_Pressed)
 	{
 		HideResult();
@@ -575,6 +659,240 @@ void ACosPlayerController::HideResult()
 	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
 	{
 		GM->OnResultConfirmed(); // Forge/NextWave/GameClear 중 하나로 이어짐
+	}
+}
+
+void ACosPlayerController::PlayCollapseThenShowResult(const FWaveResultData& ResultData)
+{
+	APawn* ControlledPawn = GetPawn();
+	UCameraComponent* Camera = ControlledPawn ? ControlledPawn->FindComponentByClass<UCameraComponent>() : nullptr;
+	if (bIsCollapsing || !IsValid(Camera))
+	{
+		ShowResult(ResultData); // 연출을 못 하면 결과창만이라도 띄웁니다.
+		return;
+	}
+
+	PendingCollapseResult = ResultData;
+	bIsCollapsing = true;
+	bIsCollapsed = true;
+	bCollapseImpactPlayed = false;
+
+	// 입력 비활성화, 이동 강제 정지
+	ControlledPawn->DisableInput(this);
+	if (ACharacter* PossessedCharacter = Cast<ACharacter>(ControlledPawn))
+	{
+		if (UCharacterMovementComponent* MoveComp = PossessedCharacter->GetCharacterMovement())
+		{
+			MoveComp->StopMovementImmediately();
+		}
+	}
+	CloseCombatHUD();
+	CollapseCamera = Camera;
+
+	// 먼저 심박만 들리다가 HeartbeatDuration 뒤에 쓰러집니다.
+	if (HeartbeatSound)
+	{
+		HeartbeatAudio = UGameplayStatics::SpawnSound2D(this, HeartbeatSound);
+	}
+
+	// 심박에 맞춰 화면이 붉게 번쩍입니다.
+	HeartbeatFlashesLeft = HeartbeatFlashCount;
+	if (HeartbeatFlashesLeft > 0)
+	{
+		GetWorldTimerManager().SetTimer(HeartbeatFlashTimer, this, &ACosPlayerController::PlayHeartbeatFlash,
+			HeartbeatFlashInterval, true, FMath::Max(HeartbeatFlashFirstDelay, KINDA_SMALL_NUMBER));
+	}
+
+	if (HeartbeatDuration > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(CollapseFallTimer, this, &ACosPlayerController::BeginCollapseFall, HeartbeatDuration, false);
+	}
+	else
+	{
+		BeginCollapseFall();
+	}
+}
+
+void ACosPlayerController::PlayHeartbeatFlash()
+{
+	if (HeartbeatFlashesLeft <= 0)
+	{
+		GetWorldTimerManager().ClearTimer(HeartbeatFlashTimer);
+		return;
+	}
+	--HeartbeatFlashesLeft;
+
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(
+			HeartbeatFlashAlpha, 0.0f, HeartbeatFlashDuration, HeartbeatFlashColor, false, false);
+	}
+
+	if (HeartbeatFlashesLeft <= 0)
+	{
+		GetWorldTimerManager().ClearTimer(HeartbeatFlashTimer);
+	}
+}
+
+void ACosPlayerController::BeginCollapseFall()
+{
+	// 쓰러지기 시작하면 남은 번쩍임은 취소합니다. 뒤이은 검은 페이드와 겹치지 않게 합니다.
+	GetWorldTimerManager().ClearTimer(HeartbeatFlashTimer);
+	HeartbeatFlashesLeft = 0;
+
+	UCameraComponent* Camera = CollapseCamera.Get();
+	if (!Camera)
+	{
+		FinishCollapse();
+		return;
+	}
+
+	// 컨트롤 회전 대신 카메라를 직접 기울이기 위해 시작 시선을 기억해 둡니다.
+	CollapseCameraStartLocation = Camera->GetRelativeLocation();
+	CollapseStartPitch = GetControlRotation().GetNormalized().Pitch;
+	Camera->bUsePawnControlRotation = false;
+	CollapseStartTime = GetWorld()->GetTimeSeconds();
+
+	UpdateCollapseCamera();
+	GetWorldTimerManager().SetTimer(CollapseCameraTimer, this, &ACosPlayerController::UpdateCollapseCamera, 0.01f, true);
+	GetWorldTimerManager().SetTimer(CollapseFadeTimer, this, &ACosPlayerController::StartCollapseFade,
+		FMath::Max(CollapseFadeDelay, KINDA_SMALL_NUMBER), false);
+	GetWorldTimerManager().SetTimer(CollapseResultTimer, this, &ACosPlayerController::FinishCollapse,
+		FMath::Max(CollapseResultDelay, KINDA_SMALL_NUMBER), false);
+}
+
+void ACosPlayerController::UpdateCollapseCamera()
+{
+	UCameraComponent* Camera = CollapseCamera.Get();
+	if (!Camera)
+	{
+		GetWorldTimerManager().ClearTimer(CollapseCameraTimer);
+		return;
+	}
+
+	// 무게감 있는 쓰러짐: 무릎이 꺾이고(Buckle) → 잠깐 버티다 무게에 끌려 넘어가고(Topple)
+	// → 바닥에 부딪혀 살짝 튕긴 뒤 가라앉습니다(Settle).
+	constexpr float BuckleRatio = 0.4f;      // 쓰러지는 시간 중 무릎이 꺾이는 구간 비율
+	constexpr float BuckleDropRatio = 0.3f;  // 무릎이 꺾이며 내려가는 높이 비율
+	constexpr float BuckleTiltRatio = 0.1f;  // 무릎이 꺾이며 기우는 각도 비율
+	constexpr float SettleDuration = 0.45f;  // 바닥에 닿은 뒤 가라앉는 시간(초)
+	constexpr float BounceRatio = 0.05f;     // 바닥에서 튕겨 오르는 높이 비율
+	constexpr float ImpactNodPitch = 5.0f;   // 부딪힐 때 고개가 툭 숙여지는 각도
+
+	const float FallDuration = FMath::Max(CollapseFallDuration, 0.01f);
+	const float BuckleTime = FallDuration * BuckleRatio;
+	const float Elapsed = GetWorld()->GetTimeSeconds() - CollapseStartTime;
+
+	float DropAlpha = 1.0f;
+	float TiltAlpha = 1.0f;
+	float ImpactOffset = 0.0f; // 0 → 튕김 최고점 → 0
+
+	if (Elapsed < BuckleTime)
+	{
+		// 힘이 빠지듯 확 내려앉았다가 느려지며 버팁니다.
+		const float T = Elapsed / BuckleTime;
+		DropAlpha = BuckleDropRatio * FMath::InterpEaseOut(0.0f, 1.0f, T, 3.0f);
+		TiltAlpha = BuckleTiltRatio * FMath::InterpEaseInOut(0.0f, 1.0f, T, 2.0f);
+	}
+	else if (Elapsed < FallDuration)
+	{
+		// 천천히 기울기 시작해 중력처럼 가속하며 바닥으로 떨어집니다.
+		const float T = (Elapsed - BuckleTime) / (FallDuration - BuckleTime);
+		DropAlpha = FMath::Lerp(BuckleDropRatio, 1.0f, FMath::InterpEaseIn(0.0f, 1.0f, T, 2.5f));
+		TiltAlpha = FMath::Lerp(BuckleTiltRatio, 1.0f, FMath::InterpEaseIn(0.0f, 1.0f, T, 2.0f));
+	}
+	else
+	{
+		if (!bCollapseImpactPlayed)
+		{
+			bCollapseImpactPlayed = true;
+			if (CollapseSound)
+			{
+				UGameplayStatics::PlaySound2D(this, CollapseSound); // 털썩
+			}
+		}
+
+		// 짧게 튕겼다가 감쇠하며 가라앉습니다. 떨리는 흔들림 대신 한 번의 묵직한 반동만 줍니다.
+		const float S = FMath::Clamp((Elapsed - FallDuration) / SettleDuration, 0.0f, 1.0f);
+		ImpactOffset = FMath::Sin(PI * S) * (1.0f - S);
+		if (S >= 1.0f)
+		{
+			GetWorldTimerManager().ClearTimer(CollapseCameraTimer);
+		}
+	}
+
+	const float Drop = CollapseCameraDrop * (DropAlpha - BounceRatio * ImpactOffset);
+	Camera->SetRelativeLocation(CollapseCameraStartLocation - FVector(0.0f, 0.0f, Drop));
+	Camera->SetRelativeRotation(FRotator(
+		FMath::Lerp(CollapseStartPitch, CollapseEndPitch, TiltAlpha) - ImpactNodPitch * ImpactOffset,
+		0.0f,
+		CollapseRoll * TiltAlpha));
+}
+
+void ACosPlayerController::StartCollapseFade()
+{
+	if (PlayerCameraManager)
+	{
+		// 끝난 뒤에도 검은 화면을 유지해 결과창 뒤가 비치지 않게 합니다.
+		PlayerCameraManager->StartCameraFade(0.0f, 1.0f, CollapseFadeDuration, FLinearColor::Black, false, true);
+	}
+
+	// 의식이 멀어지듯 심박도 화면과 함께 잦아듭니다.
+	if (UAudioComponent* Heartbeat = HeartbeatAudio.Get())
+	{
+		Heartbeat->FadeOut(FMath::Max(CollapseFadeDuration, 0.01f), 0.0f);
+	}
+}
+
+void ACosPlayerController::FinishCollapse()
+{
+	bIsCollapsing = false;
+	ShowResult(PendingCollapseResult);
+}
+
+void ACosPlayerController::RecoverFromCollapse()
+{
+	if (!bIsCollapsed)
+	{
+		return;
+	}
+	bIsCollapsed = false;
+	bIsCollapsing = false;
+
+	GetWorldTimerManager().ClearTimer(CollapseFallTimer);
+	GetWorldTimerManager().ClearTimer(HeartbeatFlashTimer);
+	HeartbeatFlashesLeft = 0;
+	GetWorldTimerManager().ClearTimer(CollapseCameraTimer);
+	GetWorldTimerManager().ClearTimer(CollapseFadeTimer);
+	GetWorldTimerManager().ClearTimer(CollapseResultTimer);
+
+	if (UAudioComponent* Heartbeat = HeartbeatAudio.Get())
+	{
+		Heartbeat->Stop();
+	}
+	HeartbeatAudio.Reset();
+
+	if (UCameraComponent* Camera = CollapseCamera.Get())
+	{
+		Camera->SetRelativeLocation(CollapseCameraStartLocation);
+		Camera->SetRelativeRotation(FRotator::ZeroRotator);
+		Camera->bUsePawnControlRotation = true;
+	}
+	CollapseCamera.Reset();
+
+	FRotator Upright = GetControlRotation();
+	Upright.Pitch = 0.0f;
+	Upright.Roll = 0.0f;
+	SetControlRotation(Upright);
+
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		ControlledPawn->EnableInput(this);
+	}
+
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(1.0f, 0.0f, WakeUpFadeDuration, FLinearColor::Black, false, false);
 	}
 }
 
@@ -713,6 +1031,16 @@ void ACosPlayerController::ShowGameHUD()
 	// 타이틀 닫고 전투 HUD 표시
 	HideTitleWidget();
 	ShowCombatHUD();
+
+	// 타이틀 BGM을 끕니다. Day 1은 BGM 없이 진행하고, 그 외 스테이지는 전투 BGM으로 바꿉니다.
+	OnStopBGMRequested();
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
+	{
+		if (!GM->IsInDay1())
+		{
+			OnCombatBGMRequested();
+		}
+	}
 
 	// 캐릭터 관련 UI 연결
 	SetupCharacterBindings();

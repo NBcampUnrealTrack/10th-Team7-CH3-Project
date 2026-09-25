@@ -13,6 +13,11 @@ class UInputMappingContext;
 class UHealthComponent;
 class AShotgunWeapon;
 class UCameraShakeBase;
+class UCameraComponent;
+class USoundBase;
+class UAudioComponent;
+class UMediaPlayer;
+class UCosDialogueWidget;
 
 USTRUCT(BlueprintType)
 struct FWaveResultData
@@ -100,6 +105,35 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Instances")
 	TObjectPtr<UUserWidget> ResultWidgetInstance;
 
+	// 결과창 → 대장간 사이에 띄우는 로딩 화면. 기본값은 검은 배경 + LOADING 문구입니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
+	TSubclassOf<UUserWidget> LoadingWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Instances")
+	TObjectPtr<UUserWidget> LoadingWidgetInstance;
+
+	// 대장간 배경 영상을 재생하는 미디어 플레이어. 이게 재생을 시작해야 로딩 화면을 걷습니다. 비우면 최소 시간만 기다립니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Loading")
+	TObjectPtr<UMediaPlayer> ForgeMediaPlayer;
+
+	// 영상이 빨리 준비돼도 로딩 화면을 최소 이만큼(초) 보여줍니다. 깜빡임 방지.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Loading", meta = (ClampMin = "0.0"))
+	float ForgeLoadingMinSeconds = 1.0f;
+
+	// 영상이 끝내 준비되지 않아도 이 시간(초)이 지나면 로딩 화면을 걷습니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Loading", meta = (ClampMin = "0.0"))
+	float ForgeLoadingMaxSeconds = 5.0f;
+
+	// Day 1에 쓰러졌다가 대장간에서 깨어날 때 한 번 띄우는 대사
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue")
+	TSubclassOf<UCosDialogueWidget> DialogueWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue")
+	FText FirstForgeSpeaker;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue", meta = (MultiLine = true))
+	FText FirstForgeLine = FText::FromString(TEXT("정신이 들어? 여기는 대장간이야. 무기를 강화해 줄게."));
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
 	TSubclassOf<UUserWidget> ESCWidgetClass;
 
@@ -161,6 +195,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void HideResult();
 
+	// Day 1 종료 연출. 입력을 막고 시점이 풀썩 쓰러지며 화면이 어두워진 뒤 결과창을 띄웁니다.
+	// 대장간이 열릴 때 시점을 되돌리고 화면을 밝혀 "깨어나는" 것으로 이어집니다.
+	void PlayCollapseThenShowResult(const FWaveResultData& ResultData);
+
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ToggleESCMenu();
 
@@ -218,6 +256,108 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void OnPossess(APawn* InPawn) override; 
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
+
+	// 마지막 적을 잡은 뒤 쓰러지기 전까지 심박 소리만 들리는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float HeartbeatDuration = 2.5f;
+
+	// 쓰러지기 전부터 재생할 심박 소리. 화면이 어두워지는 동안 서서히 작아집니다.
+	// 구간보다 짧은 소리면 반복되도록 Looping을 켠 사운드(큐)를 넣으세요. 비워두면 재생하지 않습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse")
+	TObjectPtr<USoundBase> HeartbeatSound;
+
+	// 심박이 들리는 동안 화면이 붉게 번쩍이는 횟수. 0이면 번쩍이지 않습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash", meta = (ClampMin = "0"))
+	int32 HeartbeatFlashCount = 2;
+
+	// 심박 시작 후 첫 번쩍임까지(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash", meta = (ClampMin = "0.0"))
+	float HeartbeatFlashFirstDelay = 0.3f;
+
+	// 번쩍임 사이 간격(초). 심박 소리 박자에 맞추세요.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash", meta = (ClampMin = "0.05"))
+	float HeartbeatFlashInterval = 0.9f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash")
+	FLinearColor HeartbeatFlashColor = FLinearColor(0.6f, 0.0f, 0.0f);
+
+	// 번쩍이는 순간의 진하기(0~1)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HeartbeatFlashAlpha = 0.45f;
+
+	// 번쩍인 뒤 사라지는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse|Flash", meta = (ClampMin = "0.0"))
+	float HeartbeatFlashDuration = 0.5f;
+
+	// 시점이 바닥까지 떨어지는 데 걸리는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.01"))
+	float CollapseFallDuration = 0.9f;
+
+	// 카메라가 내려가는 거리(cm). 눈높이에서 바닥 근처까지.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float CollapseCameraDrop = 140.0f;
+
+	// 옆으로 쓰러지며 기울어지는 각도(도). 음수면 반대쪽으로 쓰러집니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "-89.0", ClampMax = "89.0"))
+	float CollapseRoll = 75.0f;
+
+	// 쓰러진 뒤 시선의 위아래 각도(도). 0이면 수평.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "-89.0", ClampMax = "89.0"))
+	float CollapseEndPitch = 0.0f;
+
+	// 아래 시간들은 심박이 끝나고 쓰러지기 시작한 순간부터 셉니다.
+	// 쓰러지기 시작한 뒤 화면이 어두워지기 시작할 때까지(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float CollapseFadeDelay = 0.4f;
+
+	// 화면이 완전히 검게 되기까지 걸리는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float CollapseFadeDuration = 1.6f;
+
+	// 쓰러지기 시작한 뒤 결과창이 뜰 때까지(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float CollapseResultDelay = 3.0f;
+
+	// 대장간에서 깨어날 때 화면이 밝아지는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse", meta = (ClampMin = "0.0"))
+	float WakeUpFadeDuration = 1.5f;
+
+	// 바닥에 털썩 닿는 순간 재생할 소리. 비워두면 재생하지 않습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day1|Collapse")
+	TObjectPtr<USoundBase> CollapseSound;
+
+private:
+	void CheckForgeLoading();
+	void HideLoadingWidget();
+	FTimerHandle ForgeLoadingTimer;
+	float ForgeLoadingStartTime = 0.0f;
+
+	void ShowFirstForgeDialogue();
+	bool bPendingFirstForgeDialogue = false;
+
+	void BeginCollapseFall();
+	void PlayHeartbeatFlash();
+	void UpdateCollapseCamera();
+	void StartCollapseFade();
+	void FinishCollapse();
+	void RecoverFromCollapse();
+
+	FTimerHandle CollapseFallTimer;
+	FTimerHandle HeartbeatFlashTimer;
+	int32 HeartbeatFlashesLeft = 0;
+	FTimerHandle CollapseCameraTimer;
+	FTimerHandle CollapseFadeTimer;
+	FTimerHandle CollapseResultTimer;
+
+	FWaveResultData PendingCollapseResult;
+	TWeakObjectPtr<UCameraComponent> CollapseCamera;
+	TWeakObjectPtr<UAudioComponent> HeartbeatAudio;
+	FVector CollapseCameraStartLocation = FVector::ZeroVector;
+	float CollapseStartPitch = 0.0f;
+	float CollapseStartTime = 0.0f;
+	bool bCollapseImpactPlayed = false;
+	bool bIsCollapsing = false; // 쓰러지는 중. 결과창이 뜨기 전까지 입력을 막습니다.
+	bool bIsCollapsed = false;  // 대장간에서 깨어나기 전까지 true
 };

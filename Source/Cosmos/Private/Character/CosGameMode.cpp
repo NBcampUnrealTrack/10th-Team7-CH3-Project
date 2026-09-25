@@ -11,11 +11,23 @@
 #include "Data/CosGameInstance.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Data/EnchantPickup.h"
+#include "UObject/ConstructorHelpers.h"
 
 ACosGameMode::ACosGameMode()
 {
 	DefaultPawnClass = ACosCharacter::StaticClass();
 	GameStateClass = ACosGameState::StaticClass();
+
+	// 적들이 떨구는 것과 같은 인챈트를 기본값으로 씁니다. BP에서 바꿀 수 있습니다.
+	static ConstructorHelpers::FClassFinder<AEnchantPickup> EnchantPickupBP(
+		TEXT("/Game/Cosmos/BluePrints/BP_EnchantPickup"));
+	if (EnchantPickupBP.Succeeded())
+	{
+		Day1EnchantPickupClass = EnchantPickupBP.Class;
+	}
 }
 
 void ACosGameMode::BeginPlay()
@@ -148,6 +160,17 @@ void ACosGameMode::StartDay1(ATutorialDeer* Deer)
 
 	Deer->OnDeerKilled.AddDynamic(this, &ACosGameMode::HandleDeerKilled);
 
+	// Day 1 동안 떨어진 인챈트 수와 획득 여부를 추적합니다.
+	Day1EnchantDropCount = 0;
+	bDay1EnchantCollected = false;
+	bDay1ClearWaitingForEnchant = false;
+	Day1ActorSpawnedHandle = GetWorld()->AddOnActorSpawnedHandler(
+		FOnActorSpawned::FDelegate::CreateUObject(this, &ACosGameMode::HandleDay1ActorSpawned));
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		GI->OnEnchantCollected.AddDynamic(this, &ACosGameMode::HandleDay1EnchantCollected);
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 시작 - 사슴 대기"));
 	OnDayStarted.Broadcast(GetCurrentDay());
 }
@@ -162,6 +185,34 @@ void ACosGameMode::HandleDeerKilled(ATutorialDeer* Deer)
 	UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 사슴 사망 -> %.1f초 후 구울 %d마리"),
 		Day1GhoulDelay, Day1GhoulCount);
 
+	// 사슴이 죽는 순간부터 안개가 점점 짙어집니다.
+	if (WaveSpawner)
+	{
+		WaveSpawner->StartTutorialFogFadeIn();
+	}
+
+	// 저주가 걸리는 순간 화면이 붉게 한 번 번쩍였다가 사라집니다.
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (PC->PlayerCameraManager && Day1FlashAlpha > 0.0f)
+		{
+			PC->PlayerCameraManager->StartCameraFade(
+				Day1FlashAlpha, 0.0f, Day1FlashDuration, Day1FlashColor, false, false);
+		}
+	}
+
+	// 비명은 사슴 자리에서, 저주·울부짖음은 조금씩 뒤따라 화면 전체에 들립니다.
+	if (Day1DeerDeathSound && Deer)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Day1DeerDeathSound, Deer->GetActorLocation());
+	}
+	GetWorldTimerManager().SetTimer(Day1CurseSoundTimer,
+		FTimerDelegate::CreateUObject(this, &ACosGameMode::PlayDay1Sound, Day1CurseSound.Get()),
+		FMath::Max(Day1CurseSoundDelay, KINDA_SMALL_NUMBER), false);
+	GetWorldTimerManager().SetTimer(Day1GhostWailSoundTimer,
+		FTimerDelegate::CreateUObject(this, &ACosGameMode::PlayDay1Sound, Day1GhostWailSound.Get()),
+		FMath::Max(Day1GhostWailSoundDelay, KINDA_SMALL_NUMBER), false);
+
 	if (Day1GhoulDelay > 0.0f)
 	{
 		GetWorldTimerManager().SetTimer(
@@ -173,6 +224,52 @@ void ACosGameMode::HandleDeerKilled(ATutorialDeer* Deer)
 	}
 }
 
+void ACosGameMode::HandleDay1ActorSpawned(AActor* SpawnedActor)
+{
+	if (bInDay1 && SpawnedActor && SpawnedActor->IsA<AEnchantPickup>())
+	{
+		++Day1EnchantDropCount;
+	}
+}
+
+void ACosGameMode::HandleDay1EnchantCollected(UEnchantData* CollectedEnchant)
+{
+	if (!bInDay1 || bDay1EnchantCollected)
+	{
+		return;
+	}
+	bDay1EnchantCollected = true;
+
+	// 구울을 다 잡고 인챈트를 기다리던 중이면 이제 Day 1을 끝냅니다.
+	if (bDay1ClearWaitingForEnchant && !bGameOver)
+	{
+		bDay1ClearWaitingForEnchant = false;
+		UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 인챈트 획득 - Day 1 종료"));
+		HandleWaveCleared(0);
+	}
+}
+
+void ACosGameMode::StopTrackingDay1Enchant()
+{
+	if (Day1ActorSpawnedHandle.IsValid())
+	{
+		GetWorld()->RemoveOnActorSpawnedHandler(Day1ActorSpawnedHandle);
+		Day1ActorSpawnedHandle.Reset();
+	}
+	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+	{
+		GI->OnEnchantCollected.RemoveDynamic(this, &ACosGameMode::HandleDay1EnchantCollected);
+	}
+}
+
+void ACosGameMode::PlayDay1Sound(USoundBase* Sound)
+{
+	if (Sound && !bGameOver)
+	{
+		UGameplayStatics::PlaySound2D(this, Sound);
+	}
+}
+
 void ACosGameMode::SpawnDay1Ghouls()
 {
 	if (!bInDay1 || bGameOver || !WaveSpawner)
@@ -180,12 +277,7 @@ void ACosGameMode::SpawnDay1Ghouls()
 		return;
 	}
 
-	if (ACosPlayerController* CosPC =
-		Cast<ACosPlayerController>(
-			UGameplayStatics::GetPlayerController(this, 0)))
-	{
-		CosPC->OnCombatBGMRequested();
-	}
+	// Day 1은 전투 BGM 없이 안개와 효과음만으로 진행합니다.
 
 	// 구울이 전멸하면 스포너가 Stage 0 클리어를 방송하고 HandleWaveCleared로 이어집니다.
 	WaveSpawner->StartTutorialStage(Day1GhoulCount);
@@ -347,6 +439,8 @@ void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통
 
 	StopStageTimer();
 	GetWorldTimerManager().ClearTimer(Day1GhoulTimer);
+	GetWorldTimerManager().ClearTimer(Day1CurseSoundTimer);
+	GetWorldTimerManager().ClearTimer(Day1GhostWailSoundTimer);
 
 	if (WaveSpawner)
 	{
@@ -378,6 +472,49 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		TEXT("[GameMode] HandleWaveCleared 호출 / WaveIndex = %d"),
 		WaveIndex);
 
+	// Day 1은 인챈트를 하나라도 먹어야 끝납니다. 먹는 순간 HandleDay1EnchantCollected가 여기로 다시 부릅니다.
+	if (bInDay1 && WaveIndex == 0 && !bDay1EnchantCollected)
+	{
+		if (!bDay1ClearWaitingForEnchant)
+		{
+			bDay1ClearWaitingForEnchant = true;
+
+			// 확률 드롭이 하나도 안 나왔으면 마지막 구울 자리에 하나 떨굽니다.
+			if (Day1EnchantDropCount == 0)
+			{
+				AEnchantPickup* Pickup = nullptr;
+				if (Day1EnchantPickupClass)
+				{
+					FActorSpawnParameters Params;
+					Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+					Pickup = GetWorld()->SpawnActor<AEnchantPickup>(
+						Day1EnchantPickupClass, LastDay1KillLocation, FRotator::ZeroRotator, Params);
+				}
+				if (!Pickup)
+				{
+					// 떨굴 수 없으면 영원히 못 끝나므로 기다리지 않고 진행합니다.
+					UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 인챈트 드롭 실패(Day1EnchantPickupClass 확인) - 인챈트 없이 진행"));
+					bDay1EnchantCollected = true;
+				}
+			}
+
+			if (!bDay1EnchantCollected)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[GameMode] Day 1 구울 전멸 - 인챈트를 획득할 때까지 대기"));
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	if (bInDay1 && WaveIndex == 0)
+	{
+		StopTrackingDay1Enchant();
+	}
+
 	StopStageTimer();
 
 	// 전투 종료 → BGM 정지
@@ -388,7 +525,9 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		CosPC->OnStopBGMRequested();
 	}
 
-	if (bInDay1 && WaveIndex == 0) // Day 1 종료: 기본 재화 지급 후 첫 대장간
+	const bool bDay1Cleared = bInDay1 && WaveIndex == 0;
+
+	if (bDay1Cleared) // Day 1 종료: 기본 재화 지급 후 첫 대장간
 	{
 		bInDay1 = false;
 
@@ -439,7 +578,15 @@ void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
 		if (ACosPlayerController* CosPC =
 			Cast<ACosPlayerController>(PC))
 		{
-			CosPC->ShowResult(ResultData);
+			if (bDay1Cleared)
+			{
+				// 주인공이 기절한 뒤 결과창 → 대장간에서 깨어남
+				CosPC->PlayCollapseThenShowResult(ResultData);
+			}
+			else
+			{
+				CosPC->ShowResult(ResultData);
+			}
 		}
 	}
 }
@@ -480,6 +627,11 @@ void ACosGameMode::HandlePlayerDeath()
 
 void ACosGameMode::HandleEnemyKilled(AEnemyBase* DeadEnemy)
 {
+	if (bInDay1 && DeadEnemy)
+	{
+		LastDay1KillLocation = DeadEnemy->GetActorLocation(); // 인챈트 보장 드롭 위치
+	}
+
 	if (ACosGameState* GS = GetGameState<ACosGameState>())
 	{
 		GS->AddKill();

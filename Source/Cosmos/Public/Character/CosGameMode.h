@@ -8,6 +8,9 @@ class AWaveSpawner;
 class AEnemyBase;
 class ATutorialDeer;
 class APlayerStart;
+class USoundBase;
+class AEnchantPickup;
+class UEnchantData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForgeRequested);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOver);
@@ -87,7 +90,7 @@ protected:
 
 	// 사슴이 죽은 뒤 나타나는 구울 수
 	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0"))
-	int32 Day1GhoulCount = 3;
+	int32 Day1GhoulCount = 10;
 
 	// 사슴 사망 후 구울 스폰을 시작하기까지의 시간(초)
 	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0.0"))
@@ -97,7 +100,45 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1", meta = (ClampMin = "0"))
 	int32 Day1SoulReward = 300;
 
+	// 사슴(염소)이 죽는 순간 그 자리에서 재생할 비명. 비워두면 재생하지 않습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Sound")
+	TObjectPtr<USoundBase> Day1DeerDeathSound;
+
+	// 사망 후 저주가 걸리는 소리(화면 전체에 들림)
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Sound")
+	TObjectPtr<USoundBase> Day1CurseSound;
+
+	// 사망 후 몇 초 뒤에 저주 소리를 낼지
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Sound", meta = (ClampMin = "0.0"))
+	float Day1CurseSoundDelay = 0.5f;
+
+	// 귀신들이 울부짖는 소리(화면 전체에 들림). 안개가 짙어지는 동안 겹쳐 들리게 합니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Sound")
+	TObjectPtr<USoundBase> Day1GhostWailSound;
+
+	// 사망 후 몇 초 뒤에 울부짖는 소리를 낼지. 구울 등장(Day1GhoulDelay)보다 조금 앞이 자연스럽습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Sound", meta = (ClampMin = "0.0"))
+	float Day1GhostWailSoundDelay = 1.5f;
+
+	// Day 1에 인챈트가 하나도 안 떨어졌을 때 마지막 구울 자리에 떨굴 인챈트. 비워두면 보장하지 않습니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Enchant")
+	TSubclassOf<AEnchantPickup> Day1EnchantPickupClass;
+
+	// 사슴이 죽는 순간 화면이 번쩍이는 색
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Flash")
+	FLinearColor Day1FlashColor = FLinearColor(0.6f, 0.0f, 0.0f);
+
+	// 번쩍이는 순간의 진하기(0~1). 1이면 화면이 완전히 그 색으로 덮입니다.
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Flash", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float Day1FlashAlpha = 0.6f;
+
+	// 번쩍인 뒤 원래 화면으로 돌아오는 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category = "Day|Day1|Flash", meta = (ClampMin = "0.0"))
+	float Day1FlashDuration = 0.8f;
+
 private:
+	void PlayDay1Sound(USoundBase* Sound);
+
 	UPROPERTY()
 	TObjectPtr<AWaveSpawner> WaveSpawner;//WaveSpawner 참조, 게임모드에서 언제 시작할지 결정
 	
@@ -139,7 +180,21 @@ private:
 
 	bool bInDay1 = false;
 
+	// Day 1 인챈트 보장: 떨어진 수를 세고, 하나라도 먹어야 Day 1을 끝냅니다.
+	void HandleDay1ActorSpawned(AActor* SpawnedActor);
+	UFUNCTION()
+	void HandleDay1EnchantCollected(UEnchantData* CollectedEnchant);
+	void StopTrackingDay1Enchant();
+
+	FDelegateHandle Day1ActorSpawnedHandle;
+	int32 Day1EnchantDropCount = 0;
+	bool bDay1EnchantCollected = false;
+	bool bDay1ClearWaitingForEnchant = false;
+	FVector LastDay1KillLocation = FVector::ZeroVector;
+
 	FTimerHandle Day1GhoulTimer;
+	FTimerHandle Day1CurseSoundTimer;
+	FTimerHandle Day1GhostWailSoundTimer;
 
 	// 같은 순간에 사망 + 시간 초과가 같이 발생했을 때 GameOver가 두 번 실행되는 것을 막기 위함
 	bool bGameOver = false;
