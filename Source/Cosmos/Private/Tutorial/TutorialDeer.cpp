@@ -1,5 +1,4 @@
 #include "Tutorial/TutorialDeer.h"
-#include "Animation/AnimSequence.h"
 #include "Components/BoxComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 
@@ -36,17 +35,7 @@ void ATutorialDeer::TakeHit(float Damage, EWeaponType Weapon)
 	}
 
 	bIsDead = true;
-	SetActorEnableCollision(false);
-	if (DeathAnimation && DeerMesh->GetSkeletalMeshAsset())
-	{
-		DeerMesh->PlayAnimation(DeathAnimation, false);
-	}
-	else if (bHideMeshWithoutDeathAnimation)
-	{
-		DeerMesh->SetVisibility(false, true);
-	}
-
-	OnDeathPresentation(Weapon);
+	OnDied();
 	OnDeerKilled.Broadcast(this);
 }
 
@@ -94,8 +83,7 @@ bool FTutorialDeerTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Non-positive damage ignored"), Deer->IsDead());
 	Deer->TakeHit(1.0f, EWeaponType::Shotgun);
 	TestTrue(TEXT("One valid hit kills"), Deer->IsDead());
-	TestFalse(TEXT("Dead deer collision disabled"), Deer->GetActorEnableCollision());
-	TestFalse(TEXT("Dead deer no longer blocks shots"), World->LineTraceSingleByChannel(ShotHit, Start, End, ECC_Weapon));
+	TestFalse(TEXT("Dead deer is not destroyed"), Deer->IsActorBeingDestroyed());
 	Deer->TakeHit(100.0f, EWeaponType::Nail);
 	TestTrue(TEXT("Repeated hit preserves dead state"), Deer->IsDead());
 	World->DestroyWorld(false);

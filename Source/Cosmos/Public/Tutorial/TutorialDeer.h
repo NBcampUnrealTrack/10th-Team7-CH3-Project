@@ -7,7 +7,6 @@
 
 class UBoxComponent;
 class USkeletalMeshComponent;
-class UAnimSequence;
 class ATutorialDeer;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTutorialDeerKilled, ATutorialDeer*, Deer);
@@ -37,18 +36,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tutorial|Deer")
 	TObjectPtr<USkeletalMeshComponent> DeerMesh;
 
-	// 사슴 외형과 호환되는 애니메이션을 BP에서 지정합니다. 없으면 기본적으로 외형을 숨깁니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tutorial|Deer")
-	TObjectPtr<UAnimSequence> DeathAnimation;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tutorial|Deer")
-	bool bHideMeshWithoutDeathAnimation = true;
-
-	// 필요할 때만 BP에서 소리/이펙트/별도 사망 연출을 붙입니다. 컷신은 강제하지 않습니다.
+	// 사망 신호만 보냅니다. 래그돌/애니메이션/콜리전 등 사망 연출은 BP에서 처리합니다.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Tutorial|Deer")
-	void OnDeathPresentation(EWeaponType KillingWeapon);
+	void OnDied();
 
 private:
-	UPROPERTY(VisibleInstanceOnly, Transient, Category = "Tutorial|Deer")
+	UPROPERTY(VisibleInstanceOnly, Transient, BlueprintReadOnly, Category = "Tutorial|Deer", meta = (AllowPrivateAccess = "true"))
 	bool bIsDead = false;
 };
