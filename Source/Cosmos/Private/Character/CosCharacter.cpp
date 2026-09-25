@@ -146,6 +146,14 @@ void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		HealthComponent->ApplyDamage(Damage, Weapon);
 	}
+	if (DamageShake && Damage > 0.f)
+	{
+		const float Scale = FMath::Clamp(Damage / DamageShakeReference, 0.4f, 2.f);
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			PC->ClientStartCameraShake(DamageShake, Scale);
+		}
+	}
 }
 
 

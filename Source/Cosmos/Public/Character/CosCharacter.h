@@ -52,5 +52,8 @@ protected:
 	void StopSprint(const FInputActionValue& Value);
 
 	
-	
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback")
+	TSubclassOf<UCameraShakeBase> DamageShake;
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback", meta = (ClampMin = "1.0"))
+	float DamageShakeReference = 10.f;
 };

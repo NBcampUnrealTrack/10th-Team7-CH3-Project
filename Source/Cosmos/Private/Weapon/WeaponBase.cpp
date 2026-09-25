@@ -3,7 +3,8 @@
 #include "Data/CosGameInstance.h"
 #include "Weapon/SkillComponent.h"
 #include "Character/HealthComponent.h"
-
+#include "Camera/CameraShakeBase.h" 
+#include "GameFramework/PlayerController.h"
 AWeaponBase::AWeaponBase()
 {
 	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot")); // 무기 메쉬
@@ -69,6 +70,7 @@ bool AWeaponBase::TryApplyDamageAlt(AActor* HitActor, const FHitResult& Hit)
 	if (bWasAlive && TargetHealth->IsDead()) // 이번 공격으로 죽었으면 킬
 	{
 		OnKillConfirmed.Broadcast(HitActor);
+		PlayCameraShake(KillShake);
 	}
 	else
 	{
@@ -156,4 +158,20 @@ float AWeaponBase::GetCurrentDamage() const // 최종 데미지
 		GetEnchantStat(GetDamageMultiStatType());
 
 	return (BaseDamage + AddBonus) * (1.f + MultiBonus * 0.01f); // 깡뎀 , 퍼센트가 따로 있음
+}
+void AWeaponBase::PlayCameraShake(TSubclassOf<UCameraShakeBase> Shake, float Scale) const
+{
+	if (!Shake || Scale <= 0.f)
+	{
+		return;
+	}
+	const APawn* OwnerPawn = Cast<APawn>(GetAttachParentActor());
+	if (!OwnerPawn)
+	{
+		return;
+	}
+	if (APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController()))
+	{
+		PC->ClientStartCameraShake(Shake, Scale);
+	}
 }

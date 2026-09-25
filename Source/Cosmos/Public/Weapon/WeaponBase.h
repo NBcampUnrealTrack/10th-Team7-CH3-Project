@@ -11,7 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnKillConfirmed, AActor*, Victim);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackPerformed, bool, bSwingRight);
 
 class USkillComponent;
-
+class UCameraShakeBase;
 UCLASS()
 class COSMOS_API AWeaponBase : public AActor
 {
@@ -68,4 +68,12 @@ protected:
 	float AttackInterval;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float AttackRange;
+	//shake
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Feedback")
+	TSubclassOf<UCameraShakeBase> HitShake;
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Feedback")
+	TSubclassOf<UCameraShakeBase> KillShake;
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Feedback")
+	TSubclassOf<UCameraShakeBase> ShotgunShake;
+	void PlayCameraShake(TSubclassOf<UCameraShakeBase> Shake, float Scale = 1.f) const;
 };
