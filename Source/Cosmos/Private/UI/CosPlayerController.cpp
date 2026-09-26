@@ -22,7 +22,10 @@
 #include "Sound/SoundBase.h"
 #include "UI/CosLoadingWidget.h"
 #include "UI/CosDialogueWidget.h"
+#include "UI/CosIntroVideoWidget.h"
 #include "MediaPlayer.h"
+#include "FileMediaSource.h"
+#include "Misc/Paths.h"
 #include "UObject/ConstructorHelpers.h"
 
 /*
@@ -49,6 +52,7 @@ ACosPlayerController::ACosPlayerController()
 	CosLegacyCameraShakeClass = UCosLegacyCameraShake::StaticClass();
 	LoadingWidgetClass = UCosLoadingWidget::StaticClass();
 	DialogueWidgetClass = UCosDialogueWidget::StaticClass();
+	IntroVideoWidgetClass = UCosIntroVideoWidget::StaticClass();
 
 	// WBP_Forge가 배경 영상을 재생하는 미디어 플레이어입니다.
 	static ConstructorHelpers::FObjectFinder<UMediaPlayer> ForgeMediaPlayerAsset(TEXT("/Game/Movies/NewMediaPlayer"));
@@ -1025,6 +1029,12 @@ void ACosPlayerController::SetUIInputMode(bool bUIMode)
 
 void ACosPlayerController::ShowGameHUD()
 {
+	// 시작을 누르면 오프닝 영상을 먼저 보여주고, 영상이 끝나면 이 함수가 다시 불려 게임을 시작합니다.
+	if (TryPlayIntro())
+	{
+		return;
+	}
+
 	// 타이틀에서 걸어둔 일시정지 해제
 	SetPause(false);
 
@@ -1063,6 +1073,98 @@ void ACosPlayerController::ShowGameHUD()
 
 		UpdateWaveUI(GS->GetWaveIndex());
 	}
+}
+
+bool ACosPlayerController::TryPlayIntro()
+{
+	if (IsValid(IntroVideoWidgetInstance.Get()))
+	{
+		return true; // 재생 중에 또 불리면 무시
+	}
+	if (bIntroChecked)
+	{
+		return false;
+	}
+	bIntroChecked = true;
+
+	UCosGameInstance* GI = GetGameInstance<UCosGameInstance>();
+	if (bPlayIntroOnlyOnce && GI && GI->bHasPlayedIntro)
+	{
+		return false;
+	}
+
+	UMediaSource* Source = ResolveIntroMediaSource();
+	if (!Source || !IsValid(IntroVideoWidgetClass))
+	{
+		return false;
+	}
+
+	IntroVideoWidgetInstance = CreateWidget<UCosIntroVideoWidget>(this, IntroVideoWidgetClass);
+	if (!IsValid(IntroVideoWidgetInstance.Get()))
+	{
+		return false;
+	}
+
+	// 타이틀을 닫고 BGM을 끈 뒤 영상을 띄웁니다. 영상이 끝날 때까지 타이틀의 일시정지는 유지합니다.
+	HideTitleWidget();
+	OnStopBGMRequested();
+
+	IntroVideoWidgetInstance->AddToViewport(200);
+	if (!IntroVideoWidgetInstance->PlayIntro(Source))
+	{
+		IntroVideoWidgetInstance->RemoveFromParent();
+		IntroVideoWidgetInstance = nullptr;
+		return false;
+	}
+	IntroVideoWidgetInstance->OnFinished.AddUObject(this, &ACosPlayerController::HandleIntroFinished);
+
+	if (GI)
+	{
+		GI->bHasPlayedIntro = true;
+	}
+
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(IntroVideoWidgetInstance->TakeWidget());
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+	return true;
+}
+
+UMediaSource* ACosPlayerController::ResolveIntroMediaSource()
+{
+	if (IsValid(IntroMediaSource.Get()))
+	{
+		return IntroMediaSource.Get();
+	}
+
+	if (IntroMoviePath.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	// Content/Movies 폴더의 파일은 패키징할 때 그대로 함께 복사됩니다.
+	const FString FullPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / IntroMoviePath);
+	if (!FPaths::FileExists(FullPath))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Intro] 인트로 영상 파일이 없어 바로 시작합니다: %s"), *FullPath);
+		return nullptr;
+	}
+
+	UFileMediaSource* FileSource = NewObject<UFileMediaSource>(this);
+	FileSource->SetFilePath(FullPath);
+	return FileSource;
+}
+
+void ACosPlayerController::HandleIntroFinished()
+{
+	if (IsValid(IntroVideoWidgetInstance.Get()))
+	{
+		IntroVideoWidgetInstance->OnFinished.RemoveAll(this);
+		IntroVideoWidgetInstance->RemoveFromParent();
+		IntroVideoWidgetInstance = nullptr;
+	}
+
+	ShowGameHUD();
 }
 
 void ACosPlayerController::UpdatePotionUI(int32 CurrentPotion)

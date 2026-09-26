@@ -17,7 +17,9 @@ class UCameraComponent;
 class USoundBase;
 class UAudioComponent;
 class UMediaPlayer;
+class UMediaSource;
 class UCosDialogueWidget;
+class UCosIntroVideoWidget;
 
 USTRUCT(BlueprintType)
 struct FWaveResultData
@@ -133,6 +135,22 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue", meta = (MultiLine = true))
 	FText FirstForgeLine = FText::FromString(TEXT("정신이 들어? 여기는 대장간이야. 무기를 강화해 줄게."));
+
+	// 타이틀에서 시작을 누른 뒤, 게임이 시작되기 전에 재생할 오프닝 영상 위젯
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Intro")
+	TSubclassOf<UCosIntroVideoWidget> IntroVideoWidgetClass;
+
+	// 오프닝 영상(File Media Source 에셋). 비워두면 아래 IntroMoviePath의 파일을 찾아 재생합니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Intro")
+	TObjectPtr<UMediaSource> IntroMediaSource;
+
+	// IntroMediaSource가 비었을 때 재생할 파일(Content 폴더 기준). 파일이 없으면 영상 없이 바로 시작합니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Intro")
+	FString IntroMoviePath = TEXT("Movies/Intro.mp4");
+
+	// 켜면 게임을 켠 뒤 처음 시작할 때만 영상을 보여주고, 재시작할 때는 건너뜁니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Intro")
+	bool bPlayIntroOnlyOnce = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
 	TSubclassOf<UUserWidget> ESCWidgetClass;
@@ -329,6 +347,16 @@ protected:
 	TObjectPtr<USoundBase> CollapseSound;
 
 private:
+	// 오프닝 영상을 띄웠으면 true. 영상이 끝나면 ShowGameHUD를 다시 불러 게임을 시작합니다.
+	bool TryPlayIntro();
+	UMediaSource* ResolveIntroMediaSource();
+	void HandleIntroFinished();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCosIntroVideoWidget> IntroVideoWidgetInstance;
+
+	bool bIntroChecked = false; // 이 레벨에서 영상 재생 여부를 이미 판단했는지
+
 	void CheckForgeLoading();
 	void HideLoadingWidget();
 	FTimerHandle ForgeLoadingTimer;
