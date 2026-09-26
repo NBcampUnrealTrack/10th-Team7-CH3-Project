@@ -70,7 +70,7 @@ bool AWeaponBase::TryApplyDamageAlt(AActor* HitActor, const FHitResult& Hit)
 	if (bWasAlive && TargetHealth->IsDead()) // 이번 공격으로 죽었으면 킬
 	{
 		OnKillConfirmed.Broadcast(HitActor);
-		PlayCameraShake(KillShake);
+
 	}
 	else
 	{

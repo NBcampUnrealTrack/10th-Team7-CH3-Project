@@ -8,6 +8,7 @@
 #include "Data/EnchantPickup.h"
 #include "Data/CosDataTable.h"
 #include "EnemyBase.generated.h"
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEnemyKilled, AEnemyBase*);
 class UNiagaraSystem;
 class UHealthComponent;
@@ -127,6 +128,8 @@ protected:
 	FSFXVolume DeathSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	FSFXVolume ProjectileHitSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|SFX")
+	FSFXVolume HitPlayerSound;
 	//Effect
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
 	TObjectPtr<UNiagaraSystem> BloodHitVFX;
@@ -142,7 +145,7 @@ protected:
 	FVector RangeHitVFXScale = FVector(1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
 	float HitVFXHeightOffset = 0.f;
-
+	//
 	void PlayHitVFX(EWeaponType weapon);
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
