@@ -115,6 +115,10 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Soul")
 	int32 Soul = 999;
+
+	// 오프닝 영상을 이미 봤는지. 레벨을 다시 열어도 유지되어 재시작할 때 영상을 건너뜁니다.
+	UPROPERTY(Transient, BlueprintReadWrite, Category = "Intro")
+	bool bHasPlayedIntro = false;
 private:
-	
+
 };
