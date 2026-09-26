@@ -79,6 +79,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
 	void SetFogVisible(bool bVisible);
 
+	// Day 1 사슴 사망 연출. 숨겨둔 안개를 밀도 0에서 시작해 TutorialFogFadeDuration초 동안
+	// 맵 원래 밀도 × TutorialFogDensityMultiplier까지 점점 짙게 만듭니다. StartWave에서 원래 밀도로 되돌립니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
+	void StartTutorialFogFadeIn();
+
 	// 에디터에서만 안개를 비교합니다. 조명, 전투와 원본 안개 값은 변경하지 않습니다.
 	UFUNCTION(CallInEditor, Category = "Wave|Fog Preview", meta = (DisplayName = "Preview Fog"))
 	void PreviewFog();
@@ -202,6 +207,14 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	UPROPERTY(EditAnywhere, Category = "Wave|Environment")
 	TMap<int32, FStageEnvironmentSettings> StageEnvironments;
 
+	// Day 1 사슴이 죽은 뒤 안개가 최종 밀도까지 짙어지는 데 걸리는 시간(초). 0이면 즉시.
+	UPROPERTY(EditAnywhere, Category = "Wave|Tutorial Fog", meta = (ClampMin = "0.0"))
+	float TutorialFogFadeDuration = 10.0f;
+
+	// 맵에 설정된 원래 안개 밀도에 곱할 최종 배율. 클수록 짙습니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Tutorial Fog", meta = (ClampMin = "0.0"))
+	float TutorialFogDensityMultiplier = 3.0f;
+
 	// 스테이지·웨이브별 스폰 수가 담긴 데이터 테이블. 에디터 Details에서 DT 에셋을 꽂습니다.
 	UPROPERTY(EditAnywhere, Category = "Wave")
 	TObjectPtr<UDataTable> WaveDataTable;
@@ -248,6 +261,17 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
 	float MaxSpawnRadius = 4000.0f;
 
+	// Day 1(튜토리얼) 구울의 최소/최대 스폰 거리(cm). 안개가 짙어지는 연출 속이라 일반 스테이지보다 가깝게 둡니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
+	float TutorialMinSpawnRadius = 1200.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
+	float TutorialMaxSpawnRadius = 2000.0f;
+
+	// Day 1에서 구울이 이 시간(초) 동안 거의 움직이지 못하면 끼인 것으로 보고 플레이어 근처 새 위치로 옮깁니다. 0이면 끕니다.
+	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
+	float TutorialStuckSeconds = 4.0f;
+
 	// 360도를 몇 칸으로 나눠 돌아가며 쓸지. 한쪽으로 몰리지 않고 사방에서 나오게 합니다.
 	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "1"))
 	int32 SpawnDirectionSlices = 8;
@@ -277,6 +301,11 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	FTimerHandle SpawnTimer; // 1초마다 한 마리 꺼내는 타이머의 이름표
 	FTimerHandle WaveTimer;  // 웨이브 시작부터 60초 후 추가. 전멸하면 다음 틱으로 당깁니다.
 	FTimerHandle ProgressTimer; // 사망 콜백 완료 후 진행 조건을 검사합니다.
+	FTimerHandle StuckCheckTimer; // Day 1에서 끼인 구울을 찾아 옮깁니다.
+
+	// Day 1 끼임 검사용. 적마다 마지막으로 움직인 위치와 시각을 기억합니다.
+	void CheckStuckEnemies();
+	TMap<TWeakObjectPtr<AActor>, TPair<FVector, float>> StuckTracking;
 
 	int32 CurrentStage = 0;     // 지금 몇 번째 스테이지인지. 클리어 방송할 때 이 번호를 같이 넘깁니다.
 	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지 (1~5). 0이면 스테이지 시작 전.
@@ -297,4 +326,12 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	float BaseSkylightIntensity = 0.0f;
 	float BaseFogDensity = 0.0f;
 	float BaseVolumetricExtinction = 0.0f;
+
+	// Day 1 안개 연출. 시작할 때 각 안개의 원래 밀도를 기억해 두고, 끝나면 그 값으로 되돌립니다.
+	void UpdateTutorialFog();
+	void RestoreTutorialFog();
+
+	FTimerHandle TutorialFogTimer;
+	float TutorialFogStartTime = 0.0f;
+	TArray<TPair<TWeakObjectPtr<UExponentialHeightFogComponent>, float>> TutorialFogBaseDensities;
 };

@@ -2,6 +2,7 @@
 #include "Spawn/EnemySpawnPoint.h"
 #include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
 #include "Enemy/Boss.h"
+#include "AIController.h"
 #include "Components/CapsuleComponent.h"
 #include "Data/CosDataTable.h"
 #include "Engine/DataTable.h"
@@ -236,6 +237,7 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	}
 
 	ResetStageState(WaveIndex); // 시그니처는 WaveIndex지만 의미는 스테이지 번호입니다.
+	RestoreTutorialFog(); // Day 1에서 짙게 만든 안개를 원래 밀도로 돌려야 스테이지 배율 기준이 맞습니다.
 	SetFogVisible(true); // Day 1에서 숨긴 안개를 전투 스테이지부터 되돌립니다.
 	ApplyStageEnvironment(CurrentStage);
 
@@ -276,6 +278,12 @@ void AWaveSpawner::StartTutorialStage(int32 GhoulCount)
 			SpawnTimer, this, &AWaveSpawner::SpawnOne, SpawnInterval, true, 0.f);
 	}
 
+	// Day 1은 구울이 끼여서 안 오면 진행이 막히므로 주기적으로 끼인 구울을 옮겨 줍니다.
+	if (TutorialStuckSeconds > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(StuckCheckTimer, this, &AWaveSpawner::CheckStuckEnemies, 1.0f, true);
+	}
+
 	// 스폰할 게 없으면 여기서 바로 클리어를 방송합니다.
 	TryBroadcastStageCleared();
 }
@@ -286,6 +294,8 @@ void AWaveSpawner::ResetStageState(int32 StageIndex)
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
 	GetWorldTimerManager().ClearTimer(ProgressTimer);
+	GetWorldTimerManager().ClearTimer(StuckCheckTimer);
+	StuckTracking.Reset();
 
 	// 스테이지 상태 초기화. 누적 스폰이므로 초기화는 스테이지 시작 때 딱 한 번만 합니다.
 	// 웨이브가 바뀔 때는 비우지 않고 순서표 뒤에 이어 붙입니다.
@@ -302,9 +312,74 @@ void AWaveSpawner::ResetStageState(int32 StageIndex)
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 시작"), StageIndex);
 }
 
+void AWaveSpawner::CheckStuckEnemies()
+{
+	if (CurrentStage != 0 || !bIsStageActive)
+	{
+		GetWorldTimerManager().ClearTimer(StuckCheckTimer);
+		StuckTracking.Reset();
+		return;
+	}
+
+	const APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!IsValid(Player))
+	{
+		return;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	for (AActor* Enemy : AliveEnemies)
+	{
+		if (!IsValid(Enemy))
+		{
+			continue;
+		}
+
+		const FVector Location = Enemy->GetActorLocation();
+		TPair<FVector, float>& Info = StuckTracking.FindOrAdd(Enemy, TPair<FVector, float>(Location, Now));
+
+		// 1m 이상 움직였거나 플레이어 곁(5m 안)에서 싸우는 중이면 정상입니다.
+		const bool bMoved = FVector::DistSquared2D(Location, Info.Key) > FMath::Square(100.0f);
+		const bool bNearPlayer = FVector::DistSquared2D(Location, Player->GetActorLocation()) < FMath::Square(500.0f);
+		if (bMoved || bNearPlayer)
+		{
+			Info = TPair<FVector, float>(Location, Now);
+			continue;
+		}
+		if (Now - Info.Value < TutorialStuckSeconds)
+		{
+			continue;
+		}
+
+		// 끼였습니다. 스폰할 때와 같은 방식으로 플레이어 근처 걸어올 수 있는 자리를 찾아 옮깁니다.
+		FVector NewLocation;
+		if (FindSpawnLocationNearPlayer(NewLocation))
+		{
+			NewLocation.Z += SpawnHeightOffset;
+			FVector ToPlayer = Player->GetActorLocation() - NewLocation;
+			ToPlayer.Z = 0.0f;
+			Enemy->TeleportTo(NewLocation, ToPlayer.Rotation());
+
+			// 옛 경로를 버리고 새 자리에서 다시 길을 찾게 합니다.
+			if (const APawn* EnemyPawn = Cast<APawn>(Enemy))
+			{
+				if (AAIController* AI = Cast<AAIController>(EnemyPawn->GetController()))
+				{
+					AI->StopMovement();
+				}
+			}
+			UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Day 1 끼인 구울 %s를 %.0fm 지점으로 옮김"),
+				*Enemy->GetName(), FVector::Dist(NewLocation, Player->GetActorLocation()) / 100.0f);
+		}
+		Info = TPair<FVector, float>(Enemy->GetActorLocation(), Now);
+	}
+}
+
 void AWaveSpawner::StopWave()
 {
 	GetWorldTimerManager().ClearTimer(ProgressTimer);
+	GetWorldTimerManager().ClearTimer(StuckCheckTimer);
+	StuckTracking.Reset();
 	// 스폰과 웨이브 타이머도 끕니다. 이미 스폰된 적을 지울지는 게임모드가 판단합니다.
 	GetWorldTimerManager().ClearTimer(SpawnTimer);
 	GetWorldTimerManager().ClearTimer(WaveTimer);
@@ -402,6 +477,71 @@ void AWaveSpawner::SetFogVisible(bool bVisible)
 			Fog->SetVisibility(bVisible);
 		}
 	}
+}
+
+void AWaveSpawner::StartTutorialFogFadeIn()
+{
+	UWorld* World = GetWorld();
+	if (!World || !World->IsGameWorld())
+	{
+		return;
+	}
+
+	// 두 번 불려도 짙어진 값이 아니라 원래 밀도를 기준으로 다시 시작합니다.
+	RestoreTutorialFog();
+
+	for (TActorIterator<AExponentialHeightFog> It(World); It; ++It)
+	{
+		if (UExponentialHeightFogComponent* Fog = It->GetComponent())
+		{
+			TutorialFogBaseDensities.Emplace(Fog, Fog->FogDensity);
+			Fog->SetFogDensity(0.0f);
+			Fog->SetVisibility(true);
+		}
+	}
+
+	TutorialFogStartTime = GetGameTimeSinceCreation();
+	UpdateTutorialFog();
+	if (TutorialFogFadeDuration > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(
+			TutorialFogTimer, this, &AWaveSpawner::UpdateTutorialFog, 0.05f, true);
+	}
+}
+
+void AWaveSpawner::UpdateTutorialFog()
+{
+	const float Alpha = TutorialFogFadeDuration > 0.0f
+		? FMath::Clamp((GetGameTimeSinceCreation() - TutorialFogStartTime) / TutorialFogFadeDuration, 0.0f, 1.0f)
+		: 1.0f;
+	// 처음엔 서서히, 뒤로 갈수록 빠르게 짙어집니다.
+	const float Eased = FMath::InterpEaseIn(0.0f, 1.0f, Alpha, 2.0f);
+
+	for (const TPair<TWeakObjectPtr<UExponentialHeightFogComponent>, float>& Entry : TutorialFogBaseDensities)
+	{
+		if (UExponentialHeightFogComponent* Fog = Entry.Key.Get())
+		{
+			Fog->SetFogDensity(Entry.Value * FMath::Max(0.0f, TutorialFogDensityMultiplier) * Eased);
+		}
+	}
+
+	if (Alpha >= 1.0f)
+	{
+		GetWorldTimerManager().ClearTimer(TutorialFogTimer);
+	}
+}
+
+void AWaveSpawner::RestoreTutorialFog()
+{
+	GetWorldTimerManager().ClearTimer(TutorialFogTimer);
+	for (const TPair<TWeakObjectPtr<UExponentialHeightFogComponent>, float>& Entry : TutorialFogBaseDensities)
+	{
+		if (UExponentialHeightFogComponent* Fog = Entry.Key.Get())
+		{
+			Fog->SetFogDensity(Entry.Value);
+		}
+	}
+	TutorialFogBaseDensities.Reset();
 }
 
 void AWaveSpawner::AddNextWave()
@@ -551,16 +691,49 @@ void AWaveSpawner::SpawnOne()
 	}
 	else if (SpawnPoints.Num() > 0)
 	{
-		// 플레이어 근처를 못 찾았으면 예비 스폰 포인트 중 하나를 무작위로 고릅니다. 1) 각주
-		const int32 Index = FMath::RandRange(0, SpawnPoints.Num() - 1);
-		AEnemySpawnPoint* Point = SpawnPoints[Index];
-		if (!IsValid(Point))
+		// 플레이어 근처를 못 찾았으면 예비 스폰 포인트 중 플레이어와 가장 가까운 것을 고릅니다. 1) 각주
+		// 무작위로 고르면 맵 반대편 포인트가 뽑혀 한참 걸어오거나 길을 못 찾는 경우가 생깁니다.
+		const APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+		AEnemySpawnPoint* Point = nullptr;
+		float BestDistSq = TNumericLimits<float>::Max();
+		for (AEnemySpawnPoint* Candidate : SpawnPoints)
+		{
+			if (!IsValid(Candidate))
+			{
+				continue;
+			}
+			const float DistSq = Player
+				? FVector::DistSquared(Candidate->GetActorLocation(), Player->GetActorLocation())
+				: 0.0f;
+			if (!Point || DistSq < BestDistSq)
+			{
+				Point = Candidate;
+				BestDistSq = DistSq;
+			}
+		}
+		if (!Point)
 		{
 			return; // 이번 칸은 소모하지 않고 다음 틱에 다시 시도합니다.
 		}
 		SpawnLocation = Point->GetActorLocation();
 		SpawnRotation = Point->GetActorRotation();
-		UE_LOG(LogTemp, Verbose, TEXT("[WaveSpawner] 플레이어 근처 위치 실패, 예비 SpawnPoint 사용"));
+
+		// 포인트가 NavMesh 밖(땅속, 공중)에 놓여 있으면 적이 태어나자마자 못 움직이므로 NavMesh 위로 붙여 줍니다.
+		if (UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+		{
+			FNavLocation NavLocation;
+			if (NavSys->ProjectPointToNavigation(SpawnLocation, NavLocation, FVector(500.0f, 500.0f, 1000.0f)))
+			{
+				SpawnLocation = NavLocation.Location + FVector(0.0f, 0.0f, SpawnHeightOffset);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 예비 SpawnPoint(%s) 주변에 NavMesh가 없습니다. 적이 움직이지 못할 수 있습니다"),
+					*Point->GetName());
+			}
+		}
+		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] 플레이어 근처 위치 실패, 가장 가까운 예비 SpawnPoint(%s, %.0fm) 사용"),
+			*Point->GetName(), FMath::Sqrt(BestDistSq) / 100.0f);
 	}
 	else
 	{
@@ -621,44 +794,70 @@ bool AWaveSpawner::FindSpawnLocationNearPlayer(FVector& OutLocation)
 	const FVector PlayerLocation = Player->GetActorLocation();
 	const float SliceAngle = 360.0f / SpawnDirectionSlices; // 8칸이면 한 칸 45도
 
-	for (int32 Attempt = 0; Attempt < MaxSpawnAttempts; ++Attempt)
+	// 2) 거리: Day 1(Stage 0)은 튜토리얼 전용 거리를 씁니다.
+	const bool bTutorial = CurrentStage == 0;
+	const float MinRadius = bTutorial ? TutorialMinSpawnRadius : MinSpawnRadius;
+	const float MaxRadius = bTutorial ? TutorialMaxSpawnRadius : MaxSpawnRadius;
+
+	// 실패 원인을 세어 두었다가 전부 실패하면 로그로 알려줍니다.
+	int32 NoNavCount = 0, NoPathCount = 0, DetourCount = 0;
+
+	auto TryFind = [&](int32 Attempts, bool bCheckDetour) -> bool
 	{
-		// 1) 방향: 이번 칸 안에서 랜덤 각도. 다음 시도는 옆 칸을 씁니다.
-		const float Angle = NextSliceIndex * SliceAngle + FMath::FRandRange(0.0f, SliceAngle);
-		NextSliceIndex = (NextSliceIndex + 1) % SpawnDirectionSlices;
-		const FVector Direction = FRotator(0.0f, Angle, 0.0f).Vector(); // Yaw만 돌린 수평 방향
-
-		// 2) 거리: 최소~최대 사이 랜덤
-		const float Distance = FMath::FRandRange(MinSpawnRadius, MaxSpawnRadius);
-		const FVector Candidate = PlayerLocation + Direction * Distance;
-
-		// 3) 바닥: 후보 점을 가장 가까운 NavMesh 위로 붙입니다. NavMesh가 없는 곳이면 다시 뽑기.
-		FNavLocation NavLocation;
-		if (!NavSys->ProjectPointToNavigation(Candidate, NavLocation, FVector(500.0f, 500.0f, 1000.0f)))
+		for (int32 Attempt = 0; Attempt < Attempts; ++Attempt)
 		{
-			continue;
-		}
+			// 1) 방향: 이번 칸 안에서 랜덤 각도. 다음 시도는 옆 칸을 씁니다.
+			const float Angle = NextSliceIndex * SliceAngle + FMath::FRandRange(0.0f, SliceAngle);
+			NextSliceIndex = (NextSliceIndex + 1) % SpawnDirectionSlices;
+			const FVector Direction = FRotator(0.0f, Angle, 0.0f).Vector(); // Yaw만 돌린 수평 방향
+			const FVector Candidate = PlayerLocation + Direction * FMath::FRandRange(MinRadius, MaxRadius);
 
-		// 4) 경로: 스폰 점에서 플레이어까지 걸어갈 수 있는지. 끊겼거나 중간까지만 가면 버립니다.
-		//    바위 틈처럼 NavMesh가 따로 떨어진 섬에 붙은 경우를 여기서 거릅니다.
-		UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(
-			GetWorld(), NavLocation.Location, PlayerLocation);
-		if (Path == nullptr || !Path->IsValid() || Path->IsPartial())
-		{
-			continue;
-		}
+			// 3) 바닥: 후보 점을 가장 가까운 NavMesh 위로 붙입니다. NavMesh가 없는 곳이면 다시 뽑기.
+			FNavLocation NavLocation;
+			if (!NavSys->ProjectPointToNavigation(Candidate, NavLocation, FVector(500.0f, 500.0f, 1000.0f)))
+			{
+				++NoNavCount;
+				continue;
+			}
 
-		// 5) 우회: 경로가 직선거리의 MaxPathRatio배를 넘으면 너무 빙 도는 위치라 버립니다.
-		const float StraightDistance = FVector::Dist(NavLocation.Location, PlayerLocation);
-		if (Path->GetPathLength() > StraightDistance * MaxPathRatio)
-		{
-			continue;
-		}
+			// 4) 경로: 스폰 점에서 플레이어까지 걸어갈 수 있는지. 끊겼거나 중간까지만 가면 버립니다.
+			//    바위 틈처럼 NavMesh가 따로 떨어진 섬에 붙은 경우를 여기서 거릅니다.
+			UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(
+				GetWorld(), NavLocation.Location, PlayerLocation);
+			if (Path == nullptr || !Path->IsValid() || Path->IsPartial())
+			{
+				++NoPathCount;
+				continue;
+			}
 
-		OutLocation = NavLocation.Location;
+			// 5) 우회: 경로가 직선거리의 MaxPathRatio배를 넘으면 너무 빙 도는 위치라 버립니다.
+			const float StraightDistance = FVector::Dist(NavLocation.Location, PlayerLocation);
+			if (bCheckDetour && Path->GetPathLength() > StraightDistance * MaxPathRatio)
+			{
+				++DetourCount;
+				continue;
+			}
+
+			OutLocation = NavLocation.Location;
+			return true;
+		}
+		return false;
+	};
+
+	if (TryFind(MaxSpawnAttempts, true))
+	{
 		return true;
 	}
 
+	// 2차: 우회 검사를 빼고 두 배로 더 찾아봅니다. 멀리 떨어진 예비 포인트보다 조금 돌아오는 편이 낫습니다.
+	if (TryFind(MaxSpawnAttempts * 2, false))
+	{
+		return true;
+	}
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[WaveSpawner] 플레이어 근처 스폰 실패 (NavMesh 없음 %d / 경로 없음 %d / 너무 돌아감 %d) - 플레이어 주변 NavMesh를 확인하세요"),
+		NoNavCount, NoPathCount, DetourCount);
 	return false; // 전부 실패하면 SpawnOne이 예비 SpawnPoint로 대체합니다.
 }
 
