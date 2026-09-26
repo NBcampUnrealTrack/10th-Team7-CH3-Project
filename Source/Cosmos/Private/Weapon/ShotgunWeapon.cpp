@@ -29,11 +29,12 @@ void AShotgunWeapon::BeginPlay()
 
 bool AShotgunWeapon::PerformAttack()
 {
+
 	if (bIsReloading || CurrentAmmo <= 0) 
 	{
 		return false;
 	}
-
+	PlayCameraShake(ShotgunShake);
 	FVector StartLocation;
 	FVector Direction;
 	if (!GetTraceStartAndDirection(StartLocation, Direction)) // 시작점, 방향 설정
@@ -76,6 +77,7 @@ bool AShotgunWeapon::PerformAttack()
 	if (bHit) // 무언가에 맞았는가
 	{
 		TryApplyDamageAlt(HitResult.GetActor(), HitResult);
+		
 	}
 
 	return true;

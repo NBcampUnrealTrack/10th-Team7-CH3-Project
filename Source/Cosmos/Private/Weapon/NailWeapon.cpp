@@ -112,8 +112,11 @@ bool ANailWeapon::PerformAttack()
 	}
 
 	OnAttackPerformed.Broadcast(bSwingLeftToRight);
-
-
+	if (HitCount > 0)
+	{
+		const float Scale = FMath::Min(1.f + (HitCount - 1) * 0.2f, 1.6f);
+		PlayCameraShake(HitShake, Scale);
+	}
 	return true;
 }
 

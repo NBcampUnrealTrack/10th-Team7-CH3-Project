@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/CombatComponent.h"
 #include "Data/CosGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 ACosCharacter::ACosCharacter()
 {
@@ -146,6 +147,16 @@ void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 	{
 		HealthComponent->ApplyDamage(Damage, Weapon);
 	}
+	if (DamageShake && Damage > 0.f)
+	{
+		PlaySFXPlayer(HitReactSound);
+		const float Scale = FMath::Clamp(Damage / DamageShakeReference, 0.4f, 2.f);
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			PC->ClientStartCameraShake(DamageShake, Scale);
+		}
+		PlayDamagedScreen(Damage);
+	}
 }
 
 
@@ -185,4 +196,23 @@ void ACosCharacter::RecalculateMovementSpeed()
 	const float CurrentBaseSpeed = NormalSpeed + SpeedBonus;
 
 	GetCharacterMovement()->MaxWalkSpeed = CurrentBaseSpeed;
+}
+
+void ACosCharacter::PlaySFXPlayer(const FSFXVolume& SFX) const
+{
+	if (!SFX.Sound)
+	{
+		return;
+	}
+	const float FinalPitch = SFX.Pitch * (1.f + FMath::FRandRange(-SFX.RandomPitch, SFX.RandomPitch));
+	UGameplayStatics::PlaySound2D(this,	SFX.Sound,SFX.Volume,FinalPitch,0.f,SFX.Concurrency,this,false);
+}
+void ACosCharacter::PlayDamagedScreen(float Damage)
+{
+	if (Damage <= 0.f)
+	{
+		return;
+	}
+	const float Intensity = FMath::Clamp(Damage / DamagedScreenAmount, 0.2f, 1.f);
+	OnPlayerDamaged.Broadcast(Intensity);
 }

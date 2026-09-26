@@ -5,7 +5,7 @@
 #include "InputActionValue.h"
 #include "Weapon/Damageable.h"//[추가] 데미져블 인터페이스 사용하게
 #include "CosCharacter.generated.h"
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDamaged, float, Intensity);
 class UHealthComponent;
 class UCameraComponent;
 
@@ -26,6 +26,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHealthComponent> HealthComponent;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "VFX")
+	FSFXVolume HitReactSound;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float NormalSpeed;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -36,6 +39,8 @@ protected:
 
 	UFUNCTION()
 	void OnLoadoutChanged();
+	UFUNCTION(BlueprintCallable, Category = "SFX")
+	void PlaySFXPlayer(const FSFXVolume& SFX) const;
 	void RecalculateMovementSpeed();
 
 	UFUNCTION()
@@ -51,6 +56,16 @@ protected:
 	UFUNCTION()
 	void StopSprint(const FInputActionValue& Value);
 
-	
-	
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback", meta = (ClampMin = "1.0"))
+	float DamagedScreenAmount = 20.f;
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Feedback")
+	void OnDamagedScreen(float Intensity);
+	void PlayDamagedScreen(float Damage);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Feedback")
+	FOnPlayerDamaged OnPlayerDamaged;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback")
+	TSubclassOf<UCameraShakeBase> DamageShake;
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback", meta = (ClampMin = "1.0"))
+	float DamageShakeReference = 10.f;
 };

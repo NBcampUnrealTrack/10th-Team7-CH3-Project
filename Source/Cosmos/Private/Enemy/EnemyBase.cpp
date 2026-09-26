@@ -453,6 +453,7 @@ void AEnemyBase::AttackHitCheck()
 		if (IDamageable* bonk = Cast<IDamageable>(Target))
 		{
 			bonk->TakeHit(AttackDamage, EWeaponType::None);
+			PlaySFXAt(this, HitPlayerSound, GetActorLocation());
 		}
 		break;
 	}
