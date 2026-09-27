@@ -23,6 +23,8 @@ TSharedRef<SWidget> UCosDialogueWidget::RebuildWidget()
 		SpeakerLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Speaker"));
 		SpeakerLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.9f, 0.6f, 0.3f)));
 		FSlateFontInfo SpeakerFont = SpeakerLabel->GetFont();
+		SpeakerFont.FontObject = LoadObject<UObject>(nullptr, TEXT("/Game/Cosmos/Fonts/Megadeth_Font.Megadeth_Font"));
+		SpeakerFont.TypefaceFontName = TEXT("Default");
 		SpeakerFont.Size = 18;
 		SpeakerLabel->SetFont(SpeakerFont);
 
@@ -30,6 +32,8 @@ TSharedRef<SWidget> UCosDialogueWidget::RebuildWidget()
 		LineLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.9f, 0.86f)));
 		LineLabel->SetAutoWrapText(true);
 		FSlateFontInfo LineFont = LineLabel->GetFont();
+		LineFont.FontObject = SpeakerFont.FontObject;
+		LineFont.TypefaceFontName = TEXT("Default");
 		LineFont.Size = 24;
 		LineLabel->SetFont(LineFont);
 

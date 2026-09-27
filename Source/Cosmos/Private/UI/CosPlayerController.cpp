@@ -1010,6 +1010,34 @@ void ACosPlayerController::ToggleESCMenu()
 	{
 		ESCWidgetInstance->AddToViewport();
 
+		// Refresh the snapshot on every open; gameplay values stop changing while paused.
+		auto SetPauseText = [this](FName Name, const FText& Text)
+		{
+			if (UTextBlock* Label = Cast<UTextBlock>(ESCWidgetInstance->GetWidgetFromName(Name)))
+			{
+				Label->SetText(Text);
+			}
+		};
+		if (const ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+		{
+			SetPauseText(TEXT("PauseWaveText"), FText::Format(
+				NSLOCTEXT("PauseMenu", "Wave", "Wave: {0}"), FText::AsNumber(GS->GetWaveIndex())));
+			SetPauseText(TEXT("PauseKillText"), FText::Format(
+				NSLOCTEXT("PauseMenu", "Kills", "Kills: {0}"), FText::AsNumber(GS->GetKillCount())));
+			const int32 Seconds = FMath::Max(0, FMath::FloorToInt(GS->GetStageRemainingTime()));
+			SetPauseText(TEXT("PauseTimeText"), FText::Format(
+				NSLOCTEXT("PauseMenu", "Time", "Time: {0}"),
+				FText::FromString(FString::Printf(TEXT("%02d:%02d"), Seconds / 60, Seconds % 60))));
+		}
+		// The HUD retains the existing enemy-count event binding, even when hidden.
+		if (IsValid(CombatHUDInstance.Get()))
+		{
+			if (const UTextBlock* EnemyCount = Cast<UTextBlock>(CombatHUDInstance->GetWidgetFromName(TEXT("EnemyCountText"))))
+			{
+				SetPauseText(TEXT("PauseEnemyText"), EnemyCount->GetText());
+			}
+		}
+
 		// UI 입력 모드로 전환
 		SetUIInputMode(true);
 
