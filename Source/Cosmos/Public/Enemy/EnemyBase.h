@@ -130,6 +130,8 @@ protected:
 	FSFXVolume ProjectileHitSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|SFX")
 	FSFXVolume HitPlayerSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AI|SFX")
+	bool bIsExplodeDeath = false;
 	//Effect
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
 	TObjectPtr<UNiagaraSystem> BloodHitVFX;
