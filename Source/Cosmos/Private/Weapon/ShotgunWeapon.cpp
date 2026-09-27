@@ -80,6 +80,7 @@ bool AShotgunWeapon::PerformAttack()
 		
 	}
 
+	OnAttackPerformed.Broadcast(true);
 	return true;
 }
 
@@ -92,6 +93,7 @@ void AShotgunWeapon::Reload()
 
 	bIsReloading = true; // 재장전중
 	OnReloadStarted();
+	OnReloadPerformed.Broadcast();
 
 	GetWorld()->GetTimerManager().SetTimer( // 재장전하는데 시간이 들도록 함
 		ReloadTimerHandle,
@@ -112,6 +114,7 @@ void AShotgunWeapon::FinishReload()
 	bIsReloading = false;
 	BroadcastAmmo(); //총알 장전된것 방송
 	OnReloadFinished();
+	OnReloadFinishedPerformed.Broadcast();
 }
 
 int32 AShotgunWeapon::GetCurrentAmmo() const

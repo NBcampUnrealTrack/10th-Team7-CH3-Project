@@ -5,6 +5,8 @@
 #include "ShotgunWeapon.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, NewAmmo, int32, MaxAmmo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadPerformed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadFinishedPerformed);
 
 UCLASS()
 class COSMOS_API AShotgunWeapon : public AWeaponBase
@@ -17,6 +19,12 @@ public:
 	void FinishReload();
 	void RefillAmmo();
 	
+	UPROPERTY(BlueprintAssignable, Category = "Weapon")
+	FOnReloadFinishedPerformed OnReloadFinishedPerformed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
+	FOnReloadPerformed OnReloadPerformed;
+
 	UPROPERTY(BlueprintAssignable, Category = "Weapon") //µ®∏Æ∞‘¿Ã∆Æ
 	FOnAmmoChanged OnAmmoChanged;
 
