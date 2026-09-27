@@ -42,7 +42,9 @@ TSharedRef<SWidget> UCosIntroVideoWidget::RebuildWidget()
 			SkipLabel->SetText(SkipText);
 			SkipLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.75f, 0.7f, 0.7f)));
 			FSlateFontInfo Font = SkipLabel->GetFont();
-			Font.Size = 16;
+			Font.FontObject = LoadObject<UObject>(nullptr, TEXT("/Engine/EngineFonts/Roboto.Roboto"));
+			Font.TypefaceFontName = TEXT("Medium");
+			Font.Size = 18;
 			SkipLabel->SetFont(Font);
 			if (UOverlaySlot* SkipSlot = Root->AddChildToOverlay(SkipLabel))
 			{

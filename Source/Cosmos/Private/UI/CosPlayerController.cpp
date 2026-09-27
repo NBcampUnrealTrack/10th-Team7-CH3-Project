@@ -81,10 +81,34 @@ void ACosPlayerController::BeginPlay()
 	}
 
 	// 현재 레벨 이름
-	const FString CurrentLevelName = GetWorld()->GetMapName();
+	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
 
-	// 어떤 레벨이든 처음에는 타이틀 표시
-	ShowTitleWidget();
+	if (CurrentLevelName == TEXT("L_MenuLevel"))
+	{
+		ShowTitleWidget();
+	}
+	else
+	{
+		// Intro playback belongs to the menu. Wait for GameMode's Day 1 setup
+		// before binding HUD values and selecting gameplay music.
+		bIntroChecked = true;
+		UCosGameInstance* GI = GetGameInstance<UCosGameInstance>();
+		if (GI && GI->bPendingGameplayReveal && PlayerCameraManager)
+		{
+			GI->bPendingGameplayReveal = false;
+			PlayerCameraManager->SetManualCameraFade(1.0f, FLinearColor::Black, false);
+			SetInputMode(FInputModeUIOnly());
+			bShowMouseCursor = false;
+			SetIgnoreMoveInput(true);
+			SetIgnoreLookInput(true);
+			GetWorldTimerManager().SetTimer(GameplayEntryTimer, this,
+				&ACosPlayerController::FinishGameplayEntry, FMath::Max(GameplayWarmupSeconds, 0.01f), false);
+		}
+		else
+		{
+			GetWorldTimerManager().SetTimerForNextTick(this, &ACosPlayerController::ShowGameHUD);
+		}
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 레벨: %s"), *CurrentLevelName);
 
@@ -431,14 +455,16 @@ UUserWidget* ACosPlayerController::GetHUDWidget() const
 
 void ACosPlayerController::ShowTitleWidget()
 {
+	if (UGameplayStatics::GetCurrentLevelName(this, true) != TEXT("L_MenuLevel"))
+	{
+		return;
+	}
+
 	// Class 유효성 검사, Instance가 이미 생성되었는지 확인
 	if (IsValid(TitleWidgetClass) && !IsValid(TitleWidgetInstance))
 	{
-		//일시 정
-		if (SetPause(false))
-		{
-			SetPause(true);
-		}
+		// No gameplay runs in the menu; keep widget fades and latent delays ticking.
+		SetPause(false);
 
 		TitleWidgetInstance = CreateWidget<UUserWidget>(this, TitleWidgetClass); //위젯 인스턴스 생성(메모리상에 객체만 둠. 아직 화면에는 X)
 
@@ -1029,9 +1055,26 @@ void ACosPlayerController::SetUIInputMode(bool bUIMode)
 
 void ACosPlayerController::ShowGameHUD()
 {
+	if (bGameplayTravelRequested)
+	{
+		return;
+	}
+
 	// 시작을 누르면 오프닝 영상을 먼저 보여주고, 영상이 끝나면 이 함수가 다시 불려 게임을 시작합니다.
 	if (TryPlayIntro())
 	{
+		return;
+	}
+
+	if (UGameplayStatics::GetCurrentLevelName(this, true) == TEXT("L_MenuLevel"))
+	{
+		bGameplayTravelRequested = true;
+		if (UCosGameInstance* GI = GetGameInstance<UCosGameInstance>())
+		{
+			GI->bPendingGameplayReveal = true;
+		}
+		OnStopBGMRequested();
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Cosmos/Maps/L_BlockoutAstra")));
 		return;
 	}
 
@@ -1072,6 +1115,18 @@ void ACosPlayerController::ShowGameHUD()
 			this, &ACosPlayerController::HandleStageTimeChanged);
 
 		UpdateWaveUI(GS->GetWaveIndex());
+	}
+}
+
+void ACosPlayerController::FinishGameplayEntry()
+{
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+	ShowGameHUD();
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(1.0f, 0.0f, GameplayFadeInSeconds,
+			FLinearColor::Black, false, false);
 	}
 }
 
