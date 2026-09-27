@@ -26,9 +26,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> MagazineButton;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	UPROPERTY(EditAnywhere, Category = "Sound")
 	TObjectPtr<USoundBase> UpgradeSuccessSound;
-	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	UPROPERTY(EditAnywhere, Category = "Sound")
 	TObjectPtr<USoundBase> UpgradeFailSound;
 
 	UFUNCTION() 
