@@ -347,6 +347,16 @@ protected:
 	TObjectPtr<USoundBase> CollapseSound;
 
 private:
+	void FinishGameplayEntry();
+	FTimerHandle GameplayEntryTimer;
+
+	// Let the new world's sky capture and temporal rendering settle behind black.
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Transition", meta = (ClampMin = "0.0"))
+	float GameplayWarmupSeconds = 1.25f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Transition", meta = (ClampMin = "0.0"))
+	float GameplayFadeInSeconds = 0.35f;
+
 	// 오프닝 영상을 띄웠으면 true. 영상이 끝나면 ShowGameHUD를 다시 불러 게임을 시작합니다.
 	bool TryPlayIntro();
 	UMediaSource* ResolveIntroMediaSource();
@@ -364,6 +374,8 @@ private:
 
 	void ShowFirstForgeDialogue();
 	bool bPendingFirstForgeDialogue = false;
+
+	bool bGameplayTravelRequested = false;
 
 	void BeginCollapseFall();
 	void PlayHeartbeatFlash();

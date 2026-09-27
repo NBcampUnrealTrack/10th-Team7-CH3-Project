@@ -38,7 +38,7 @@ protected:
 
 	// 화면 오른쪽 아래에 표시할 건너뛰기 안내. 비우면 표시하지 않습니다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Intro")
-	FText SkipText = FText::FromString(TEXT("아무 키나 눌러 건너뛰기"));
+	FText SkipText = FText::FromString(TEXT("Skip: Press Any Key"));
 
 	// 시작 버튼을 누른 입력이 곧바로 건너뛰기로 이어지지 않도록, 이 시간(초) 동안은 건너뛰기를 막습니다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Intro", meta = (ClampMin = "0.0"))

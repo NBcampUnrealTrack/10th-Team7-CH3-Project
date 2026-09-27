@@ -30,9 +30,25 @@ ACosGameMode::ACosGameMode()
 	}
 }
 
+void ACosGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	// The menu reuses the UI controller, but must not spawn the combat character.
+	if (UGameplayStatics::GetCurrentLevelName(this, true) == TEXT("L_MenuLevel"))
+	{
+		DefaultPawnClass = nullptr;
+	}
+}
+
 void ACosGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (UGameplayStatics::GetCurrentLevelName(this, true) == TEXT("L_MenuLevel"))
+	{
+		return;
+	}
 
 	WaveSpawner = Cast<AWaveSpawner>(//현재 월드에 AWaveSpawner인 액터 찾아서 WaveSpawner에 저장
 		UGameplayStatics::GetActorOfClass(//나중에 WaveSpawner->StartWave(1); 이렇게 호출
@@ -463,7 +479,15 @@ void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통
 
 void ACosGameMode::StartGame()//타이들에서 게임 시작 누르면 전투(임시) 맵으로 이동하도록함
 {
-	UGameplayStatics::OpenLevel(this, FName("L_BlockoutAstra"));
+	if (UGameplayStatics::GetCurrentLevelName(this, true) == TEXT("L_MenuLevel"))
+	{
+		if (ACosPlayerController* PC = Cast<ACosPlayerController>(UGameplayStatics::GetPlayerController(this, 0)))
+		{
+			PC->ShowGameHUD(); // Keep the same intro/travel path as the title button.
+			return;
+		}
+	}
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Cosmos/Maps/L_BlockoutAstra")));
 }
 
 void ACosGameMode::HandleWaveCleared(int32 WaveIndex)
