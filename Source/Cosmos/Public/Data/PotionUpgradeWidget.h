@@ -23,9 +23,9 @@ public:
 	TObjectPtr<UTextBlock> MaxCountText;
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HealAmountText;
-	UPROPERTY(EditDefaultsOnly, Category = "Potion")
+	UPROPERTY(EditAnywhere, Category = "Potion")
 	TObjectPtr<USoundBase> UpgradeSuccessSound;
-	UPROPERTY(EditDefaultsOnly, Category = "Potion")
+	UPROPERTY(EditAnywhere, Category = "Potion")
 	TObjectPtr<USoundBase> UpgradeFailSound;
 
 	UFUNCTION()
