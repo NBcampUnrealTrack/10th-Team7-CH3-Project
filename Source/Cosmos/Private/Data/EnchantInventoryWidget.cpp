@@ -4,6 +4,7 @@
 #include "Data/EnchantSlotWidget.h"
 #include "Components/VerticalBox.h"
 #include "Data/EnchantInfoPopup.h"
+#include "Components/Button.h"
 
 void UEnchantInventoryWidget::NativeConstruct()
 {
@@ -12,8 +13,13 @@ void UEnchantInventoryWidget::NativeConstruct()
 	if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
 	{
 		GI->OnLoadoutChange.AddDynamic(this, &UEnchantInventoryWidget::RefreshList);
+		GI->OnEnchantInfoRequested.AddDynamic(this, &UEnchantInventoryWidget::ShowEnchantInfo);
 	}
 
+	if (InfoPopup && InfoPopup->ActionButton)
+	{
+		InfoPopup->ActionButton->OnClicked.AddDynamic(this, &UEnchantInventoryWidget::OnPopupActionClicked);
+	}
 	RefreshList();
 }
 
@@ -131,6 +137,9 @@ void UEnchantInventoryWidget::ToggleEquip(UEnchantData* Enchant, bool bCurrently
 
 void UEnchantInventoryWidget::ShowEnchantInfo(UEnchantData* Enchant, bool bIsEquipped)
 {
+	UE_LOG(LogTemp, Warning, TEXT("ShowEnchantInfo called. InfoPopup valid: %d"), InfoPopup != nullptr);
+
+
 	SelectedEnchant = Enchant;
 	bSelectedIsEquipped = bIsEquipped;
 	if (InfoPopup)

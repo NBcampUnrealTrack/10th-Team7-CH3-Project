@@ -1,6 +1,7 @@
 #include "Data/EnchantEquipWidget.h"
 #include "Data/CosGameInstance.h"
 #include "Data/EnchantData.h"
+#include "Data/EnchantSlotWidget.h"
 
 void UEnchantEquipWidget::NativeConstruct()
 {

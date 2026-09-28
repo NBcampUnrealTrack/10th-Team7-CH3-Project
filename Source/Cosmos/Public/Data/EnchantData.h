@@ -39,5 +39,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Enchant")
 	static EEnchantValueType GetSkillValueType(EEnchantSkillType Type);
+
+	UFUNCTION(BlueprintPure, Category = "Enchant")
+	FString GetStatText() const;
 	
 };
