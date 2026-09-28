@@ -147,7 +147,7 @@ private:
 	
 	float CurrentStageStartTime = 0.0f;//현재 스테이지가 시작된 시간을 저장함. 현재시간 - 이 값으로 엉ㄹ마나 지났는지 알 수 있음
 
-	float StageDuration = 300.0f;//제한시작 : 5분
+	float StageDuration = 180.0f;//제한시간 : 3분 (생존 스테이지는 이 시간을 버티면 클리어)
 
 	FTimerHandle StageUpdateTimer;
 

@@ -370,13 +370,13 @@ bool ACosGameMode::IsBossStageIndex(int32 StageIndex) const
 	return StageIndex == BossStageIndex;
 }
 
-void ACosGameMode::StartStageTimer()//새로운 스테이지 시작될 때 5분 타이머 시작
+void ACosGameMode::StartStageTimer()//새로운 스테이지 시작될 때 StageDuration(3분) 타이머 시작
 {
 	StopStageTimer();//혹시 이전 타이머 남아있으면 제거
 
 	CurrentStageStartTime = GetWorld()->GetTimeSeconds();
 
-	if (ACosGameState* GS = GetGameState<ACosGameState>())//스테이트 남은 시간을 처음에 300초로 설정
+	if (ACosGameState* GS = GetGameState<ACosGameState>())//스테이트 남은 시간을 처음에 StageDuration으로 설정
 	{
 		GS->SetStageRemainingTime(StageDuration);
 	}
@@ -407,7 +407,7 @@ void ACosGameMode::UpdateStageTimer()// 현재 스테이지의 남은 시간을 
 		GetWorld()->GetTimeSeconds() - CurrentStageStartTime;
 
 
-	// 300초 - 경과시간 = 남은시간
+	// StageDuration - 경과시간 = 남은시간
 	// FMath::Max를 사용해서 음수가 되지 않도록 함
 	const float RemainingTime =
 		FMath::Max(0.0f, StageDuration - ElapsedTime);

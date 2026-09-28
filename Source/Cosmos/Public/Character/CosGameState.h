@@ -55,6 +55,6 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Stage")
-	float StageRemainingTime = 300.0f;
+	float StageRemainingTime = 180.0f;
 
 };
