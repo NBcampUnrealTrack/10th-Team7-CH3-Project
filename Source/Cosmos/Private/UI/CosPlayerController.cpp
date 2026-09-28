@@ -642,6 +642,11 @@ void ACosPlayerController::OpenForgeWidget()
 
 void ACosPlayerController::CloseForgeWidget()
 {
+	// Repeated close requests must not advance the stage while the cinematic is playing.
+	if (IsValid(IntroVideoWidgetInstance.Get())) return;
+	const ACosGameMode* ForgeGameMode = GetWorld()->GetAuthGameMode<ACosGameMode>();
+	const bool bEnteringFinalBoss = ForgeGameMode && ForgeGameMode->GetCurrentDay() == 6;
+
 	if (IsValid(ForgeWidgetInstance.Get()))
 	{
 		ForgeWidgetInstance->RemoveFromParent();
@@ -673,14 +678,49 @@ void ACosPlayerController::CloseForgeWidget()
 		}
 	}
 
+	// The sixth forge closes before Day 7 starts; defer the wave until the movie finishes.
+	if (bEnteringFinalBoss)
+	{
+		const FString MoviePath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Movies/lastboss.mp4"));
+		if (FPaths::FileExists(MoviePath))
+		{
+			UFileMediaSource* Source = NewObject<UFileMediaSource>(this);
+			Source->SetFilePath(MoviePath);
+			IntroVideoWidgetInstance = CreateWidget<UCosIntroVideoWidget>(this, UCosIntroVideoWidget::StaticClass());
+			if (IsValid(IntroVideoWidgetInstance.Get()))
+			{
+				IntroVideoWidgetInstance->AddToViewport(200);
+				if (IntroVideoWidgetInstance->PlayIntro(Source))
+				{
+					IntroVideoWidgetInstance->OnFinished.AddWeakLambda(this, [this]()
+					{
+						IntroVideoWidgetInstance->RemoveFromParent();
+						IntroVideoWidgetInstance = nullptr;
+						SetUIInputMode(false);
+						ShowCombatHUD();
+						if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>()) GM->StartNextWave();
+						UE_LOG(LogTemp, Log, TEXT("[BossIntro] Finished; starting Day 7"));
+					});
+					CloseCombatHUD();
+					OnStopBGMRequested();
+					if (ForgeMediaPlayer) ForgeMediaPlayer->Pause();
+					FInputModeUIOnly InputMode;
+					InputMode.SetWidgetToFocus(IntroVideoWidgetInstance->TakeWidget());
+					SetInputMode(InputMode);
+					bShowMouseCursor = false;
+					UE_LOG(LogTemp, Log, TEXT("[BossIntro] Playing lastboss.mp4 after forge 6"));
+					return;
+				}
+				IntroVideoWidgetInstance->RemoveFromParent();
+				IntroVideoWidgetInstance = nullptr;
+			}
+		}
+		UE_LOG(LogTemp, Warning, TEXT("[BossIntro] Movie unavailable; continuing to boss stage"));
+	}
+
 	SetUIInputMode(false);
 	ShowCombatHUD();
-
-	// 다음 웨이브 호출
-	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
-	{
-		GM->StartNextWave();
-	}
+	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>()) GM->StartNextWave();
 }
 
 void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
