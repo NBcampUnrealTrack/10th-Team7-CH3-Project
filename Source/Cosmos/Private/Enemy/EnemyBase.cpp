@@ -18,6 +18,7 @@
 #include "Engine/OverlapResult.h" //  FOverlapResult 
 #include "BehaviorTree/BlackboardComponent.h" 
 #include "NiagaraFunctionLibrary.h"
+
 #include "NiagaraSystem.h"
 
 // Sets default values
@@ -85,24 +86,21 @@ void AEnemyBase::BeginPlay()
 
 void AEnemyBase::SetEnemyAtStart()
 {
-	SetMovementSpeed(RunSpeed);
-
-	if (HealthComponent)
-	{
-		HealthComponent->SetHPAtStart(MaxHP);
-	}
 	if (EnemyDataTable && !EnemyRowName.IsNone())
 	{
 		if (const FEnemyData* Row = EnemyDataTable->FindRow<FEnemyData>(EnemyRowName, TEXT("EnemyInit")))
 		{
 			EnemyData = *Row;
-
-			// 데이터 테이블 값을 기존 스탯 변수에도 반영
 			MaxHP = EnemyData.HP;
 			AttackDamage = EnemyData.AttackPower;
 			RunSpeed = EnemyData.MoveSpeed;
-			SoulAmount = EnemyData.SoulDrop; //추가된 부분
+			SoulAmount = EnemyData.SoulDrop;
 		}
+	}
+	SetMovementSpeed(RunSpeed);
+	if (HealthComponent)
+	{
+		HealthComponent->SetHPAtStart(MaxHP);
 	}
 	bIsStagger = false;
 	LastStaggerTime = -1.f;
@@ -194,40 +192,36 @@ void AEnemyBase::FaceTarget(const AActor* Target)
 
 	SetActorRotation(NewRot);
 }
-float AEnemyBase::EnemyAttack() {
+UAnimMontage* AEnemyBase::PickAttackMontage() const
+{
+	if (AttackMontage1 && AttackMontage2)
+	{
+		return FMath::RandBool() ? AttackMontage1 : AttackMontage2;
+	}
+	return AttackMontage1 ? AttackMontage1 : AttackMontage2;
+}
+float AEnemyBase::EnemyAttack() 
+{
+	if (!IsAlive()) 
+	{ 
+		return 0.1f; 
+	}  
 	if (bFaceTargetOnAttack)
 	{
 		FaceTarget(GetAttackTarget());
 	}
 	PlayRandomSFX(AttackSounds);
-	if (!AttackMontage1 && !AttackMontage2) {
-		GetWorldTimerManager().SetTimer(AttackHitTimerHandle, this, &AEnemyBase::AttackHitCheck, AttackPreDelay, false);
+
+	UAnimMontage* Montage = PickAttackMontage();
+	if (!Montage)
+	{
+		GetWorldTimerManager().SetTimer(
+			AttackHitTimerHandle, this, &AEnemyBase::AttackHitCheck, AttackPreDelay, false);
 		return AttackPreDelay + 0.5f;
 	}
-	float Duration = 0;
-	float Random = FMath::FRandRange(0.f, 1.f);
-	if (Random <= 0.5f) {
-		if (AttackMontage1)
-		{
-			Duration = PlayAnimMontage(AttackMontage1);
-		}
-		else
-		{
-			Duration = PlayAnimMontage(AttackMontage2);
-		}
-		
-	}
-	if (Random  > 0.5f) {
-		if (AttackMontage2)
-		{
-			Duration = PlayAnimMontage(AttackMontage2);
-		}
-		else
-		{
-			Duration = PlayAnimMontage(AttackMontage1);
-		}
-	}
-	return Duration > 0.0f ? Duration : 1.0f;
+
+	const float Duration = PlayAnimMontage(Montage);
+	return Duration > 0.f ? Duration : 1.f;
 }
 bool AEnemyBase::ResolveImpactPoint(const FHitResult& Hit, FVector& OutPoint, FVector& OutNormal) const
 {
@@ -310,7 +304,14 @@ void AEnemyBase::TakeHit(float Damage, EWeaponType Weapon)
 }
 void AEnemyBase::PlayHitVFX(EWeaponType Weapon)
 {
-	if (!MeleeHitVFX && !RangeHitVFX) { return; }
+	if (!BloodHitVFX && !MeleeHitVFX && !RangeHitVFX) 
+	{ 
+		return; 
+	}
+	if (!bHasLastHit) 
+	{ 
+		return; 
+	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (LastHitVFXTime >= 0.f && (Now - LastHitVFXTime) < HitVFXInterval)
 	{
@@ -458,12 +459,12 @@ void AEnemyBase::AttackHitCheck()
 		{
 			continue;
 		}
-		if (IDamageable* bonk = Cast<IDamageable>(Target))
+		if (IDamageable* Damageable = Cast<IDamageable>(Target))
 		{
-			bonk->TakeHit(AttackDamage, EWeaponType::None);
+			Damageable->TakeHit(AttackDamage, EWeaponType::None);
 			PlaySFXAt(this, HitPlayerSound, GetActorLocation());
+			break;   
 		}
-		break;
 	}
 }
 
