@@ -111,6 +111,7 @@ protected:
 	TObjectPtr<UAnimMontage> HitReactMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Anim")
 	TObjectPtr<UAnimMontage> DeathMontage;
+	UAnimMontage* PickAttackMontage() const;
 	//Sounds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|SFX")
 	TArray<FSFXVolume> FootStepSounds;
@@ -147,7 +148,8 @@ protected:
 	FVector RangeHitVFXScale = FVector(1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|VFX")
 	float HitVFXHeightOffset = 0.f;
-	//
+	//Adjust Spawn Location
+	////
 	void PlayHitVFX(EWeaponType weapon);
 	UFUNCTION(BlueprintCallable, Category = "AI|SFX")
 	void PlaySFX(const FSFXVolume& SFX);
@@ -224,6 +226,7 @@ private:
 	FVector LastHitNormal = FVector::ZeroVector;
 	bool bHasLastHit = false;
 	float LastHitVFXTime = -1.f;
+
 	FTimerHandle DeathTimerHandle;
 	FTimerHandle AttackHitTimerHandle;
 	FTimerHandle StaggerTimerHandle;
