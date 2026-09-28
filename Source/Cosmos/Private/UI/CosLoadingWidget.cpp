@@ -17,6 +17,8 @@ TSharedRef<SWidget> UCosLoadingWidget::RebuildWidget()
 		Label->SetText(LoadingText);
 		Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.75f, 0.7f)));
 		FSlateFontInfo Font = Label->GetFont();
+		Font.FontObject = LoadObject<UObject>(nullptr, TEXT("/Game/Cosmos/Fonts/Megadeth_Font.Megadeth_Font"));
+		Font.TypefaceFontName = TEXT("Default");
 		Font.Size = 28;
 		Label->SetFont(Font);
 

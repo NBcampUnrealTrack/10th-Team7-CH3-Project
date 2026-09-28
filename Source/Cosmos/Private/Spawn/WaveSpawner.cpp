@@ -286,7 +286,7 @@ void AWaveSpawner::StartTutorialStage(int32 GhoulCount)
 
 	// 스폰할 게 없으면 여기서 바로 클리어를 방송합니다.
 	TryBroadcastStageCleared();
-}
+} 
 
 void AWaveSpawner::ResetStageState(int32 StageIndex)
 {
