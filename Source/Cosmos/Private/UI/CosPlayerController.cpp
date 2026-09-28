@@ -342,18 +342,8 @@ void ACosPlayerController::UpdateStageTimeUI(float RemainingSeconds)
 		CombatHUDInstance->CallFunctionByNameWithArguments(*Cmd, *GLog, nullptr, true);
 	}
 
-	// 3. 게임오버 처리
-	if (RemainingSeconds <= 0.f)
-	{
-		int32 CurrentSoul = 0;
-		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
-		{
-			CurrentSoul = GI->GetSoul();
-		}
-
-		// 게임오버 위젯 호출 및 획득한 소울 점수 
-		ShowGameOver(CurrentSoul);
-	}
+	// 시간이 0이 됐을 때 게임오버인지(보스 스테이지) 클리어인지(생존 스테이지)는 게임모드가 정합니다.
+	// 게임오버면 게임모드의 OnGameOver -> HandleGameOverRequested로 게임오버 화면이 뜹니다.
 }
 
 void ACosPlayerController::UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies)
