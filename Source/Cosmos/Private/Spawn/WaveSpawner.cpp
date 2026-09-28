@@ -2,6 +2,8 @@
 #include "Spawn/EnemySpawnPoint.h"
 #include "Enemy/EnemyBase.h" // Cast<AEnemyBase>를 하려면 전방선언만으로는 부족하고 전체 정의가 필요합니다.
 #include "Enemy/Boss.h"
+#include "Enemy/FlyingBase.h"
+#include "Enemy/EnemyProjectile.h"
 #include "AIController.h"
 #include "Components/CapsuleComponent.h"
 #include "Data/CosDataTable.h"
@@ -241,6 +243,12 @@ void AWaveSpawner::StartWave(int32 WaveIndex)
 	SetFogVisible(true); // Day 1에서 숨긴 안개를 전투 스테이지부터 되돌립니다.
 	ApplyStageEnvironment(CurrentStage);
 
+	// 끼인 적 구조는 모든 스테이지에서 돌립니다. 적이 지형에 끼면 생존 스테이지의 압박이 사라지기 때문입니다.
+	if (TutorialStuckSeconds > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(StuckCheckTimer, this, &AWaveSpawner::CheckStuckEnemies, 1.0f, true);
+	}
+
 	// 웨이브 1은 기다리지 않고 즉시 추가합니다.
 	AddNextWave();
 
@@ -301,6 +309,7 @@ void AWaveSpawner::ResetStageState(int32 StageIndex)
 	// 웨이브가 바뀔 때는 비우지 않고 순서표 뒤에 이어 붙입니다.
 	CurrentStage = StageIndex;
 	CurrentWave = 0;
+	LastWaveRowIndex = 0;
 	SpawnQueue.Empty();
 	SpawnedCount = 0;
 	AliveEnemies.Empty();
@@ -314,7 +323,7 @@ void AWaveSpawner::ResetStageState(int32 StageIndex)
 
 void AWaveSpawner::CheckStuckEnemies()
 {
-	if (CurrentStage != 0 || !bIsStageActive)
+	if (!bIsStageActive)
 	{
 		GetWorldTimerManager().ClearTimer(StuckCheckTimer);
 		StuckTracking.Reset();
@@ -327,6 +336,15 @@ void AWaveSpawner::CheckStuckEnemies()
 		return;
 	}
 
+	// 죽어서 사라진 적의 기록은 지웁니다. 생존 스테이지는 적이 계속 나와서 기록이 쌓이기 때문입니다.
+	for (auto It = StuckTracking.CreateIterator(); It; ++It)
+	{
+		if (!It.Key().IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	const float Now = GetWorld()->GetTimeSeconds();
 	for (AActor* Enemy : AliveEnemies)
 	{
@@ -335,12 +353,21 @@ void AWaveSpawner::CheckStuckEnemies()
 			continue;
 		}
 
+		// 보스는 제자리에서 BossPoint 사이를 텔레포트하고, 날아다니는 적은 NavMesh를 쓰지 않으므로 옮기지 않습니다.
+		if (Enemy->IsA<ABoss>() || Enemy->IsA<AFlyingBase>())
+		{
+			continue;
+		}
+
 		const FVector Location = Enemy->GetActorLocation();
 		TPair<FVector, float>& Info = StuckTracking.FindOrAdd(Enemy, TPair<FVector, float>(Location, Now));
 
-		// 1m 이상 움직였거나 플레이어 곁(5m 안)에서 싸우는 중이면 정상입니다.
+		// 1m 이상 움직였거나 플레이어 곁에서 싸우는 중이면 정상입니다.
+		// 곁의 기준은 5m와 공격 사거리의 1.5배 중 큰 값입니다. 멀리서 공격하는 적을 끼인 것으로 보지 않기 위함입니다.
+		const AEnemyBase* EnemyBase = Cast<AEnemyBase>(Enemy);
+		const float NearRadius = FMath::Max(500.0f, EnemyBase ? EnemyBase->GetAttackRange() * 1.5f : 0.0f);
 		const bool bMoved = FVector::DistSquared2D(Location, Info.Key) > FMath::Square(100.0f);
-		const bool bNearPlayer = FVector::DistSquared2D(Location, Player->GetActorLocation()) < FMath::Square(500.0f);
+		const bool bNearPlayer = FVector::DistSquared2D(Location, Player->GetActorLocation()) < FMath::Square(NearRadius);
 		if (bMoved || bNearPlayer)
 		{
 			Info = TPair<FVector, float>(Location, Now);
@@ -368,8 +395,8 @@ void AWaveSpawner::CheckStuckEnemies()
 					AI->StopMovement();
 				}
 			}
-			UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Day 1 끼인 구울 %s를 %.0fm 지점으로 옮김"),
-				*Enemy->GetName(), FVector::Dist(NewLocation, Player->GetActorLocation()) / 100.0f);
+			UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] Stage %d 끼인 적 %s를 %.0fm 지점으로 옮김"),
+				CurrentStage, *Enemy->GetName(), FVector::Dist(NewLocation, Player->GetActorLocation()) / 100.0f);
 		}
 		Info = TPair<FVector, float>(Enemy->GetActorLocation(), Now);
 	}
@@ -387,6 +414,36 @@ void AWaveSpawner::StopWave()
 	bIsStageActive = false; // 중단된 스테이지는 클리어 방송을 하지 않습니다.
 
 	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 종료"), CurrentStage);
+}
+
+void AWaveSpawner::ClearRemainingEnemies()
+{
+	// Destroy 중에 HandleEnemyDestroyed가 AliveEnemies를 건드리므로 복사본을 돌립니다.
+	const TArray<TObjectPtr<AActor>> Remaining = AliveEnemies;
+	AliveEnemies.Empty();
+	StuckTracking.Reset();
+
+	for (AActor* Enemy : Remaining)
+	{
+		if (IsValid(Enemy))
+		{
+			Enemy->Destroy(); // 처치가 아니므로 소울과 킬 수는 오르지 않습니다.
+		}
+	}
+
+	// 날아가던 적 투사체가 결과창 중에 플레이어를 맞히지 않도록 같이 치웁니다.
+	for (TActorIterator<AEnemyProjectile> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] Stage %d 남은 적 %d마리 정리"), CurrentStage, Remaining.Num());
+}
+
+bool AWaveSpawner::IsSurvivalStage() const
+{
+	// Day 1(Stage 0)과 보스 스테이지는 처치 조건, 그 사이 스테이지는 생존 조건입니다.
+	return CurrentStage > 0 && CurrentStage != BossStageIndex;
 }
 
 void AWaveSpawner::ApplyStageEnvironment(int32 StageIndex)
@@ -558,8 +615,20 @@ void AWaveSpawner::AddNextWave()
 
 	// 스테이지 + 웨이브 번호로 DT 행을 찾습니다. 2) 각주
 	// 세 번째 인자 false: 행이 없을 때 엔진 경고를 끄고, 아래에서 직접 로그를 남깁니다.
-	const FName RowName = MakeRowName(CurrentStage, CurrentWave);
+	FName RowName = MakeRowName(CurrentStage, CurrentWave);
 	const FWaveData* Row = WaveDataTable->FindRow<FWaveData>(RowName, TEXT("AddNextWave"), false);
+
+	if (Row != nullptr)
+	{
+		LastWaveRowIndex = CurrentWave;
+	}
+	else if (IsSurvivalStage() && LastWaveRowIndex > 0)
+	{
+		// 생존 스테이지는 DT에 적힌 웨이브를 다 쓰면 마지막 웨이브를 반복합니다.
+		// 스테이지 타이머가 끝날 때까지 적이 끊기지 않게 하기 위함입니다.
+		RowName = MakeRowName(CurrentStage, LastWaveRowIndex);
+		Row = WaveDataTable->FindRow<FWaveData>(RowName, TEXT("AddNextWave"), false);
+	}
 
 	if (Row == nullptr)
 	{
@@ -627,8 +696,15 @@ void AWaveSpawner::AddNextWave()
 		CurrentStage, CurrentWave, SpawnQueue.Num() - QueueSizeBefore,
 		SpawnQueue.Num() - SpawnedCount, AliveEnemies.Num());
 
+	if (IsSurvivalStage())
+	{
+		// 생존 스테이지는 WavesPerStage와 상관없이 스테이지 타이머가 끝날 때까지 WaveInterval마다 계속 추가합니다.
+		// 전멸하면 TryBroadcastStageCleared가 다음 웨이브를 당겨옵니다.
+		GetWorldTimerManager().SetTimer(
+			WaveTimer, this, &AWaveSpawner::AddNextWave, WaveInterval, false);
+	}
 	// 마지막 웨이브였으면 표시하고 웨이브 타이머를 끕니다.
-	if (CurrentWave >= WavesPerStage)
+	else if (CurrentWave >= WavesPerStage)
 	{
 		bAllWavesQueued = true;
 		GetWorldTimerManager().ClearTimer(WaveTimer);
@@ -652,7 +728,11 @@ void AWaveSpawner::AddNextWave()
 	}
 
 	// 마지막 웨이브 행이 0마리였고 적도 이미 전멸이면, 사망 이벤트가 안 오므로 여기서 검사합니다.
-	TryBroadcastStageCleared();
+	// 생존 스테이지는 0마리 웨이브에서 바로 다음 웨이브를 당기면 매 틱 반복되므로 WaveTimer를 기다립니다.
+	if (!IsSurvivalStage())
+	{
+		TryBroadcastStageCleared();
+	}
 }
 
 void AWaveSpawner::SpawnOne()
@@ -923,6 +1003,11 @@ void AWaveSpawner::TryBroadcastStageCleared()
 		{
 			// 빈 웨이브가 연속되어도 재귀 호출하지 않습니다.
 			WaveTimer = GetWorldTimerManager().SetTimerForNextTick(this, &AWaveSpawner::AddNextWave);
+			return;
+		}
+		// 생존 스테이지의 클리어는 게임모드의 스테이지 타이머가 정합니다. 전멸로는 끝나지 않습니다.
+		if (IsSurvivalStage())
+		{
 			return;
 		}
 		GetWorldTimerManager().ClearTimer(SpawnTimer);

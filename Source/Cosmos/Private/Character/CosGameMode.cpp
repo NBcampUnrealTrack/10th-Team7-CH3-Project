@@ -435,12 +435,35 @@ void ACosGameMode::StopStageTimer()// 스테이지가 끝났거나 GameOver가 �
 	}
 }
 
-void ACosGameMode::HandleStageTimeout()// 스테이지 제한시간 5분을 모두 사용했을 때 호출
+void ACosGameMode::HandleStageTimeout()// 스테이지 제한시간을 모두 사용했을 때 호출
 {
-	UE_LOG(LogTemp, Warning,
-		TEXT("[GameMode] Stage Timeout -> Game Over"));
+	if (bGameOver)
+	{
+		return;
+	}
 
-	TriggerGameOver();
+	// 보스 스테이지는 제한시간 안에 보스를 잡아야 합니다.
+	if (IsBossStageIndex(CurrentWaveIndex) || !WaveSpawner)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[GameMode] Stage Timeout -> Game Over"));
+
+		TriggerGameOver();
+		return;
+	}
+
+	// 생존 스테이지는 시간을 버티면 클리어입니다. 남은 적은 소울 없이 치웁니다.
+	UE_LOG(LogTemp, Warning,
+		TEXT("[GameMode] Stage Timeout -> 생존 성공, Stage %d 클리어"), CurrentWaveIndex);
+
+	StopStageTimer();
+	WaveSpawner->StopWave();
+	WaveSpawner->ClearRemainingEnemies();
+
+	RemainingEnemiesThisWave = 0;
+	PushEnemyCountUI();
+
+	HandleWaveCleared(CurrentWaveIndex);
 }
 
 void ACosGameMode::TriggerGameOver()// GameOver가 발생하는 경우의 공통으로 처리

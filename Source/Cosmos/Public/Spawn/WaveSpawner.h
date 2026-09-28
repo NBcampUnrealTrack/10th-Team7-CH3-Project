@@ -34,8 +34,10 @@ struct FStageEnvironmentSettings
 
 
 // 용어
-//   Stage (5웨이브) : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
+//   Stage : 게임모드가 시작시키는 단위. 끝나면 대장간으로 갑니다. UI에 남은 시간이 노출됩니다.
+//           Day 1(Stage 0)과 보스 스테이지는 전멸하면 클리어, 그 사이 스테이지는 스테이지 타이머를 버티면 클리어(생존)입니다.
 //   Wave (1분 간격) : 전멸하거나 1분이 지나면 다음 적을 추가하는 내부 단위. UI에 노출하지 않습니다.
+//           생존 스테이지는 DT의 웨이브를 다 쓰면 마지막 웨이브를 반복합니다.
 
 
 // 델리게이트 선언. 모든 웨이브가 순서표에 들어갔고 + 전부 스폰됐고 + 생존 적 0 -> 스테이지당 한 번 방송됨. 게임 모드가 구독합니다.
@@ -69,6 +71,14 @@ public:
 	// 진행 중인 스폰과 웨이브 추가를 중단합니다. 이미 스폰된 적을 지우지는 않습니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave")
 	void StopWave();
+
+	// 살아 있는 적과 날아가던 적 투사체를 소울 없이 치웁니다. 생존 스테이지가 끝날 때 게임모드가 부릅니다.
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void ClearRemainingEnemies();
+
+	// 지금 스테이지가 생존 조건인지. Day 1(Stage 0)과 보스 스테이지가 아니면 생존입니다.
+	UFUNCTION(BlueprintPure, Category = "Wave")
+	bool IsSurvivalStage() const;
 
 	// 게임 중 환경만 적용합니다. 웨이브/적/타이머는 진행시키지 않습니다.
 	UFUNCTION(BlueprintCallable, Category = "Wave|Environment")
@@ -271,7 +281,8 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
 	float TutorialMaxSpawnRadius = 2000.0f;
 
-	// Day 1에서 구울이 이 시간(초) 동안 거의 움직이지 못하면 끼인 것으로 보고 플레이어 근처 새 위치로 옮깁니다. 0이면 끕니다.
+	// 지상 적이 이 시간(초) 동안 거의 움직이지 못하면 끼인 것으로 보고 플레이어 근처 새 위치로 옮깁니다. 0이면 끕니다.
+	// 처음엔 Day 1 전용이라 이름에 Tutorial이 붙어 있지만, 지금은 모든 스테이지에 적용됩니다. (BP에 저장된 값 유지를 위해 이름은 그대로 둠)
 	UPROPERTY(EditAnywhere, Category = "Wave|Spawn", meta = (ClampMin = "0.0"))
 	float TutorialStuckSeconds = 4.0f;
 
@@ -304,14 +315,15 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	FTimerHandle SpawnTimer; // 1초마다 한 마리 꺼내는 타이머의 이름표
 	FTimerHandle WaveTimer;  // 웨이브 시작부터 60초 후 추가. 전멸하면 다음 틱으로 당깁니다.
 	FTimerHandle ProgressTimer; // 사망 콜백 완료 후 진행 조건을 검사합니다.
-	FTimerHandle StuckCheckTimer; // Day 1에서 끼인 구울을 찾아 옮깁니다.
+	FTimerHandle StuckCheckTimer; // 끼인 지상 적을 찾아 옮깁니다.
 
-	// Day 1 끼임 검사용. 적마다 마지막으로 움직인 위치와 시각을 기억합니다.
+	// 끼임 검사용. 적마다 마지막으로 움직인 위치와 시각을 기억합니다.
 	void CheckStuckEnemies();
 	TMap<TWeakObjectPtr<AActor>, TPair<FVector, float>> StuckTracking;
 
 	int32 CurrentStage = 0;     // 지금 몇 번째 스테이지인지. 클리어 방송할 때 이 번호를 같이 넘깁니다.
-	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지 (1~5). 0이면 스테이지 시작 전.
+	int32 CurrentWave = 0;      // 지금 몇 번째 웨이브까지 추가했는지. 0이면 스테이지 시작 전.
+	int32 LastWaveRowIndex = 0; // DT에서 실제로 찾은 마지막 웨이브 번호. 생존 스테이지가 웨이브를 다 쓰면 이 행을 반복합니다.
 	int32 SpawnedCount = 0;     // 순서표에서 지금까지 몇 칸 꺼냈는지. 곧 다음에 꺼낼 칸 번호입니다.
 	int32 NextSliceIndex = 0;   // 다음에 쓸 방향 칸 번호 (0 ~ SpawnDirectionSlices-1)
 
