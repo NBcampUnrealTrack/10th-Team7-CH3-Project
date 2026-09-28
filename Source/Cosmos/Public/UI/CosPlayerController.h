@@ -39,6 +39,16 @@ struct FWaveResultData
 	int32 TotalSoul = 0;
 };
 
+// 대장간 한 번 방문할 때 대장장이가 하는 대사. 한 줄씩 좌클릭으로 넘깁니다.
+USTRUCT(BlueprintType)
+struct FForgeVisitDialogue
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (MultiLine = true))
+	TArray<FText> Lines;
+};
+
 UCLASS()
 class COSMOS_API ACosPlayerController : public APlayerController
 {
@@ -46,6 +56,30 @@ class COSMOS_API ACosPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	// Development/PIE commands. Shipping implementations are inert.
+	UFUNCTION(Exec)
+	void CosDebugHelp();
+	UFUNCTION(Exec)
+	void CosDebugBoss();
+	UFUNCTION(Exec)
+	void CosDebugDay(int32 Day = 1);
+	UFUNCTION(Exec)
+	void CosDebugRestart();
+	UFUNCTION(Exec)
+	void CosDebugGod();
+	UFUNCTION(Exec)
+	void CosDebugRefill();
+	UFUNCTION(Exec)
+	void CosDebugKillEnemies();
+	UFUNCTION(Exec)
+	void CosDebugSpeed(float Speed = 1.0f);
+	UFUNCTION(Exec)
+	void CosDebugBossDamage(float Percent = 10.0f);
+	UFUNCTION(Exec)
+	void CosDebugPlayerDamage(float Damage = 10.0f);
+	UFUNCTION(Exec)
+	void CosDebugSoul(int32 Amount = 1000);
+	FString GetDebugStatus() const;
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateEnemyCountUI(int32 RemainingEnemies, int32 TotalEnemies);
@@ -95,6 +129,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI|Instances")
 	TObjectPtr<UUserWidget> CombatHUDInstance;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> BossHealthHUDInstance;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Classes")
 	TSubclassOf<UUserWidget> ForgeWidgetClass;
 
@@ -126,15 +163,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Loading", meta = (ClampMin = "0.0"))
 	float ForgeLoadingMaxSeconds = 5.0f;
 
-	// Day 1에 쓰러졌다가 대장간에서 깨어날 때 한 번 띄우는 대사
+	// 대장간에 들어올 때마다 띄우는 대장장이 대사창
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue")
 	TSubclassOf<UCosDialogueWidget> DialogueWidgetClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue")
-	FText FirstForgeSpeaker;
+	FText ForgeSpeaker;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue", meta = (MultiLine = true))
-	FText FirstForgeLine = FText::FromString(TEXT("정신이 들어? 여기는 대장간이야. 무기를 강화해 줄게."));
+	// 방문 순서별 대사. [0] = 방문 1(Day 1 종료 후) ... [5] = 방문 6(Day 6 종료 후). 비어 있는 방문은 대사 없이 넘어갑니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Dialogue")
+	TArray<FForgeVisitDialogue> ForgeVisitDialogues;
 
 	// 타이틀에서 시작을 누른 뒤, 게임이 시작되기 전에 재생할 오프닝 영상 위젯
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Intro")
@@ -347,6 +385,11 @@ protected:
 	TObjectPtr<USoundBase> CollapseSound;
 
 private:
+	bool HandleDebugKey(const FInputKeyEventArgs& EventArgs);
+	void DebugMessage(const FString& Message) const;
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> DebugOverlayInstance;
+	bool bDebugTravelPending = false;
 	void FinishGameplayEntry();
 	FTimerHandle GameplayEntryTimer;
 
@@ -372,8 +415,11 @@ private:
 	FTimerHandle ForgeLoadingTimer;
 	float ForgeLoadingStartTime = 0.0f;
 
-	void ShowFirstForgeDialogue();
-	bool bPendingFirstForgeDialogue = false;
+	void ShowForgeDialogue();
+	int32 PendingForgeVisit = 0; // 로딩이 걷힌 뒤 띄울 방문 번호(1부터). 0이면 없음
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCosDialogueWidget> ForgeDialogueInstance;
 
 	bool bGameplayTravelRequested = false;
 

@@ -78,6 +78,21 @@ void ACosGameMode::BeginPlay()
 		&ACosGameMode::HandleEnemySpawned
 	);
 
+#if !UE_BUILD_SHIPPING
+	// Debug travel opens a fresh world: no tutorial timers, drops or death flow carry over.
+	const int32 DebugDay = UGameplayStatics::GetIntOption(OptionsString, TEXT("CosDebugDay"), 0);
+	if (DebugDay >= 2 && DebugDay <= 7)
+	{
+		for (TActorIterator<ATutorialDeer> It(GetWorld()); It; ++It)
+		{
+			It->Destroy();
+		}
+		CurrentWaveIndex = DebugDay - 2;
+		StartNextWave();
+		return;
+	}
+#endif
+
 	// 레벨에 사슴이 있으면 Day 1부터, 없으면 기존처럼 첫 전투부터 시작
 	ATutorialDeer* Deer = Cast<ATutorialDeer>(
 		UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialDeer::StaticClass()));
@@ -93,6 +108,19 @@ void ACosGameMode::BeginPlay()
 
 AActor* ACosGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
+#if !UE_BUILD_SHIPPING
+	const int32 DebugDay = UGameplayStatics::GetIntOption(OptionsString, TEXT("CosDebugDay"), 0);
+	if (DebugDay >= 2 && DebugDay <= 7)
+	{
+		if (APlayerStart* DebugStart = FindDayStart(DebugDay)) return DebugStart;
+		int32 NumStarts = 0;
+		while (FindDayStart(NumStarts + 1)) ++NumStarts;
+		if (NumStarts > 0)
+		{
+			if (APlayerStart* CyclicStart = FindDayStart((DebugDay - 1) % NumStarts + 1)) return CyclicStart;
+		}
+	}
+#endif
 	// 처음 태어나는 곳은 Day 1 지점. 태그가 없는 맵(타이틀 등)은 엔진 기본 선택을 따릅니다.
 	if (APlayerStart* Day1Start = FindDayStart(1))
 	{
@@ -130,7 +158,11 @@ void ACosGameMode::MovePlayerToDayStart(int32 Day)
 
 	// 지점을 순서대로 돌려 씁니다. 3개면 Day1~7 -> 1,2,3,1,2,3,1
 	const int32 Slot = (Day - 1) % NumStarts + 1;
-	APlayerStart* Start = FindDayStart(Slot);
+	APlayerStart* Start = FindDayStart(Day);
+	if (!Start)
+	{
+		Start = FindDayStart(Slot);
+	}
 
 	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
 	APawn* Pawn = PC ? PC->GetPawn() : nullptr;
@@ -148,7 +180,7 @@ void ACosGameMode::MovePlayerToDayStart(int32 Day)
 		Start->GetActorLocation(), StartRotation, false, nullptr, ETeleportType::TeleportPhysics);
 	PC->SetControlRotation(StartRotation); // 카메라가 컨트롤 회전을 따르므로 같이 돌려줍니다.
 
-	UE_LOG(LogTemp, Log, TEXT("[GameMode] Day%d -> 시작 지점 Day%d(%s)로 이동"), Day, Slot, *Start->GetName());
+	UE_LOG(LogTemp, Log, TEXT("[GameMode] Day%d -> 시작 지점 %s로 이동"), Day, *Start->GetName());
 }
 
 void ACosGameMode::StartDay1(ATutorialDeer* Deer)
@@ -376,6 +408,16 @@ void ACosGameMode::StartStageTimer()//새로운 스테이지 시작될 때 Stage
 
 	CurrentStageStartTime = GetWorld()->GetTimeSeconds();
 
+	// 보스전은 처치로만 끝납니다. 남은 시간 변경을 방송해 HUD도 숨깁니다.
+	if (IsBossStage())
+	{
+		if (ACosGameState* GS = GetGameState<ACosGameState>())
+		{
+			GS->SetStageRemainingTime(0.0f);
+		}
+		return;
+	}
+
 	if (ACosGameState* GS = GetGameState<ACosGameState>())//스테이트 남은 시간을 처음에 StageDuration으로 설정
 	{
 		GS->SetStageRemainingTime(StageDuration);
@@ -437,13 +479,12 @@ void ACosGameMode::StopStageTimer()// 스테이지가 끝났거나 GameOver가 �
 
 void ACosGameMode::HandleStageTimeout()// 스테이지 제한시간을 모두 사용했을 때 호출
 {
-	if (bGameOver)
+	if (bGameOver || IsBossStage())
 	{
 		return;
 	}
 
-	// 보스 스테이지는 제한시간 안에 보스를 잡아야 합니다.
-	if (IsBossStageIndex(CurrentWaveIndex) || !WaveSpawner)
+	if (!WaveSpawner)
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[GameMode] Stage Timeout -> Game Over"));

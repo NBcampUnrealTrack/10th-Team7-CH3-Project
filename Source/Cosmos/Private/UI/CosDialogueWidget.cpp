@@ -1,74 +1,107 @@
 #include "UI/CosDialogueWidget.h"
 #include "Blueprint/WidgetTree.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 
 TSharedRef<SWidget> UCosDialogueWidget::RebuildWidget()
 {
-	// BP 디자이너 레이아웃이 없을 때만 기본 대사창을 코드로 만듭니다.
-	if (WidgetTree && !WidgetTree->RootWidget)
-	{
-		UOverlay* Root = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("Root"));
-		Root->SetVisibility(ESlateVisibility::SelfHitTestInvisible); // 대사창 밖 클릭은 대장간 UI로 넘깁니다.
+    // BP layouts remain supported; the native fallback supplies a restrained reading panel.
+    if (WidgetTree && !WidgetTree->RootWidget)
+    {
+        UOverlay* Root = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("Root"));
+        Root->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        USizeBox* BoxSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("DialogueBoxSize"));
+        BoxSize->SetWidthOverride(1440.0f);
+        BoxSize->SetMinDesiredHeight(140.0f);
 
-		UBorder* Box = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DialogueBox"));
-		Box->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.75f));
-		Box->SetPadding(FMargin(32.0f, 20.0f));
+        UBorder* Box = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DialogueBox"));
+        // One fill preserves 80% opacity; an overlapping frame would darken the panel.
+        Box->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.0f, 0.0f, 0.0f, 0.8f), 0.0f,
+            FLinearColor(0.28f, 0.26f, 0.22f, 0.75f), 1.0f));
+        Box->SetBrushColor(FLinearColor::White);
+        Box->SetPadding(FMargin(32.0f, 26.0f));
+        BoxSize->SetContent(Box);
+        UVerticalBox* Lines = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("Lines"));
+        Box->SetContent(Lines);
 
-		UVerticalBox* Lines = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("Lines"));
+        // Engine Roboto provides a plain reading face and the engine's Korean fallback.
+        UObject* ReadingFont = LoadObject<UObject>(nullptr, TEXT("/Engine/EngineFonts/Roboto.Roboto"));
+        SpeakerLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Speaker"));
+        SpeakerLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.64f, 0.52f, 0.34f)));
+        FSlateFontInfo SpeakerFont = SpeakerLabel->GetFont();
+        SpeakerFont.FontObject = ReadingFont;
+        SpeakerFont.TypefaceFontName = TEXT("Bold");
+        SpeakerFont.Size = 16;
+        SpeakerLabel->SetFont(SpeakerFont);
+        Lines->AddChildToVerticalBox(SpeakerLabel)->SetPadding(FMargin(0, 0, 0, 10));
 
-		SpeakerLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Speaker"));
-		SpeakerLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.9f, 0.6f, 0.3f)));
-		FSlateFontInfo SpeakerFont = SpeakerLabel->GetFont();
-		SpeakerFont.FontObject = LoadObject<UObject>(nullptr, TEXT("/Game/Cosmos/Fonts/Megadeth_Font.Megadeth_Font"));
-		SpeakerFont.TypefaceFontName = TEXT("Default");
-		SpeakerFont.Size = 18;
-		SpeakerLabel->SetFont(SpeakerFont);
+        LineLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Line"));
+        LineLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.88f, 0.86f, 0.81f)));
+        LineLabel->SetAutoWrapText(true);
+        LineLabel->SetLineHeightPercentage(1.3f);
+        LineLabel->SetApplyLineHeightToBottomLine(false);
+        FSlateFontInfo LineFont = LineLabel->GetFont();
+        LineFont.FontObject = ReadingFont;
+        LineFont.TypefaceFontName = TEXT("Regular");
+        LineFont.Size = 22;
+        LineLabel->SetFont(LineFont);
+        Lines->AddChildToVerticalBox(LineLabel)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-		LineLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Line"));
-		LineLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.9f, 0.86f)));
-		LineLabel->SetAutoWrapText(true);
-		FSlateFontInfo LineFont = LineLabel->GetFont();
-		LineFont.FontObject = SpeakerFont.FontObject;
-		LineFont.TypefaceFontName = TEXT("Default");
-		LineFont.Size = 24;
-		LineLabel->SetFont(LineFont);
-
-		Lines->AddChildToVerticalBox(SpeakerLabel);
-		Lines->AddChildToVerticalBox(LineLabel);
-		Box->SetContent(Lines);
-
-		if (UOverlaySlot* BoxSlot = Root->AddChildToOverlay(Box))
-		{
-			BoxSlot->SetHorizontalAlignment(HAlign_Fill);
-			BoxSlot->SetVerticalAlignment(VAlign_Bottom);
-			BoxSlot->SetPadding(FMargin(160.0f, 0.0f, 160.0f, 80.0f));
-		}
-
-		WidgetTree->RootWidget = Root;
-	}
-
-	return Super::RebuildWidget();
+        UOverlaySlot* BoxSlot = Root->AddChildToOverlay(BoxSize);
+        BoxSlot->SetHorizontalAlignment(HAlign_Center);
+        BoxSlot->SetVerticalAlignment(VAlign_Bottom);
+        BoxSlot->SetPadding(FMargin(32.0f, 0.0f, 32.0f, 52.0f));
+        WidgetTree->RootWidget = Root;
+    }
+    return Super::RebuildWidget();
 }
 
 void UCosDialogueWidget::ShowLine(const FText& InSpeaker, const FText& InLine)
 {
-	FullLine = InLine.ToString();
-	RevealedChars = 0.0f;
-	HoldElapsed = 0.0f;
+	ShowLines(InSpeaker, { InLine });
+}
+
+void UCosDialogueWidget::ShowLines(const FText& InSpeaker, const TArray<FText>& InLines)
+{
+	QueuedLines = InLines;
 
 	if (SpeakerLabel)
 	{
 		SpeakerLabel->SetText(InSpeaker);
 		SpeakerLabel->SetVisibility(InSpeaker.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}
+
+	StartLine(0);
+}
+
+void UCosDialogueWidget::StartLine(int32 Index)
+{
+	if (!QueuedLines.IsValidIndex(Index))
+	{
+		Close();
+		return;
+	}
+
+	LineIndex = Index;
+	FullLine = QueuedLines[Index].ToString();
+	RevealedChars = 0.0f;
+	HoldElapsed = 0.0f;
+
 	if (LineLabel)
 	{
 		LineLabel->SetText(FText::GetEmpty());
 	}
+}
+
+void UCosDialogueWidget::Advance()
+{
+	StartLine(LineIndex + 1); // 마지막 줄이었으면 닫힙니다.
 }
 
 void UCosDialogueWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -92,14 +125,19 @@ void UCosDialogueWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 		HoldElapsed += InDeltaTime;
 		if (HoldElapsed >= HoldSeconds)
 		{
-			Close();
+			Advance();
 		}
 	}
 }
 
 FReply UCosDialogueWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	// 글자가 나오는 중이면 끝까지 보여주고, 다 보인 상태면 닫습니다.
+	if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	// 글자가 나오는 중이면 끝까지 보여주고, 다 보인 상태면 다음 줄로 넘어갑니다.
 	if (RevealedChars < FullLine.Len())
 	{
 		RevealedChars = FullLine.Len();
@@ -110,7 +148,7 @@ FReply UCosDialogueWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 	}
 	else
 	{
-		Close();
+		Advance();
 	}
 	return FReply::Handled();
 }

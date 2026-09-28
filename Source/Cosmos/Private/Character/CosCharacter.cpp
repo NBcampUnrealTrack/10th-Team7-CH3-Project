@@ -143,6 +143,8 @@ void ACosCharacter::StopSprint(const FInputActionValue& Value)
 
 void ACosCharacter::TakeHit(float Damage, EWeaponType Weapon)
 {
+	// Honor Unreal's damage flag (including the development God command).
+	if (!CanBeDamaged()) return;
 	if (HealthComponent)
 	{
 		HealthComponent->ApplyDamage(Damage, Weapon);

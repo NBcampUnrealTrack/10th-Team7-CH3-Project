@@ -23,6 +23,7 @@
 #include "UI/CosLoadingWidget.h"
 #include "UI/CosDialogueWidget.h"
 #include "UI/CosIntroVideoWidget.h"
+#include "UI/CosBossHealthWidget.h"
 #include "MediaPlayer.h"
 #include "FileMediaSource.h"
 #include "Misc/Paths.h"
@@ -53,6 +54,36 @@ ACosPlayerController::ACosPlayerController()
 	LoadingWidgetClass = UCosLoadingWidget::StaticClass();
 	DialogueWidgetClass = UCosDialogueWidget::StaticClass();
 	IntroVideoWidgetClass = UCosIntroVideoWidget::StaticClass();
+
+	// 대장장이 대사 기본값. BP 디테일 패널(UI|Dialogue)에서 고치면 그 값이 우선합니다.
+	auto AddVisit = [this](std::initializer_list<const TCHAR*> InLines)
+	{
+		FForgeVisitDialogue& Visit = ForgeVisitDialogues.AddDefaulted_GetRef();
+		for (const TCHAR* Line : InLines)
+		{
+			Visit.Lines.Add(FText::FromString(Line));
+		}
+	};
+	AddVisit({ // 방문 1
+		TEXT("깼네. 숲 한가운데 쓰러져 있길래 끌고 왔어. 무겁더라."),
+		TEXT("손에 묻은 거, 네 피는 아니야. 염소 피야. 걱정 마."),
+		TEXT("빈손으로 밤을 넘기긴 어려울 거야. 이거 받아. 뭐든 제자리에 붙들어 두는 물건이야.") });
+	AddVisit({ // 방문 2
+		TEXT("살아 돌아왔네. 난 네가 돌아올 줄 알았어."),
+		TEXT("무덤에서 일어난 것들은 다시 눕혀줘야 해. 못은 그러라고 있는 거야.") });
+	AddVisit({ // 방문 3
+		TEXT("오늘은 안개가 좀 들어왔네. 신경 쓰지 마, 문을 오래 열어둬서 그래."),
+		TEXT("못은 박힐 때보다, 빠지지 않을 때 진짜 일을 하는 거야.") });
+	AddVisit({ // 방문 4
+		TEXT("아까 그 제단, 처음 보는 것 같았어? 숲은 원래 다 비슷하게 생겼어."),
+		TEXT("오늘이 몇 번째 밤이더라. 난 가끔 세는 걸 잊어.") });
+	AddVisit({ // 방문 5
+		TEXT("그 염소 봤구나. 아직 거기 있지? 여기선 아무것도 썩지 않아. 아무것도 떠나지 않고."),
+		TEXT("눈이 좀 시려서. 바닷바람을 너무 오래 맞았나 봐.") });
+	AddVisit({ // 방문 6
+		TEXT("이제 네 무기엔 내 손이 안 닿은 곳이 없어."),
+		TEXT("못은 한쪽 끝만 날카로워. 다른 쪽 끝은 언제나 누군가 쥐고 있지."),
+		TEXT("내일 밤이면 끝나. 네가 원하던 대로.") });
 
 	// WBP_Forge가 배경 영상을 재생하는 미디어 플레이어입니다.
 	static ConstructorHelpers::FObjectFinder<UMediaPlayer> ForgeMediaPlayerAsset(TEXT("/Game/Movies/NewMediaPlayer"));
@@ -329,6 +360,17 @@ void ACosPlayerController::HandleStageTimeChanged(float RemainingSeconds)
 
 void ACosPlayerController::UpdateStageTimeUI(float RemainingSeconds)
 {
+	const ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>();
+	const bool bBossStage = GM && GM->IsBossStage();
+	if (CombatHUDInstance)
+	{
+		if (UWidget* TimerText = CombatHUDInstance->GetWidgetFromName(TEXT("StageTime")))
+		{
+			TimerText->SetVisibility(bBossStage ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+		}
+	}
+	if (bBossStage) return;
+
 	// 분/초 단위 계산
 	const int32 TotalSeconds = FMath::Max(0, FMath::FloorToInt(RemainingSeconds));
 	const int32 Minutes = TotalSeconds / 60;
@@ -418,12 +460,18 @@ void ACosPlayerController::ShowCombatHUD()
 		if (IsValid(CombatHUDInstance.Get()))
 		{
 			CombatHUDInstance->AddToViewport();
+			BossHealthHUDInstance = CreateWidget<UCosBossHealthWidget>(this);
+			if (BossHealthHUDInstance) BossHealthHUDInstance->AddToViewport(1);
 
 			// 게임 입력모드 전환
 			SetInputMode(FInputModeGameOnly());
 			bShowMouseCursor = false;
 
 			RefreshCombatHUD();
+			if (const ACosGameState* GS = GetWorld()->GetGameState<ACosGameState>())
+			{
+				UpdateStageTimeUI(GS->GetStageRemainingTime());
+			}
 		}
 	}
 }
@@ -431,6 +479,11 @@ void ACosPlayerController::ShowCombatHUD()
 
 void ACosPlayerController::CloseCombatHUD()
 {
+	if (BossHealthHUDInstance)
+	{
+		BossHealthHUDInstance->RemoveFromParent();
+		BossHealthHUDInstance = nullptr;
+	}
 	if (IsValid(CombatHUDInstance.Get()))
 	{
 		CombatHUDInstance->RemoveFromParent();
@@ -500,8 +553,11 @@ void ACosPlayerController::TestReloadAmmo() { UpdateAmmoUI(30, 30); }
 
 void ACosPlayerController::HandleForgeRequested()
 {
-	// Day 1에서 쓰러졌다면 대장간에서 깨어나고, 로딩이 걷힌 뒤 첫 대사를 띄웁니다.
-	bPendingFirstForgeDialogue = bIsCollapsed;
+	// 방금 끝난 Day 번호가 곧 대장간 방문 번호입니다(Day 1 종료 → 방문 1). 로딩이 걷힌 뒤 대사를 띄웁니다.
+	const ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>();
+	PendingForgeVisit = GM ? GM->GetCurrentDay() : 0;
+
+	// Day 1에서 쓰러졌다면 대장간에서 깨어납니다.
 	RecoverFromCollapse();
 
 	// 대장간 배경 영상은 비동기로 열려 처음 몇 프레임이 비어 보일 수 있으므로,
@@ -524,22 +580,26 @@ void ACosPlayerController::HandleForgeRequested()
 	}
 	else
 	{
-		ShowFirstForgeDialogue(); // 로딩 화면이 없으면 바로 띄웁니다.
+		ShowForgeDialogue(); // 로딩 화면이 없으면 바로 띄웁니다.
 	}
 }
 
-void ACosPlayerController::ShowFirstForgeDialogue()
+void ACosPlayerController::ShowForgeDialogue()
 {
-	if (!bPendingFirstForgeDialogue || FirstForgeLine.IsEmpty() || !IsValid(DialogueWidgetClass))
+	const int32 VisitIndex = PendingForgeVisit - 1;
+	PendingForgeVisit = 0;
+
+	if (!ForgeVisitDialogues.IsValidIndex(VisitIndex) || ForgeVisitDialogues[VisitIndex].Lines.IsEmpty()
+		|| !IsValid(DialogueWidgetClass))
 	{
 		return;
 	}
-	bPendingFirstForgeDialogue = false;
 
-	if (UCosDialogueWidget* Dialogue = CreateWidget<UCosDialogueWidget>(this, DialogueWidgetClass))
+	ForgeDialogueInstance = CreateWidget<UCosDialogueWidget>(this, DialogueWidgetClass);
+	if (IsValid(ForgeDialogueInstance.Get()))
 	{
-		Dialogue->AddToViewport(50); // 대장간 위, 로딩 화면 아래
-		Dialogue->ShowLine(FirstForgeSpeaker, FirstForgeLine);
+		ForgeDialogueInstance->AddToViewport(50); // 대장간 위, 로딩 화면 아래
+		ForgeDialogueInstance->ShowLines(ForgeSpeaker, ForgeVisitDialogues[VisitIndex].Lines);
 	}
 }
 
@@ -561,7 +621,7 @@ void ACosPlayerController::HideLoadingWidget()
 	{
 		LoadingWidgetInstance->RemoveFromParent();
 	}
-	ShowFirstForgeDialogue();
+	ShowForgeDialogue();
 }
 
 void ACosPlayerController::OpenForgeWidget()
@@ -586,6 +646,14 @@ void ACosPlayerController::CloseForgeWidget()
 	{
 		ForgeWidgetInstance->RemoveFromParent();
 		ForgeWidgetInstance = nullptr;
+	}
+
+	// 대사를 다 넘기기 전에 대장간을 나가도 대사창이 전투 화면에 남지 않게 닫습니다.
+	PendingForgeVisit = 0;
+	if (IsValid(ForgeDialogueInstance.Get()))
+	{
+		ForgeDialogueInstance->RemoveFromParent();
+		ForgeDialogueInstance = nullptr;
 	}
 
 	//포션 충전
@@ -651,6 +719,7 @@ void ACosPlayerController::ShowResult(const FWaveResultData& ResultData)
 
 bool ACosPlayerController::InputKey(const FInputKeyEventArgs& EventArgs)
 {
+	if (HandleDebugKey(EventArgs)) return true;
 	// 쓰러지는 동안은 ESC 메뉴를 포함한 모든 입력을 무시합니다.
 	if (bIsCollapsing)
 	{
@@ -1107,7 +1176,11 @@ void ACosPlayerController::ShowGameHUD()
 	OnStopBGMRequested();
 	if (ACosGameMode* GM = GetWorld()->GetAuthGameMode<ACosGameMode>())
 	{
-		if (!GM->IsInDay1())
+		if (GM->IsBossStage())
+		{
+			OnBossBGMRequested();
+		}
+		else if (!GM->IsInDay1())
 		{
 			OnCombatBGMRequested();
 		}

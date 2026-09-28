@@ -752,8 +752,9 @@ void AWaveSpawner::SpawnOne()
 	FVector SpawnLocation = FVector::ZeroVector;
 	FRotator SpawnRotation = FRotator::ZeroRotator;
 
-	if (ClassToSpawn && ClassToSpawn->IsChildOf(ABoss::StaticClass())
-		&& FindBossSpawnLocation(ClassToSpawn, SpawnLocation, SpawnRotation))
+	const bool bAtBossPoint = ClassToSpawn && ClassToSpawn->IsChildOf(ABoss::StaticClass())
+		&& FindBossSpawnLocation(ClassToSpawn, SpawnLocation, SpawnRotation);
+	if (bAtBossPoint)
 	{
 		UE_LOG(LogTemp, Log, TEXT("[WaveSpawner] 보스 등장 위치 %s"), *SpawnLocation.ToString());
 	}
@@ -834,6 +835,15 @@ void AWaveSpawner::SpawnOne()
 		AActor* Enemy = GetWorld()->SpawnActor<AActor>(ClassToSpawn, SpawnLocation, SpawnRotation, Params);
 		if (Enemy)
 		{
+			if (bAtBossPoint)
+			{
+				// BP BeginPlay can scale the boss; use the final capsule just like teleport.
+				const ACharacter* BossCDO = CastChecked<ACharacter>(ClassToSpawn->GetDefaultObject());
+				const ACharacter* SpawnedBoss = CastChecked<ACharacter>(Enemy);
+				SpawnLocation.Z += SpawnedBoss->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+					- BossCDO->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+				Enemy->SetActorLocation(SpawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+			}
 			AliveEnemies.Add(Enemy);
 
 			// 이 적이 파괴되면 HandleEnemyDestroyed를 불러달라고 등록합니다.
@@ -945,7 +955,12 @@ bool AWaveSpawner::FindSpawnLocationNearPlayer(FVector& OutLocation)
 bool AWaveSpawner::FindBossSpawnLocation(TSubclassOf<AActor> BossToSpawn, FVector& OutLocation, FRotator& OutRotation) const
 {
 	TArray<AActor*> Points;
-	UGameplayStatics::GetAllActorsWithTag(this, BossSpawnPointTag, Points);
+	// 첫 소환은 제단 중앙. 이동 지점 중 플레이어와 가까운 곳은 예비용입니다.
+	UGameplayStatics::GetAllActorsWithTag(this, TEXT("BossInitialSpawn"), Points);
+	if (Points.Num() == 0)
+	{
+		UGameplayStatics::GetAllActorsWithTag(this, BossSpawnPointTag, Points);
+	}
 	if (Points.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[WaveSpawner] '%s' 태그 BossPoint 없음. 보스를 플레이어 근처에 스폰합니다 (텔레포트 불가)"),
