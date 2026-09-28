@@ -606,6 +606,7 @@ void AWaveSpawner::AddNextWave()
 	AddToQueue(EnhancedGhoulClass, Row->EnhancedGhoulCount, TEXT("EnhancedGhoul"));
 	AddToQueue(GargoyleClass, Row->GargoyleCount, TEXT("Gargoyle"));
 	AddToQueue(CrowClass, Row->CrowCount, TEXT("Crow"));
+	AddToQueue(SprinterClass, Row->SprinterCount, TEXT("Sprinter"));
 
 	// 보스 스테이지 첫 웨이브는 DT 값과 관계없이 보스가 최소 1마리 나오게 합니다.
 	int32 BossCount = Row->BossCount;

@@ -232,6 +232,9 @@ private: // 내부함수들이기 때문에 private임. 바깥에 쓰는 것만 
 	TSubclassOf<AActor> CrowClass;
 
 	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
+	TSubclassOf<AActor> SprinterClass;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Enemy")
 	TSubclassOf<AActor> BossClass;
 
 	// 스테이지 5 다음 스테이지. 이 스테이지의 웨이브 1에 보스가 없으면 1마리를 넣어 보스 등장을 보장합니다.
