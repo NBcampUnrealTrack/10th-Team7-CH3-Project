@@ -33,10 +33,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enchant")
 	FString GetStatText() const;
 
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UEnchantInventoryWidget> OwnerInventory;
+
 private:
 
-	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-
-	//TObjectPtr<UEnchantInventoryWidget> OwnerInventory;
+	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 };
 	

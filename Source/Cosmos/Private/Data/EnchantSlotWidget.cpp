@@ -75,23 +75,13 @@ FString UEnchantSlotWidget::GetStatText() const
 	return Result;
 }
 
-FReply UEnchantSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+FReply UEnchantSlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 	
-	if (MyEnchant)
+	if (MyEnchant && OwnerInventory)
 	{
-		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
-		{
-			if (bIsEquipped)
-			{
-				GI->UnEquipEnchant(MyEnchant);
-			}
-			else
-			{
-				GI->EquipEnchant(MyEnchant);
-			}
-		}
+		OwnerInventory->ShowEnchantInfo(MyEnchant, bIsEquipped);
 	}
 
 	return FReply::Handled();
