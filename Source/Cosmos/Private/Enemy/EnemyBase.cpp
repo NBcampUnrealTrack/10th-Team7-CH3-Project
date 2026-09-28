@@ -359,13 +359,16 @@ void AEnemyBase::HandleDeath()
 {
 
 	if (bDeathHandled) { return; }
+	if (!bIsExplodeDeath)
+	{
+		PlaySFX(DeathHitSound);
+	}
 
 	bDeathHandled = true;
 	SetCanBeDamaged(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DisableAllCollision();
 	SetHitboxesEnabled(false);
-	PlaySFX(DeathHitSound);
 	ApplyDeathMovement();
 	if (UCosGameInstance* GameInstance = Cast<UCosGameInstance>(GetWorld()->GetGameInstance()))
 	{ 
@@ -385,8 +388,11 @@ void AEnemyBase::HandleDeath()
 	GetWorldTimerManager().ClearTimer(AttackHitTimerHandle);
 	GetWorldTimerManager().ClearTimer(StaggerTimerHandle);
 
-	PlaySFX(DeathSound);
-	if (DeathMontage)
+	if (!bIsExplodeDeath)
+	{
+		PlaySFX(DeathSound);
+	}
+	if (!bIsExplodeDeath && DeathMontage)
 	{
 		 PlayAnimMontage(DeathMontage);
 	
