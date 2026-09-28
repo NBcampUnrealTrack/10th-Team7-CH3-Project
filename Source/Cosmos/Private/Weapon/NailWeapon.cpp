@@ -1,5 +1,5 @@
 ﻿#include "Weapon/NailWeapon.h"
-#include "DrawDebugHelpers.h" // 트레이스 시각화
+#include "TimerManager.h"
 
 ANailWeapon::ANailWeapon()
 {
@@ -12,6 +12,11 @@ ANailWeapon::ANailWeapon()
 	ComboWindowBonus = 0.3f;
 	bSwingLeftToRight = false;
 	LastSwingTime = -100.f;
+
+	//히트 스탑
+	HitStopDuration = 0.08f;
+	HitStopTimeDilation = 0.05f;
+	bIsHitStopIncludeOwner = false;
 }
 
 bool ANailWeapon::PerformAttack()
@@ -45,39 +50,6 @@ bool ANailWeapon::PerformAttack()
 		FCollisionShape::MakeSphere(SwingRadius), // 구체 반지름
 		QueryParams // 나머진 샷건과 동일
 	);
-	
-	// 구체 시각화 일단 꺼둠
-	//DrawDebugLine( // 구체 트레이스 이동경로
-	//	GetWorld(), // 샷건과 동일
-	//	StartLocation,
-	//	EndLocation,
-	//	FColor::Blue,
-	//	false,
-	//	2.f,
-	//	0,
-	//	2.f
-	//);
-
-	//DrawDebugSphere( // 근접 광역 공격
-	//	GetWorld(),
-	//	StartLocation, // 구체 중심좌표 (플레이어 위치)
-	//	SwingRadius, // 반지름
-	//	12, // 구체를 몇각형으로 근사해서 나타낼지
-	//	FColor::Cyan, // 색
-	//	false, // 영구적이지 않음
-	//	2.f // 2초간 표시
-	//);
-
-	//DrawDebugSphere( // 위와 동일
-	//	GetWorld(),
-	//	EndLocation, // 구체 중심좌표 , 이번에는 구체가 이동한 끝지점
-	//	SwingRadius,
-	//	12,
-	//	FColor::Cyan,
-	//	false,
-	//	2.f
-	//);
-
 
 	if (!bHit) // 안맞은 경우
 	{
@@ -87,6 +59,7 @@ bool ANailWeapon::PerformAttack()
 
 	TSet<AActor*> AlreadyHit; // 맞은 적 기록. 중복데미지 방지
 	int32 HitCount = 0; // 데미지를 입은 대상 카운트
+	TArray<AActor*> DamagedActors; // [히트스탑] 실제로 데미지를 준 대상
 
 	const int32 MaxTarget = GetCurrentMaxTarget();
 	for (const FHitResult& Hit : HitResults) //공격에 맞은 대상을 순회
@@ -108,6 +81,7 @@ bool ANailWeapon::PerformAttack()
 		if (TryApplyDamageAlt(HitActor, Hit)) // 데미지를 준 경우에만 카운트
 		{
 			HitCount++;
+			DamagedActors.Add(HitActor); // 히트스탑
 		}
 	}
 
@@ -116,6 +90,7 @@ bool ANailWeapon::PerformAttack()
 	{
 		const float Scale = FMath::Min(1.f + (HitCount - 1) * 0.2f, 1.6f);
 		PlayCameraShake(HitShake, Scale);
+		StartHitStop(DamagedActors);
 	}
 	return true;
 }
@@ -144,4 +119,55 @@ int32 ANailWeapon::GetCurrentMaxTarget() const
 float ANailWeapon::GetCurrentRange() const
 {
 	return AttackRange * (1.f + GetEnchantStat(EEnchantStat::MeleeRange) * 0.01f);
+}
+
+void ANailWeapon::StartHitStop(const TArray<AActor*>& Targets)
+{
+	EndHitStop(); // 이전 히트스탑이 남아있으면 먼저 원래대로 복구
+
+	for (AActor* Target : Targets)
+	{
+		if (!IsValid(Target))
+		{
+			continue;
+		}
+		HitStoppedActors.Emplace(Target, Target->CustomTimeDilation); // 원래 값 저장
+		Target->CustomTimeDilation = HitStopTimeDilation;
+	}
+
+	if (bIsHitStopIncludeOwner)
+	{
+		AActor* OwnerActor = GetAttachParentActor(); // 무기를 들고 있는 캐릭터
+		if (IsValid(OwnerActor))
+		{
+			HitStoppedActors.Emplace(OwnerActor, OwnerActor->CustomTimeDilation);
+			OwnerActor->CustomTimeDilation = HitStopTimeDilation;
+		}
+	}
+
+	if (HitStoppedActors.Num() > 0)
+	{
+		// 월드 시간은 느려지지 않으므로 일반 타이머로 복구 가능
+		GetWorldTimerManager().SetTimer(HitStopTimerHandle, this, &ANailWeapon::EndHitStop, HitStopDuration, false);
+	}
+}
+
+void ANailWeapon::EndHitStop()
+{
+	GetWorldTimerManager().ClearTimer(HitStopTimerHandle);
+
+	for (const TPair<TWeakObjectPtr<AActor>, float>& Pair : HitStoppedActors)
+	{
+		if (Pair.Key.IsValid()) // 그 사이 파괴된 적은 건너뜀
+		{
+			Pair.Key->CustomTimeDilation = Pair.Value;
+		}
+	}
+	HitStoppedActors.Empty();
+}
+
+void ANailWeapon::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	EndHitStop(); // 무기가 사라져도 적이 멈춘 채로 남지 않게
+	Super::EndPlay(EndPlayReason);
 }
