@@ -21,67 +21,21 @@ void UEnchantSlotWidget::Setup(UEnchantData* InEnchant, bool InIsEquipped)
 
 FString UEnchantSlotWidget::GetStatText() const
 {
-	if (!MyEnchant) return FString();
-
-	FString Result;
-
-	if (MyEnchant->bHasSkill)
-	{
-		const UEnum* SkillEnumPtr = StaticEnum<EEnchantSkillType>();
-		const FString SkillName = SkillEnumPtr ? SkillEnumPtr->GetDisplayNameTextByValue((int64)MyEnchant->SkillType).ToString() : TEXT("Unknown");
-
-		const EEnchantValueType SkillValueType = UEnchantData::GetSkillValueType(MyEnchant->SkillType);
-
-		FString SkillValueText;
-		if (SkillValueType == EEnchantValueType::Percent)
-		{
-			SkillValueText = FString::Printf(TEXT(" + %.1f%%"), MyEnchant->SkillValue);
-		}
-		else if (SkillValueType == EEnchantValueType::Integer)
-		{
-			SkillValueText = FString::Printf(TEXT(" + %d"), FMath::RoundToInt(MyEnchant->SkillValue));
-		}
-		else if (SkillValueType == EEnchantValueType::Flat)
-		{
-			SkillValueText = FString::Printf(TEXT(" + %.1f"), MyEnchant->SkillValue);
-		}
-
-		Result += FString::Printf(TEXT("[Skill] %s%s\n"), *SkillName, *SkillValueText);
-	}
-
-	for (const FEnchantRolledStat& Stat : MyEnchant->RolledStats)
-	{
-		const UEnum* StatEnumPtr = StaticEnum<EEnchantStat>();
-		const FString StatName = StatEnumPtr ? StatEnumPtr->GetDisplayNameTextByValue((int64)Stat.StatType).ToString() : TEXT("Unknown");
-
-		FString ValueText;
-
-		if (Stat.ValueType == EEnchantValueType::Percent)
-		{
-			ValueText = FString::Printf(TEXT("+ %.1f%%"), Stat.RolledValue);
-		}
-		else if (Stat.ValueType == EEnchantValueType::Integer)
-		{
-			ValueText = FString::Printf(TEXT("+ %d"), FMath::RoundToInt(Stat.RolledValue));
-		}
-		else // Flat
-		{
-			ValueText = FString::Printf(TEXT("+ %.1f"), Stat.RolledValue);
-		}
-
-		Result += FString::Printf(TEXT("%s %s\n"), *StatName, *ValueText);
-	}
-
-	return Result;
+	return MyEnchant ? MyEnchant->GetStatText() : FString();
 }
 
 FReply UEnchantSlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+	Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
 	
-	if (MyEnchant && OwnerInventory)
+	UE_LOG(LogTemp, Warning, TEXT("Slot clicked. MyEnchant valid: %d"), MyEnchant != nullptr);
+
+	if (MyEnchant)
 	{
-		OwnerInventory->ShowEnchantInfo(MyEnchant, bIsEquipped);
+		if (UCosGameInstance* GI = Cast<UCosGameInstance>(GetGameInstance()))
+		{
+			GI->OnEnchantInfoRequested.Broadcast(MyEnchant, bIsEquipped);
+		}
 	}
 
 	return FReply::Handled();

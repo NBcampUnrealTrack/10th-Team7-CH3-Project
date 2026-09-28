@@ -11,6 +11,7 @@ class UEnchantData;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrencyChanged, int32, NewSoul);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadoutChanged); 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnchantCollected, UEnchantData*, CollectedEnchant);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnchantInfoRequested, UEnchantData*, Enchant, bool, bIsEquipped);
 
 
 UCLASS()
@@ -29,6 +30,9 @@ public:
 	FOnLoadoutChanged OnLoadoutChange;
 	UPROPERTY(BlueprintAssignable, Category = "Enchant")
 	FOnEnchantCollected OnEnchantCollected;
+	UPROPERTY(BlueprintAssignable)
+	FOnEnchantInfoRequested OnEnchantInfoRequested;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
 	TArray<UEnchantData*> CollectedEnchant; // 인챈트 인벤토리
 	UPROPERTY(BlueprintReadOnly, Category = "Enchant")
