@@ -9,6 +9,10 @@ class UInputMappingContext;
 class ANailWeapon;
 class AShotgunWeapon;
 class UCosGameInstance;
+class ACharacter;
+class APlayerController;
+class UCameraShakeBase;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPotionCountChanged, int32, NewCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatReady);
@@ -45,6 +49,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	bool CanAttack() const;
 
+	UFUNCTION(BlueprintPure, Category = "Dodge")
+	bool IsDodging() const { return bIsDodging; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -77,4 +84,45 @@ protected:
 	void OnShotgunAttack();
 	void OnReload();
 	void OnUsePotion();
+
+private:
+	void TryDodge();
+	void EndDodge();
+	void ResetDodgeCooldown();
+
+	UPROPERTY(EditAnywhere, Category = "Dodge|Input")
+	TObjectPtr<UInputAction> DodgeAction;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	float DodgeStrength = 1500.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	float DodgeDuration = 0.12f;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	float DodgeCooldown = 1.2f;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	TSubclassOf<UCameraShakeBase> DodgeCameraShake;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge", meta = (ClampMin = "0.0"))
+	float DodgeShakeScale = 1.f;   // 피격 흔들림 대비 세기 (1.0 = 피격과 동일)
+
+	UPROPERTY(EditAnywhere, Category = "Dodge")
+	TObjectPtr<USoundBase> DodgeSound;
+
+	UPROPERTY(EditAnywhere, Category = "Dodge", meta = (ClampMin = "0.0"))
+	float DodgeSoundVolume = 1.0f;
+
+	UPROPERTY()
+	TObjectPtr<ACharacter> OwnerCharacter;
+
+	bool bIsDodging = false;
+	bool bCanDodge = true;
+
+	float DefaultGroundFriction = 8.0f;
+	float DefaultBrakingDeceleration = 2048.0f;
+
+	FTimerHandle DodgeTimerHandle;
+	FTimerHandle DodgeCooldownTimerHandle;
 };
