@@ -5,22 +5,28 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "TimerManager.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"                    
+#include "GameFramework/CharacterMovementComponent.h"   
 #include "Components/ChildActorComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Character/HealthComponent.h"
 #include "Data/CosGameInstance.h"
+#include "Weapon/CosLegacyCameraShake.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 UCombatComponent::UCombatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-
+	DodgeCameraShake = UCosLegacyCameraShake::StaticClass(); // 회피 기본 흔들림
 }
 
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay(); //부모가 해둔 초기화가 있을 수 있으니 관례적 호출
-	
+
 	PotionCount = GetMaxPotionCount();
 	OnPotionCountChanged.Broadcast(PotionCount);
 
@@ -28,6 +34,18 @@ void UCombatComponent::BeginPlay()
 	if (!IsValid(OwnerPawn))
 	{
 		return;
+	}
+
+	// [회피] 이동 컴포넌트 접근용 캐릭터 캐싱 + 기본 마찰값 저장
+	OwnerCharacter = Cast<ACharacter>(OwnerPawn);
+	if (IsValid(OwnerCharacter))
+	{
+		UCharacterMovementComponent* MoveComp = OwnerCharacter->GetCharacterMovement();
+		if (IsValid(MoveComp))
+		{
+			DefaultGroundFriction = MoveComp->GroundFriction;
+			DefaultBrakingDeceleration = MoveComp->BrakingDecelerationWalking;
+		}
 	}
 
 	TArray<UChildActorComponent*> ChildActorComponents; // 배열 생성
@@ -88,6 +106,10 @@ void UCombatComponent::BeginPlay()
 		{
 			EIC->BindAction(UsePotionAction, ETriggerEvent::Started, this, &UCombatComponent::OnUsePotion); // E 누르면 포션
 		}
+		if (IsValid(DodgeAction)) // [회피]
+		{
+			EIC->BindAction(DodgeAction, ETriggerEvent::Started, this, &UCombatComponent::TryDodge); // Shift 누르면 회피
+		}
 	}
 }
 
@@ -144,7 +166,7 @@ void UCombatComponent::OnUsePotion()
 	{
 		return;
 	}
-	if (PotionCount <= 0|| HealthComponent->GetCurrentHealth() >= HealthComponent->GetMaxHealth())
+	if (PotionCount <= 0 || HealthComponent->GetCurrentHealth() >= HealthComponent->GetMaxHealth())
 	{
 		return;
 	}
@@ -153,7 +175,7 @@ void UCombatComponent::OnUsePotion()
 	{
 		return;
 	}
-	
+
 	PotionCount--;
 	HealthComponent->Heal(static_cast<float>(GI->GetPotionHealAmount()));
 	OnPotionCountChanged.Broadcast(PotionCount);
@@ -170,4 +192,74 @@ void UCombatComponent::RefillPotions()
 {
 	PotionCount = GetMaxPotionCount();
 	OnPotionCountChanged.Broadcast(PotionCount);
+}
+
+// 누르고 있는 방향키 방향으로 순간 이동
+void UCombatComponent::TryDodge()
+{
+	if (!IsValid(OwnerCharacter) || !bCanDodge || bIsDodging)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* MoveComp = OwnerCharacter->GetCharacterMovement();
+	if (!IsValid(MoveComp) || !MoveComp->IsMovingOnGround())
+	{
+		return;
+	}
+
+	FVector DodgeDirection = OwnerCharacter->GetLastMovementInputVector(); // 현재 방향키 입력 방향
+	DodgeDirection.Z = 0.0f;
+
+	if (DodgeDirection.IsNearlyZero()) // 입력 없으면 뒤로
+	{
+		DodgeDirection = -OwnerCharacter->GetActorForwardVector();
+	}
+	DodgeDirection.Normalize();
+
+	MoveComp->GroundFriction = 0.0f;              // 회피 중 마찰 제거
+	MoveComp->BrakingDecelerationWalking = 0.0f;
+
+	OwnerCharacter->LaunchCharacter(DodgeDirection * DodgeStrength, true, false);
+	APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController());
+	if (IsValid(PC) && DodgeCameraShake != nullptr)
+	{
+		PC->ClientStartCameraShake(DodgeCameraShake, DodgeShakeScale);
+	}
+	if (IsValid(DodgeSound))
+	{
+		UGameplayStatics::PlaySound2D(this, DodgeSound, DodgeSoundVolume);
+	}
+	bIsDodging = true;
+	bCanDodge = false;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		DodgeTimerHandle, this, &UCombatComponent::EndDodge, DodgeDuration, false);
+	GetWorld()->GetTimerManager().SetTimer(
+		DodgeCooldownTimerHandle, this, &UCombatComponent::ResetDodgeCooldown, DodgeCooldown, false);
+}
+
+//  마찰 복구 + 속도 정리
+void UCombatComponent::EndDodge()
+{
+	bIsDodging = false;
+
+	if (!IsValid(OwnerCharacter))
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* MoveComp = OwnerCharacter->GetCharacterMovement();
+	if (IsValid(MoveComp))
+	{
+		MoveComp->GroundFriction = DefaultGroundFriction;
+		MoveComp->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+		MoveComp->Velocity = MoveComp->Velocity.GetClampedToMaxSize(MoveComp->MaxWalkSpeed);
+	}
+}
+
+// 회피쿨타임 종료
+void UCombatComponent::ResetDodgeCooldown()
+{
+	bCanDodge = true;
 }
