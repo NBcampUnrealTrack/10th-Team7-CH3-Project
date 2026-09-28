@@ -124,6 +124,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 EnhancedGhoulCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 GargoyleCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 CrowCount = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 SprinterCount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 BossCount = 0;
 };
 
