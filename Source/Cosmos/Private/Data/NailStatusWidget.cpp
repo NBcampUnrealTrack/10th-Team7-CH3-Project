@@ -38,20 +38,15 @@ void UNailStatusWidget::RefreshAll()
 	ANailWeapon* Weapon = Combat->GetNailWeapon();
 	if (!Weapon) return;
 
-	RefreshOne(Weapon->GetCurrentDamage(), DamageProgressBar, DamageValueText);
-	RefreshOne(Weapon->GetCurrentAttackInterval(), AttackSpeedProgressBar, AttackSpeedValueText);
+	RefreshOne(Weapon->GetCurrentDamage(), DamageValueText);
+	RefreshOne(Weapon->GetCurrentAttackInterval(), AttackSpeedValueText);
 }
 
-void UNailStatusWidget::RefreshOne(float Value, UProgressBar* Slider, UTextBlock* ValueText) const
+void UNailStatusWidget::RefreshOne(float Value, UTextBlock* ValueText) const
 {
 	if (ValueText)
 	{
 		ValueText->SetText(FormatNailStatText(Value));
-	}
-
-	if (Slider)
-	{
-
 	}
 }
 

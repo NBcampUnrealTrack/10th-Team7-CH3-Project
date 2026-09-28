@@ -3,6 +3,7 @@
 #include "Data/EnchantData.h"
 #include "Data/EnchantSlotWidget.h"
 #include "Components/VerticalBox.h"
+#include "Data/EnchantInfoPopup.h"
 
 void UEnchantInventoryWidget::NativeConstruct()
 {
@@ -70,7 +71,7 @@ void UEnchantInventoryWidget::RefreshList()
 		if (!NewSlot) continue;
 
 		NewSlot->Setup(Enchant, false);
-
+		NewSlot->OwnerInventory = this;
 		const int32 LocalIndex = i - StartIndex;
 		SlotContainer->AddChildToUniformGrid(NewSlot, LocalIndex / ColumsPerRow, LocalIndex % ColumsPerRow);
 	}
@@ -125,5 +126,25 @@ void UEnchantInventoryWidget::ToggleEquip(UEnchantData* Enchant, bool bCurrently
 		{
 			GI->EquipEnchant(Enchant);
 		}
+	}
+}
+
+void UEnchantInventoryWidget::ShowEnchantInfo(UEnchantData* Enchant, bool bIsEquipped)
+{
+	SelectedEnchant = Enchant;
+	bSelectedIsEquipped = bIsEquipped;
+	if (InfoPopup)
+	{
+		InfoPopup->Setup(Enchant, bIsEquipped);
+		InfoPopup->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UEnchantInventoryWidget::OnPopupActionClicked()
+{
+	ToggleEquip(SelectedEnchant, bSelectedIsEquipped);
+	if (InfoPopup)
+	{
+		InfoPopup->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }

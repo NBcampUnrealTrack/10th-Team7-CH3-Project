@@ -154,7 +154,9 @@ void AEnemyBase::CollectHitboxes()
 		Prim->SetGenerateOverlapEvents(false);
 		Prim->SetCanEverAffectNavigation(false);
 		Prim->CanCharacterStepUpOn = ECB_No;
-
+		Prim->SetCollisionObjectType(ECC_EnemyHitbox);
+		Prim->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Prim->SetCollisionResponseToChannel(ECC_Weapon, ECR_Block);
 		Hitboxes.Add(Prim);
 	}
 	if (Hitboxes.Num() > 0)

@@ -6,7 +6,7 @@ FText UEnchantData::GetStatLabel(EEnchantStat Stat)
 	{
 	case EEnchantStat::AllDamageAdd: return FText::FromString(TEXT("All Damage"));
 	case EEnchantStat::AllDamageMulti: return FText::FromString(TEXT("All Damage"));
-	case EEnchantStat::AllSpeed: return FText::FromString(TEXT("All Speed + "));
+	case EEnchantStat::AllSpeed: return FText::FromString(TEXT("All Speed"));
 	case EEnchantStat::RangeDamageAdd: return FText::FromString(TEXT("Ranged Damage"));
 	case EEnchantStat::RangeDamageMulti: return FText::FromString(TEXT("Ranged Damage"));
 	case EEnchantStat::RangeFiringRate: return FText::FromString(TEXT("Fire Rate"));
