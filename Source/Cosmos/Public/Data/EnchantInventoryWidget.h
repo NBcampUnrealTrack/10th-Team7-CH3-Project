@@ -44,6 +44,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enchant")
 	void PrevPage();
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UEnchantInfoPopup> InfoPopup;
+	bool bSelectedIsEquipped = false;
+
+	UFUNCTION(BlueprintCallable)
+	void ShowEnchantInfo(UEnchantData* Enchant, bool bIsEquipped);
+	UFUNCTION(BlueprintCallable)
+	void OnPopupActionClicked();
+
 protected:
 	virtual void NativeConstruct() override;
 };

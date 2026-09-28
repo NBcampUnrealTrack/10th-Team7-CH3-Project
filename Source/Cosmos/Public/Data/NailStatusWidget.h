@@ -5,7 +5,6 @@
 #include "Data/CosDataTable.h"
 #include "NailStatusWidget.generated.h"
 
-class UProgressBar;
 class UTextBlock;
 
 UCLASS()
@@ -17,10 +16,7 @@ public:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UProgressBar> DamageProgressBar;
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UProgressBar> AttackSpeedProgressBar;
+
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DamageValueText;
@@ -29,6 +25,6 @@ public:
 
 	UFUNCTION()
 	void RefreshAll();
-	void RefreshOne(float Value, UProgressBar* Slider, UTextBlock* ValueText) const;
+	void RefreshOne(float Value, UTextBlock* ValueText) const;
 	FText FormatNailStatText(float value) const;
 };
