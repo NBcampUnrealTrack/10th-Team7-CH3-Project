@@ -1,29 +1,71 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "InputActionValue.h"
+#include "Weapon/Damageable.h"//[추가] 데미져블 인터페이스 사용하게
 #include "CosCharacter.generated.h"
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDamaged, float, Intensity);
+class UHealthComponent;
+class UCameraComponent;
+
 
 UCLASS()
-class COSMOS_API ACosCharacter : public ACharacter
+class COSMOS_API ACosCharacter : public ACharacter, public IDamageable// IDamageable 상속 추가
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ACosCharacter();
+	void TakeHit(float Damage, EWeaponType Weapon) override;//추가한 IDamageable 구현부분
 
 protected:
-	// Called when the game starts or when spawned
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UCameraComponent* CameraComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHealthComponent> HealthComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "VFX")
+	FSFXVolume HitReactSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float NormalSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float SprintSpeedMultiplier;
+
 	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION()
+	void OnLoadoutChanged();
+	UFUNCTION(BlueprintCallable, Category = "SFX")
+	void PlaySFXPlayer(const FSFXVolume& SFX) const;
+	void RecalculateMovementSpeed();
+
+	UFUNCTION()
+	void Move(const FInputActionValue& Value);
+	UFUNCTION()
+	void StartJump(const FInputActionValue& Value);
+	UFUNCTION()
+	void StopJump(const FInputActionValue& Value);
+	UFUNCTION()
+	void Look(const FInputActionValue& Value);
+	UFUNCTION()
+	void StartSprint(const FInputActionValue& Value);
+	UFUNCTION()
+	void StopSprint(const FInputActionValue& Value);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback", meta = (ClampMin = "1.0"))
+	float DamagedScreenAmount = 20.f;
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Feedback")
+	void OnDamagedScreen(float Intensity);
+	void PlayDamagedScreen(float Damage);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Feedback")
+	FOnPlayerDamaged OnPlayerDamaged;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback")
+	TSubclassOf<UCameraShakeBase> DamageShake;
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Feedback", meta = (ClampMin = "1.0"))
+	float DamageShakeReference = 10.f;
 };

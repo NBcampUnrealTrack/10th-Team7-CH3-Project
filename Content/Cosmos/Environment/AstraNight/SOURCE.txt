@@ -1,0 +1,12 @@
+Moon texture: NASA Scientific Visualization Studio, CGI Moon Kit (2025 color map).
+Credit: NASA's Scientific Visualization Studio. Visualizer: Ernie Wright (USRA).
+Source: https://svs.gsfc.nasa.gov/4720
+Texture: https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+Imported as T_Moon_LROC_NASA. No NASA endorsement implied.
+
+Star map: NASA/Goddard Space Flight Center Scientific Visualization Studio.
+Deep Star Maps 2020, Ernie Wright, https://svs.gsfc.nasa.gov/4851/
+Source: starmap_2020_8k.exr (ICRF/J2000 celestial coordinates, RA increases left).
+Includes Hipparcos-2, Tycho-2 and Gaia DR2 positions, brightness and colors.
+Sky orientation: latitude -30 degrees; local sidereal time 12 h; +X north, +Y east.
+Static artistic night setting, not a simulation of current date/time. Moon remains artistically placed.

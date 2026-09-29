@@ -23,10 +23,7 @@ public:
 	virtual void OnUnPossess() override;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "AI")
-	class UBehaviorTree* BehaviorTreeAsset;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	UBlackboardComponent* BlackboardComp;
+
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	//UAIPerceptionComponent* AIPerception;
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")

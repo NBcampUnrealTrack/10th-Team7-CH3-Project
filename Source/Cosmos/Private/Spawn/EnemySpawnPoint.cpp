@@ -1,27 +1,13 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "Spawn/EnemySpawnPoint.h"
+#include "Components/BillboardComponent.h"
 
-
-#include "Spawn/EnemySpawnPoint.h"
-
-// Sets default values
 AEnemySpawnPoint::AEnemySpawnPoint()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
-}
-
-// Called when the game starts or when spawned
-void AEnemySpawnPoint::BeginPlay()
-{
-	Super::BeginPlay();
+	// 안써도 지우지 않고 tick을 안쓰는 클래스라는걸 표시하기 위해 false로 돌려놓기만 하는게 관례라고 합니다.
+	PrimaryActorTick.bCanEverTick = false;
 	
-}
-
-// Called every frame
-void AEnemySpawnPoint::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
+	// 해당 포인터 변수에 컴포넌트를 만들어 넣어줍니다.
+	Billboard = CreateDefaultSubobject<UBillboardComponent>(TEXT("Billboard"));
+	SetRootComponent(Billboard);
 }
 
